@@ -1,5 +1,38 @@
 let currentFormData = {};
 
+
+// Replace the getFieldInput function in form.js
+function getFieldInput(field) {
+    const fieldId = `field-${field.key}`;
+    const placeholder = `Enter ${field.label || field.key}`;
+    const rtlClass = field.isRTL ? 'rtl-input' : '';
+    const dirAttribute = field.isRTL ? 'dir="rtl"' : '';
+    
+    // For date fields
+    if (field.type === 'date') {
+        return `<input type="date" id="${fieldId}" name="${field.key}" ${field.required ? 'required' : ''} class="${rtlClass}" ${dirAttribute}>`;
+    }
+    
+    // For regular fields with RTL support
+    switch (field.type) {
+        case 'number':
+            return `<input type="number" id="${fieldId}" name="${field.key}" ${field.required ? 'required' : ''} placeholder="${placeholder}" class="${rtlClass}" ${dirAttribute}>`;
+        case 'boolean':
+            return `<select id="${fieldId}" name="${field.key}" ${field.required ? 'required' : ''} class="${rtlClass}" ${dirAttribute}>
+                <option value="">Select...</option>
+                <option value="true">Yes</option>
+                <option value="false">No</option>
+            </select>`;
+        case 'email':
+            return `<input type="email" id="${fieldId}" name="${field.key}" ${field.required ? 'required' : ''} placeholder="${placeholder}" class="${rtlClass}" ${dirAttribute}>`;
+        case 'textarea':
+            return `<textarea id="${fieldId}" name="${field.key}" ${field.required ? 'required' : ''} placeholder="${placeholder}" rows="4" class="${rtlClass}" ${dirAttribute}></textarea>`;
+        default:
+            return `<input type="text" id="${fieldId}" name="${field.key}" ${field.required ? 'required' : ''} placeholder="${placeholder}" class="${rtlClass}" ${dirAttribute}>`;
+    }
+}
+
+// Update the renderFillForm function to add RTL styling to form labels
 async function renderFillForm() {
     console.log('renderFillForm called');
     console.log('window.selectedTemplate:', window.selectedTemplate);
@@ -54,6 +87,10 @@ async function renderFillForm() {
         return;
     }
     
+    // Check if any field requires RTL
+    const hasRTLFields = window.selectedTemplate.fields.some(field => field.isRTL);
+    const formClass = hasRTLFields ? 'rtl-form' : '';
+    
     // Render the form with fields
     container.innerHTML = `
         <div class="template-info">
@@ -62,12 +99,14 @@ async function renderFillForm() {
             <p class="field-count">Total fields: ${window.selectedTemplate.fields.length}</p>
         </div>
         
-        <form id="data-form">
+        <form id="data-form" class="${formClass}">
             ${window.selectedTemplate.fields.map(field => `
-                <div class="form-group">
-                    <label>
+                <div class="form-group ${field.isRTL ? 'rtl-group' : ''}">
+                    <label ${field.isRTL ? 'dir="rtl"' : ''}>
                         ${escapeHtml(field.label || field.key)}
                         ${field.required ? '<span class="required">*</span>' : ''}
+                        ${field.type === 'date' ? '<span class="field-type-badge">📅 Date</span>' : ''}
+                        ${field.isRTL ? '<span class="field-type-badge">ދިވެހި</span>' : ''}
                     </label>
                     ${getFieldInput(field)}
                     <small class="field-key" style="color: #999; font-size: 0.8rem;">Field: ${escapeHtml(field.key)}</small>
@@ -97,30 +136,6 @@ async function renderFillForm() {
     }
     
     await loadDataRecords();
-}
-
-function getFieldInput(field) {
-    const fieldId = `field-${field.key}`;
-    const placeholder = `Enter ${field.label || field.key}`;
-    
-    switch (field.type) {
-        case 'number':
-            return `<input type="number" id="${fieldId}" name="${field.key}" ${field.required ? 'required' : ''} placeholder="${placeholder}">`;
-        case 'date':
-            return `<input type="date" id="${fieldId}" name="${field.key}" ${field.required ? 'required' : ''}>`;
-        case 'boolean':
-            return `<select id="${fieldId}" name="${field.key}" ${field.required ? 'required' : ''}>
-                <option value="">Select...</option>
-                <option value="true">Yes</option>
-                <option value="false">No</option>
-            </select>`;
-        case 'email':
-            return `<input type="email" id="${fieldId}" name="${field.key}" ${field.required ? 'required' : ''} placeholder="${placeholder}">`;
-        case 'textarea':
-            return `<textarea id="${fieldId}" name="${field.key}" ${field.required ? 'required' : ''} placeholder="${placeholder}" rows="4"></textarea>`;
-        default:
-            return `<input type="text" id="${fieldId}" name="${field.key}" ${field.required ? 'required' : ''} placeholder="${placeholder}">`;
-    }
 }
 
 function validateForm() {

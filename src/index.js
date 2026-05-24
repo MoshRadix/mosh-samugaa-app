@@ -147,89 +147,108 @@ ipcMain.handle('upload-template', async (event, { filePath, metadata }) => {
             updatedAt: new Date().toISOString()
         };
         
-        // Auto-detect placeholders for DOCX
-        if (extension === '.docx') {
-            try {
-                const zip = new PizZip(fileBuffer);
-                const doc = new Docxtemplater(zip, {
-                    paragraphLoop: true,
-                    linebreaks: true,
-                    nullGetter: () => ''
-                });
-                
-                const fullText = doc.getFullText();
-                const regex = /\{([^}]+)\}/g;
-                const matches = [...fullText.matchAll(regex)];
-                
-                if (matches.length > 0) {
-                    template.hasFields = true;
-                    const uniqueKeys = new Set();
-                    template.fields = matches
-                        .filter(match => {
-                            const key = match[1].trim();
-                            if (uniqueKeys.has(key)) return false;
-                            uniqueKeys.add(key);
-                            return true;
-                        })
-                        .map(match => ({
-                            key: match[1].trim(),
-                            label: match[1].trim()
-                                .replace(/\./g, ' ')
-                                .replace(/_/g, ' ')
-                                .replace(/\b\w/g, l => l.toUpperCase()),
-                            type: 'string',
-                            required: false,
-                            value: ''
-                        }));
-                }
-            } catch (error) {
-                console.log('No placeholders found or error reading DOCX template:', error.message);
-            }
-        }
+        // Update the field detection logic in the upload-template handler (around line 180)
+// Replace the field detection code with this enhanced version:
+
+// Auto-detect placeholders for DOCX with type detection
+if (extension === '.docx') {
+    try {
+        const zip = new PizZip(fileBuffer);
+        const doc = new Docxtemplater(zip, {
+            paragraphLoop: true,
+            linebreaks: true,
+            nullGetter: () => ''
+        });
         
-        // Auto-detect placeholders for XLSX
-        if (extension === '.xlsx') {
-            try {
-                const workbook = new ExcelJS.Workbook();
-                await workbook.xlsx.load(fileBuffer);
-                const placeholders = [];
-                const uniqueKeys = new Set();
-                
-                workbook.eachSheet(sheet => {
-                    sheet.eachRow(row => {
-                        row.eachCell(cell => {
-                            if (cell.value && typeof cell.value === 'string') {
-                                const regex = /\{([^}]+)\}/g;
-                                const matches = [...cell.value.matchAll(regex)];
-                                matches.forEach(match => {
-                                    const key = match[1].trim();
-                                    if (!uniqueKeys.has(key)) {
-                                        uniqueKeys.add(key);
-                                        placeholders.push({
-                                            key: key,
-                                            label: key
-                                                .replace(/\./g, ' ')
-                                                .replace(/_/g, ' ')
-                                                .replace(/\b\w/g, l => l.toUpperCase()),
-                                            type: 'string',
-                                            required: false,
-                                            value: ''
-                                        });
-                                    }
+        const fullText = doc.getFullText();
+        const regex = /\{([^}]+)\}/g;
+        const matches = [...fullText.matchAll(regex)];
+        
+        if (matches.length > 0) {
+            template.hasFields = true;
+            const uniqueKeys = new Set();
+            template.fields = matches
+                .filter(match => {
+                    const key = match[1].trim();
+                    if (uniqueKeys.has(key)) return false;
+                    uniqueKeys.add(key);
+                    return true;
+                })
+                .map(match => {
+                    const key = match[1].trim();
+                    // Determine field type and RTL requirement
+                    const isDivehi = key.toLowerCase().startsWith('divehi.');
+                    const isDate = key.toLowerCase().startsWith('date.');
+                    const cleanKey = key.replace(/^(divehi\.|date\.)/, '');
+                    
+                    return {
+                        key: key,
+                        label: cleanKey
+                            .replace(/\./g, ' ')
+                            .replace(/_/g, ' ')
+                            .replace(/\b\w/g, l => l.toUpperCase()),
+                        type: isDate ? 'date' : 'string',
+                        required: false,
+                        value: '',
+                        isRTL: isDivehi,
+                        originalKey: key
+                    };
+                });
+        }
+    } catch (error) {
+        console.log('No placeholders found or error reading DOCX template:', error.message);
+    }
+}
+
+// Auto-detect placeholders for XLSX with type detection
+if (extension === '.xlsx') {
+    try {
+        const workbook = new ExcelJS.Workbook();
+        await workbook.xlsx.load(fileBuffer);
+        const placeholders = [];
+        const uniqueKeys = new Set();
+        
+        workbook.eachSheet(sheet => {
+            sheet.eachRow(row => {
+                row.eachCell(cell => {
+                    if (cell.value && typeof cell.value === 'string') {
+                        const regex = /\{([^}]+)\}/g;
+                        const matches = [...cell.value.matchAll(regex)];
+                        matches.forEach(match => {
+                            const key = match[1].trim();
+                            if (!uniqueKeys.has(key)) {
+                                uniqueKeys.add(key);
+                                const isDivehi = key.toLowerCase().startsWith('divehi.');
+                                const isDate = key.toLowerCase().startsWith('date.');
+                                const cleanKey = key.replace(/^(divehi\.|date\.)/, '');
+                                
+                                placeholders.push({
+                                    key: key,
+                                    label: cleanKey
+                                        .replace(/\./g, ' ')
+                                        .replace(/_/g, ' ')
+                                        .replace(/\b\w/g, l => l.toUpperCase()),
+                                    type: isDate ? 'date' : 'string',
+                                    required: false,
+                                    value: '',
+                                    isRTL: isDivehi,
+                                    originalKey: key
                                 });
                             }
                         });
-                    });
+                    }
                 });
-                
-                if (placeholders.length > 0) {
-                    template.hasFields = true;
-                    template.fields = placeholders;
-                }
-            } catch (error) {
-                console.log('No placeholders found or error reading XLSX template:', error.message);
-            }
+            });
+        });
+        
+        if (placeholders.length > 0) {
+            template.hasFields = true;
+            template.fields = placeholders;
         }
+    } catch (error) {
+        console.log('No placeholders found or error reading XLSX template:', error.message);
+    }
+}
         
         db.templates.push(template);
         await saveDatabase(db);
@@ -421,8 +440,7 @@ async function generateExcelDocument(templatePath, outputPath, data) {
     }
 }
 
-// Print document
-// Add this new IPC handler to reload template fields
+// Update the reload-template-fields handler to include type detection
 ipcMain.handle('reload-template-fields', async (event, templateId) => {
     try {
         const db = await getDatabase();
@@ -456,12 +474,18 @@ ipcMain.handle('reload-template-fields', async (event, templateId) => {
                         const key = match[1].trim();
                         if (!uniqueKeys.has(key)) {
                             uniqueKeys.add(key);
+                            const isDivehi = key.toLowerCase().startsWith('divehi.');
+                            const isDate = key.toLowerCase().startsWith('date.');
+                            const cleanKey = key.replace(/^(divehi\.|date\.)/, '');
+                            
                             fields.push({
                                 key: key,
-                                label: key.replace(/\./g, ' ').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-                                type: 'string',
+                                label: cleanKey.replace(/\./g, ' ').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+                                type: isDate ? 'date' : 'string',
                                 required: false,
-                                value: ''
+                                value: '',
+                                isRTL: isDivehi,
+                                originalKey: key
                             });
                         }
                     });
@@ -485,12 +509,18 @@ ipcMain.handle('reload-template-fields', async (event, templateId) => {
                                     const key = match[1].trim();
                                     if (!uniqueKeys.has(key)) {
                                         uniqueKeys.add(key);
+                                        const isDivehi = key.toLowerCase().startsWith('divehi.');
+                                        const isDate = key.toLowerCase().startsWith('date.');
+                                        const cleanKey = key.replace(/^(divehi\.|date\.)/, '');
+                                        
                                         fields.push({
                                             key: key,
-                                            label: key.replace(/\./g, ' ').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-                                            type: 'string',
+                                            label: cleanKey.replace(/\./g, ' ').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+                                            type: isDate ? 'date' : 'string',
                                             required: false,
-                                            value: ''
+                                            value: '',
+                                            isRTL: isDivehi,
+                                            originalKey: key
                                         });
                                     }
                                 });

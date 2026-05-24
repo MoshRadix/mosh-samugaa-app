@@ -385,3 +385,127 @@ body {
 .record-item:hover {
     background: #f8f9fa;
 }
+
+/* Add these styles to the end of your styles.css file */
+
+/* Divehi / RTL Support */
+@font-face {
+    font-family: 'MV Faseyha';
+    src: local('MV Faseyha'), url('https://fonts.cdnfonts.com/css/mv-faseyha') format('woff2');
+    font-weight: normal;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Faruma';
+    src: local('Faruma'), url('https://fonts.cdnfonts.com/css/faruma') format('woff2');
+    font-weight: normal;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Noto Sans Thaana';
+    src: local('Noto Sans Thaana'), url('https://fonts.googleapis.com/css2?family=Noto+Sans+Thaana') format('woff2');
+    font-weight: normal;
+    font-style: normal;
+}
+
+/* RTL Form Styles */
+.rtl-form .form-group label {
+    text-align: right;
+    display: block;
+}
+
+.rtl-group {
+    direction: rtl;
+}
+
+.rtl-input {
+    direction: rtl;
+    font-family: 'Noto Sans Thaana', 'MV Faseyha', 'Faruma', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-size: 1.1rem;
+    text-align: right;
+}
+
+/* RTL input placeholder support */
+.rtl-input::placeholder {
+    text-align: right;
+    direction: rtl;
+}
+
+/* RTL textarea support */
+textarea.rtl-input {
+    text-align: right;
+}
+
+/* RTL select dropdown support */
+select.rtl-input {
+    direction: rtl;
+    text-align: right;
+}
+
+/* Field type badges */
+.field-type-badge {
+    display: inline-block;
+    background: #e8f4f8;
+    color: #2980b9;
+    font-size: 0.7rem;
+    padding: 0.2rem 0.5rem;
+    border-radius: 3px;
+    margin-left: 0.5rem;
+    font-weight: normal;
+}
+
+/* Date picker styling */
+input[type="date"] {
+    padding: 0.75rem;
+    border: 2px solid #ddd;
+    border-radius: 4px;
+    font-size: 1rem;
+}
+
+input[type="date"].rtl-input {
+    direction: ltr; /* Keep date picker LTR for usability while text is RTL */
+    text-align: right;
+    font-family: 'Noto Sans Thaana', 'MV Faseyha', 'Faruma', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Enhanced label for RTL fields */
+.rtl-group label {
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+/* Template info RTL support */
+.rtl-form .template-info {
+    text-align: right;
+}
+
+/* Improve RTL form layout */
+.form-group.rtl-group {
+    margin-bottom: 1.5rem;
+    padding: 0.5rem;
+    background: #fafafa;
+    border-radius: 6px;
+}
+
+/* Divehi text improvements */
+*[dir="rtl"] {
+    letter-spacing: normal;
+    line-height: 1.6;
+}
+
+/* Ensure proper rendering of Thaana script */
+.rtl-input,
+[dir="rtl"] {
+    font-feature-settings: normal;
+    font-variant: normal;
+}
+.btn-info {
+    background: #17a2b8;
+    color: white;
+}
+
+.btn-info:hover {
+    background: #138496;
+}
