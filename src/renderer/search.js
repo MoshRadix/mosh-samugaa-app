@@ -58,26 +58,33 @@ function renderSearchResults(results) {
         return;
     }
     
+    // Re-mapped to perfectly replicate the layout block structure of the templates grid
     container.innerHTML = results.map(doc => `
-        <div class="search-result-item" data-template-id="${doc.id}">
-            <div class="search-result-info">
-                <h3>${escapeHtml(doc.name)}</h3>
-                <p>${escapeHtml(doc.description || 'No description')} | Category: ${escapeHtml(doc.category || 'General')}</p>
-                <p>
-                    <span class="badge ${doc.hasFields ? 'badge-fillable' : 'badge-static'}">
-                        ${doc.hasFields ? 'Fillable' : 'Static'}
-                    </span>
-                    <span class="template-type-badge">${doc.type.toUpperCase()}</span>
-                    ${doc.hasFields ? `<span style="font-size: 0.75rem;"> (${doc.fields?.length || 0} fields)</span>` : ''}
-                </p>
+        <div class="template-card" data-template-id="${doc.id}">
+            <div>
+                <div class="template-card-header">
+                    <h3>${escapeHtml(doc.name)}</h3>
+                    <div class="template-badges">
+                        <span class="template-type-badge">${doc.type.toUpperCase()}</span>
+                        <span class="badge ${doc.hasFields ? 'badge-fillable' : 'badge-static'}">
+                            ${doc.hasFields ? 'Fillable' : 'Static'}
+                        </span>
+                    </div>
+                </div>
+                <p>${escapeHtml(doc.description || 'No description provided')}</p>
+                <div class="category">
+                    Category: ${escapeHtml(doc.category || 'General')} 
+                    ${doc.hasFields ? `• (${doc.fields?.length || 0} fields)` : ''}
+                </div>
             </div>
-            <div class="search-result-actions">
+            
+            <div class="template-card-actions">
                 ${doc.hasFields ? `
                     <button class="btn btn-primary btn-small fill-from-search-btn" data-template-id="${doc.id}">Fill Form</button>
-                    <button class="btn btn-secondary btn-small preview-template-btn" data-template-id="${doc.id}">Preview</button>
+                    <button class="btn btn-outline btn-small preview-template-btn" data-template-id="${doc.id}">Preview</button>
                 ` : `
                     <button class="btn btn-success btn-small print-static-btn" data-template-id="${doc.id}">Print</button>
-                    <button class="btn btn-secondary btn-small preview-template-btn" data-template-id="${doc.id}">Preview</button>
+                    <button class="btn btn-outline btn-small preview-template-btn" data-template-id="${doc.id}">Preview</button>
                 `}
             </div>
         </div>
@@ -118,12 +125,12 @@ async function handleFillFromSearch(event) {
         const template = templates.find(t => t.id === templateId);
         
         if (!template) {
-            alert('Template not found');
+            showToast('Template not found', "warning");
             return;
         }
         
         if (!template.hasFields || !template.fields || template.fields.length === 0) {
-            alert('This template has no fillable fields. Please reconfigure the template.');
+            showToast('This template has no fillable fields. Please reconfigure the template.', "warning");
             return;
         }
         
@@ -132,11 +139,13 @@ async function handleFillFromSearch(event) {
             switchView('fill-form');
         } else {
             console.error('switchView not available');
-            alert('Navigation error');
+            //alert('Navigation error');
+            showToast('Navigation error', "error");
         }
     } catch (error) {
         console.error('Error in fill from search:', error);
-        alert('Error loading template: ' + error.message);
+        //alert('Error loading template: ' + error.message);
+        showToast('Error loading template: ' + error.message, "error");
     }
 }
 
@@ -151,19 +160,23 @@ async function handlePrintStatic(event) {
         const template = templates.find(t => t.id === templateId);
         
         if (!template) {
-            alert('Template not found');
+            //alert('Template not found');
+            showToast('Template not found', "warning");
+            
             return;
         }
         
         // Check if it's static (no fillable fields)
         if (template.hasFields) {
-            alert('This template has fillable fields. Please use the Fill Form option instead.');
+            //alert('This template has fillable fields. Please use the Fill Form option instead.');
+            showToast('This template has fillable fields. Please use the Fill Form option instead.', "warning");
             return;
         }
         
         // Verify file exists
         if (!template.filePath) {
-            alert('Template file not found. Please re-upload the template.');
+            // alert('Template file not found. Please re-upload the template.');
+            showToast('Template file not found. Please re-upload the template.', "error");
             return;
         }
         
@@ -175,20 +188,22 @@ async function handlePrintStatic(event) {
         button.disabled = true;
         
         // Confirm with user
-        const confirmPrint = confirm(`Print "${template.name}" to default printer?`);
-        if (!confirmPrint) {
-            button.textContent = originalText;
-            button.disabled = false;
-            return;
-        }
+        // const confirmPrint = confirm(`Print "${template.name}" to default printer?`);
+        // if (!confirmPrint) {
+        //     button.textContent = originalText;
+        //     button.disabled = false;
+        //     return;
+        // }
         
         // Send to printer
         const result = await window.electronAPI.printDocument(template.filePath);
         
         if (result) {
-            alert('Document sent to printer successfully!');
+            // alert('Document sent to printer successfully!');
+            showToast('Document sent to printer successfully!', "success");
         } else {
-            alert('Failed to print. Please check if a printer is available.');
+            // alert('Failed to print. Please check if a printer is available.');
+            showToast('Failed to print. Please check if a printer is available.', "error");
         }
         
         button.textContent = originalText;
@@ -196,7 +211,8 @@ async function handlePrintStatic(event) {
         
     } catch (error) {
         console.error('Error printing document:', error);
-        alert('Error printing: ' + error.message);
+        // alert('Error printing: ' + error.message);
+        showToast('Error printing: ' + error.message, "error");
         button.disabled = false;
         button.textContent = 'Print';
     }
@@ -210,8 +226,8 @@ async function handlePreview(event) {
     try {
         await window.electronAPI.previewTemplate(templateId);
     } catch (error) {
-        console.error('Error previewing template:', error);
-        alert('Error previewing template: ' + error.message);
+        // console.error('Error previewing template:', error);
+        showToast('Error previewing template: ' + error.message, "error");
     }
 }
 

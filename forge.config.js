@@ -1,32 +1,38 @@
-const { FusesPlugin } = require('@electron-forge/plugin-fuses');
-const { FuseV1Options, FuseVersion } = require('@electron/fuses');
+const { FusesPlugin } = require("@electron-forge/plugin-fuses");
+const { FuseV1Options, FuseVersion } = require("@electron/fuses");
 
 module.exports = {
   packagerConfig: {
+    icon: "./assets/icons/app", // extension inferred per platform
     asar: true,
   },
   rebuildConfig: {},
   makers: [
     {
-      name: '@electron-forge/maker-squirrel',
+      name: "@electron-forge/maker-squirrel",
+      config: {
+        setupIcon: "./assets/icons/app.ico", // installer icon
+        iconUrl: "https://example.com/app.ico", // public URL to your .ico file
+        shortcutName: "Mosh Forms App", // shortcut name in Start Menu/Desktop
+        noMsi: true, // skip MSI, only generate .exe
+      },
+    },
+    {
+      name: "@electron-forge/maker-zip",
+      platforms: ["darwin"],
+    },
+    {
+      name: "@electron-forge/maker-deb",
       config: {},
     },
     {
-      name: '@electron-forge/maker-zip',
-      platforms: ['darwin'],
-    },
-    {
-      name: '@electron-forge/maker-deb',
-      config: {},
-    },
-    {
-      name: '@electron-forge/maker-rpm',
+      name: "@electron-forge/maker-rpm",
       config: {},
     },
   ],
   plugins: [
     {
-      name: '@electron-forge/plugin-auto-unpack-natives',
+      name: "@electron-forge/plugin-auto-unpack-natives",
       config: {},
     },
     // Fuses are used to enable/disable various Electron functionality

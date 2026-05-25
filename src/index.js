@@ -68,6 +68,7 @@ function createWindow() {
       sandbox: false,
     },
     title: "Document Generator",
+    autoHideMenuBar: true,   // <-- hides menu bar unless Alt is pressed
     show: false,
   });
 
@@ -88,9 +89,10 @@ ipcMain.handle("open-file-dialog", async () => {
   const result = await dialog.showOpenDialog(mainWindow, {
     properties: ["openFile"],
     filters: [
-      { name: "Document Templates", extensions: ["docx", "xlsx"] },
+      { name: "Document Templates", extensions: ["docx", "xlsx", "pdf"] }, // <-- Added pdf here
       { name: "Word Documents", extensions: ["docx"] },
       { name: "Excel Spreadsheets", extensions: ["xlsx"] },
+      { name: "Static PDF Files", extensions: ["pdf"] }, // <-- Added filter option here
     ],
   });
 
@@ -104,8 +106,10 @@ ipcMain.handle("save-file-dialog", async (event, { defaultName, filters }) => {
   const result = await dialog.showSaveDialog(mainWindow, {
     defaultPath: defaultName,
     filters: filters || [
-      { name: "Document", extensions: ["docx"] },
-      { name: "PDF", extensions: ["pdf"] },
+      { name: "Document Templates", extensions: ["docx", "xlsx", "pdf"] }, // <-- Added pdf here
+      { name: "Word Documents", extensions: ["docx"] },
+      { name: "Excel Spreadsheets", extensions: ["xlsx"] },
+      { name: "Static PDF Files", extensions: ["pdf"] }, // <-- Added filter option here
     ],
   });
 
@@ -145,6 +149,8 @@ ipcMain.handle("upload-template", async (event, { filePath, metadata }) => {
           ? "word"
           : extension === ".xlsx"
             ? "excel"
+            : extension === ".pdf" 
+              ? "pdf" // <-- Added PDF identification type
             : "unknown",
       hasFields: false,
       fields: [],
@@ -755,6 +761,7 @@ ipcMain.handle("open-and-print", async (event, filePath) => {
   }
 });
 // Print document directly to default printer
+// Print document directly to default printer
 ipcMain.handle("print-document", async (event, filePath) => {
   try {
     console.log("print-document called with filePath:", filePath);
@@ -762,10 +769,47 @@ ipcMain.handle("print-document", async (event, filePath) => {
     // Check if file exists
     await fs.access(filePath);
 
-    // For Windows
+    // Dynamic extension checking
+    const isPdf = path.extname(filePath).toLowerCase() === ".pdf";
+
+    // WINDOWS HANDLING
     if (process.platform === "win32") {
+      // If it's a PDF, use Electron's internal printing mechanism to avoid shell association errors
+      if (isPdf) {
+        return new Promise((resolve, reject) => {
+          // Create a hidden browser window to load and process the PDF
+          let pdfWindow = new BrowserWindow({
+            show: false,
+            webPreferences: {
+              plugins: true // Allows internal loading of the PDF architecture
+            }
+          });
+
+          pdfWindow.loadURL(`file://${filePath}`);
+
+          pdfWindow.webContents.on('did-finish-load', () => {
+            // Use silent print to dispatch straight to the system's default printer
+            pdfWindow.webContents.print({ silent: true, printBackground: true }, (success, failureReason) => {
+              pdfWindow.close(); // Clean up memory allocation
+              if (success) {
+                console.log("PDF sent to printer successfully via Electron context");
+                resolve(true);
+              } else {
+                console.error("Print failure exception:", failureReason);
+                reject(new Error(`Electron native printing failed: ${failureReason}`));
+              }
+            });
+          });
+
+          pdfWindow.webContents.on('did-fail-load', (err) => {
+            pdfWindow.close();
+            reject(new Error(`Failed to load target PDF into background window object`));
+          });
+        });
+      } 
+      
+      // Keep your existing working fallback for Word & Excel structures
       const { exec } = require("child_process");
-      // Use PowerShell to print to default printer
       const command = `powershell -Command "Start-Process -FilePath '${filePath}' -Verb Print -WindowStyle Hidden"`;
 
       return new Promise((resolve, reject) => {
@@ -780,11 +824,10 @@ ipcMain.handle("print-document", async (event, filePath) => {
         });
       });
     }
-    // For macOS
+    // MACOS HANDLING
     else if (process.platform === "darwin") {
       const { exec } = require("child_process");
-      // Use lp command for macOS
-      const command = `lp "${filePath}"`;
+      const command = `lp "${filePath}"`; // Native CUPS handles PDFs seamlessly on macOS
 
       return new Promise((resolve, reject) => {
         exec(command, { timeout: 30000 }, (error, stdout, stderr) => {
@@ -798,11 +841,10 @@ ipcMain.handle("print-document", async (event, filePath) => {
         });
       });
     }
-    // For Linux
+    // LINUX HANDLING
     else if (process.platform === "linux") {
       const { exec } = require("child_process");
-      // Use lp command for Linux
-      const command = `lp "${filePath}"`;
+      const command = `lp "${filePath}"`; // Native CUPS handles PDFs seamlessly on Linux
 
       return new Promise((resolve, reject) => {
         exec(command, { timeout: 30000 }, (error, stdout, stderr) => {
@@ -824,8 +866,13 @@ ipcMain.handle("print-document", async (event, filePath) => {
   }
 });
 
+const { Menu } = require('electron');  // add this at the top with other requires
+
+
 // App lifecycle
 app.whenReady().then(async () => {
+  Menu.setApplicationMenu(null);      // <-- this removes the menu bar
+  
   await initDatabase();
   createWindow();
 

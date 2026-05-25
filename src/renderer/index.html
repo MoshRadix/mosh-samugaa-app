@@ -3,17 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document Generator</title>
+    <title>MTO Document Generator</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div class="app-container">
         <header class="app-header">
-            <h1>📄 Document Generator</h1>
+            <h1>📄 MTO Document Generator</h1>
             <nav class="main-nav">
-                <button class="nav-btn active" data-view="templates">Templates</button>
-                <button class="nav-btn" data-view="fill-form">Fill Form</button>
                 <button class="nav-btn" data-view="search">Search & Print</button>
+                <button class="nav-btn" data-view="fill-form">Fill Form</button>
+                <button class="nav-btn active" data-view="templates">Templates</button>
+                
+                
             </nav>
         </header>
 
@@ -30,6 +32,7 @@
                         <option value="all">All Types</option>
                         <option value="word">Word Documents</option>
                         <option value="excel">Excel Spreadsheets</option>
+                        <option value="pdf">PDF Documents</option>
                     </select>
                     <select id="fillable-filter" class="filter-select">
                         <option value="all">All Templates</option>
@@ -46,7 +49,7 @@
             <div id="fill-form-view" class="view">
                 <div class="view-header">
                     <h2>Fill Template Form</h2>
-                    <button id="back-to-templates-btn" class="btn btn-secondary">← Back to Templates</button>
+                    <button id="back-to-search-btn" class="btn btn-secondary">← Back to Search</button>
                 </div>
                 <div id="form-container">
                     <!-- Form will be rendered here -->
@@ -64,6 +67,7 @@
                         <option value="all">All Types</option>
                         <option value="word">Word Documents</option>
                         <option value="excel">Excel Spreadsheets</option>
+                        <option value="pdf">PDF Documents</option> </select>
                     </select>
                     <select id="search-fillable-filter" class="filter-select">
                         <option value="all">All Documents</option>
@@ -71,7 +75,7 @@
                         <option value="fillable">Fillable Documents</option>
                     </select>
                 </div>
-                <div id="search-results" class="search-results">
+                <div id="search-results" class="templates-grid">
                     <!-- Search results will be rendered here -->
                 </div>
             </div>

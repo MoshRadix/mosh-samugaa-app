@@ -23,7 +23,6 @@ const languageConfig = {
   },
 };
 
-
 // Detect if field should use Divehi based on field properties
 function shouldUseDivehi(field) {
   if (field.isRTL === true) return true;
@@ -52,20 +51,32 @@ const DIVEHI_MONTHS = [
  * Example: "2026-05-12" -> "12 May 2026"
  */
 function formatEnglishDate(dateString) {
-    if (!dateString) return '';
-    const parts = dateString.split('-');
-    if (parts.length !== 3) return dateString;
-    
-    const year = parseInt(parts[0], 10);
-    const month = parseInt(parts[1], 10) - 1; // 0-index
-    const day = parseInt(parts[2], 10);
-    
-    if (isNaN(year) || isNaN(month) || isNaN(day)) return dateString;
-    
-    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
-                        'July', 'August', 'September', 'October', 'November', 'December'];
-    // Or use short format: 'Jan', 'Feb', ... depending on preference
-    return `${day} ${monthNames[month]} ${year}`;
+  if (!dateString) return "";
+  const parts = dateString.split("-");
+  if (parts.length !== 3) return dateString;
+
+  const year = parseInt(parts[0], 10);
+  const month = parseInt(parts[1], 10) - 1; // 0-index
+  const day = parseInt(parts[2], 10);
+
+  if (isNaN(year) || isNaN(month) || isNaN(day)) return dateString;
+
+  const monthNames = [
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
+  ];
+  // Or use short format: 'Jan', 'Feb', ... depending on preference
+  return `${day} ${monthNames[month]} ${year}`;
 }
 
 /**
@@ -91,31 +102,31 @@ function parseDatePlaceholderKey(key) {
  * Get preset date based on placeholder rule and current date
  */
 function getPresetDateFromPlaceholder(key) {
-    const parsed = parseDatePlaceholderKey(key);
-    if (!parsed) {
-        // No preset rule: use today's date
-        return new Date();
+  const parsed = parseDatePlaceholderKey(key);
+  if (!parsed) {
+    // No preset rule: use today's date
+    return new Date();
+  }
+
+  const today = new Date();
+  let targetYear = today.getFullYear();
+  let targetMonth = today.getMonth();
+
+  if (parsed.rule === "next") {
+    targetMonth++;
+    if (targetMonth > 11) {
+      targetMonth = 0;
+      targetYear++;
     }
-    
-    const today = new Date();
-    let targetYear = today.getFullYear();
-    let targetMonth = today.getMonth();
-    
-    if (parsed.rule === 'next') {
-        targetMonth++;
-        if (targetMonth > 11) {
-            targetMonth = 0;
-            targetYear++;
-        }
-    }
-    
-    let targetDay = parsed.day;
-    const daysInMonth = new Date(targetYear, targetMonth + 1, 0).getDate();
-    if (targetDay > daysInMonth) {
-        targetDay = daysInMonth;
-    }
-    
-    return new Date(targetYear, targetMonth, targetDay);
+  }
+
+  let targetDay = parsed.day;
+  const daysInMonth = new Date(targetYear, targetMonth + 1, 0).getDate();
+  if (targetDay > daysInMonth) {
+    targetDay = daysInMonth;
+  }
+
+  return new Date(targetYear, targetMonth, targetDay);
 }
 
 /**
@@ -407,8 +418,8 @@ function getFieldInputWithAutoSwitch(field) {
     const presetDate = getPresetDateFromPlaceholder(field.key);
     // Format as YYYY-MM-DD using LOCAL date components (avoids timezone shift)
     const year = presetDate.getFullYear();
-    const month = String(presetDate.getMonth() + 1).padStart(2, '0');
-    const day = String(presetDate.getDate()).padStart(2, '0');
+    const month = String(presetDate.getMonth() + 1).padStart(2, "0");
+    const day = String(presetDate.getDate()).padStart(2, "0");
     const presetValue = `${year}-${month}-${day}`;
 
     return `
@@ -420,7 +431,7 @@ function getFieldInputWithAutoSwitch(field) {
                class="form-input ${isDivehiField ? "divehi-input" : "english-input"}"
                dir="ltr">
     `;
-}
+  }
 
   // Make sure NO disabled attribute is added
   if (field.type === "textarea") {
@@ -624,6 +635,8 @@ async function renderFillForm() {
   }
 
   await loadDataRecords();
+  // Inside renderFillForm, after setting up event listeners, add:
+  ensureFieldsEditable();
 }
 
 // Helper function to get field type icon
@@ -785,22 +798,26 @@ async function generateDocument() {
   }
 
   let formData = collectFormData();
- // Convert date fields: Divehi if key contains 'divehi', otherwise English
-if (window.selectedTemplate.fields) {
+  // Convert date fields: Divehi if key contains 'divehi', otherwise English
+  if (window.selectedTemplate.fields) {
     for (const field of window.selectedTemplate.fields) {
-        if (field.type === 'date' && formData[field.key]) {
-            const rawDate = formData[field.key];
-            const isDivehiDate = field.key.toLowerCase().includes('divehi');
-            if (isDivehiDate) {
-                formData[field.key] = formatDivehiDate(rawDate);
-                console.log(`Converted date field ${field.key} to Divehi: ${formData[field.key]}`);
-            } else {
-                formData[field.key] = formatEnglishDate(rawDate);
-                console.log(`Converted date field ${field.key} to English: ${formData[field.key]}`);
-            }
+      if (field.type === "date" && formData[field.key]) {
+        const rawDate = formData[field.key];
+        const isDivehiDate = field.key.toLowerCase().includes("divehi");
+        if (isDivehiDate) {
+          formData[field.key] = formatDivehiDate(rawDate);
+          console.log(
+            `Converted date field ${field.key} to Divehi: ${formData[field.key]}`,
+          );
+        } else {
+          formData[field.key] = formatEnglishDate(rawDate);
+          console.log(
+            `Converted date field ${field.key} to English: ${formData[field.key]}`,
+          );
         }
+      }
     }
-}
+  }
 
   if (!window.electronAPI) {
     console.error("electronAPI not available");
@@ -827,10 +844,10 @@ if (window.selectedTemplate.fields) {
       outputFormat: outputFormat,
     });
 
-    const shouldPrint = confirm(
-      "✅ Document generated successfully!\n\nDo you want to send it to the printer?",
-    );
-
+    // const shouldPrint = confirm(
+    //   "✅ Document generated successfully!\n\nDo you want to send it to the printer?",
+    // );
+    const shouldPrint = true; // Always attempt to print, handle errors gracefully
     if (shouldPrint) {
       if (generateBtn) {
         generateBtn.innerHTML = '<span class="btn-icon">🖨️</span> Printing...';
@@ -842,27 +859,40 @@ if (window.selectedTemplate.fields) {
         }
 
         await window.electronAPI.openAndPrint(result.outputPath);
-        alert("✅ Document has been sent to the printer successfully!");
+        // alert("✅ Document has been sent to the printer successfully!");
+        showToast(
+          "✅ Document has been sent to the printer successfully!",
+          "success",
+        );
       } catch (printError) {
         console.error("Print error:", printError);
-        alert(
+        // alert(
+        //   `⚠️ Document generated but failed to print.\n\nFile saved at: ${result.outputPath}\n\nYou can manually open and print the file.`,
+        // );
+        showToast(
           `⚠️ Document generated but failed to print.\n\nFile saved at: ${result.outputPath}\n\nYou can manually open and print the file.`,
+          "warning",
         );
       }
     } else {
-      alert(
+      // alert(
+      //   `✅ Document saved successfully!\n\nFile location: ${result.outputPath}`,
+      // );
+      showToast(
         `✅ Document saved successfully!\n\nFile location: ${result.outputPath}`,
+        "success",
       );
     }
 
-    const another = confirm("Do you want to fill another form?");
-    if (!another) {
-      if (typeof switchView === "function") {
-        switchView("templates");
-      }
-    } else {
-      clearForm();
-    }
+    // const another = confirm("Do you want to fill another form?");
+    // if (!another) {
+    //   if (typeof switchView === "function") {
+    //     switchView("templates");
+    //   }
+    // } else {
+    //   clearForm();
+    // }
+    clearForm();
   } catch (error) {
     console.error("Error generating document:", error);
 
@@ -939,11 +969,12 @@ async function saveDataRecord() {
       data: formData,
     });
 
-    alert("💾 Record saved successfully!");
+   
+    showToast("💾 Record saved successfully!", "success");
     await loadDataRecords();
   } catch (error) {
     console.error("Error saving record:", error);
-    alert("Error saving record: " + error.message);
+    showToast("Error saving record: " + error.message, "error");
   }
 }
 
@@ -952,7 +983,7 @@ async function loadRecord(recordId) {
 
   if (!window.selectedTemplate) {
     console.error("No template selected");
-    alert("No template selected");
+    showToast("No template selected", "warning");
     return;
   }
 
@@ -963,7 +994,7 @@ async function loadRecord(recordId) {
     const record = records.find((r) => r.id === recordId);
 
     if (!record) {
-      alert("Record not found");
+      showToast("Record not found", "warning");
       return;
     }
 
@@ -1069,7 +1100,7 @@ async function loadRecord(recordId) {
     }, 10);
   } catch (error) {
     console.error("Error loading record:", error);
-    alert("Error loading record: " + error.message);
+    showToast("Error loading record: " + error.message, "error");
   }
 }
 
@@ -1196,6 +1227,19 @@ document.addEventListener("keydown", (e) => {
   }
 });
 
+// Force all form fields to be editable (overwrites any accidentally set readOnly/disabled)
+function ensureFieldsEditable() {
+  const allInputs = document.querySelectorAll(
+    "#data-form input, #data-form select, #data-form textarea",
+  );
+  allInputs.forEach((input) => {
+    input.removeAttribute("readonly");
+    input.readOnly = false;
+    input.removeAttribute("disabled");
+    input.disabled = false;
+    input.classList.remove("disabled", "readonly");
+  });
+}
 // Make sure functions are available globally
 window.renderFillForm = renderFillForm;
 window.saveDataRecord = saveDataRecord;

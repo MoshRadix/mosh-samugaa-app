@@ -1,33 +1,30 @@
 // Navigation to fill form
-function fillTemplate(id) {
+async function fillTemplate(id) {
   console.log("fillTemplate called with id:", id);
-  console.log("allTemplates:", allTemplates);
-
-  const foundTemplate = allTemplates.find((t) => t.id === id);
-  console.log("Found template:", foundTemplate);
-
-  if (foundTemplate) {
-    // Set the GLOBAL selectedTemplate
-    window.selectedTemplate = foundTemplate;
-    console.log("Set window.selectedTemplate:", window.selectedTemplate);
-    console.log("Template has fields:", foundTemplate.hasFields);
-
-    // Call switchView to change to fill form
-    if (typeof switchView === "function") {
-      switchView("fill-form");
+  try {
+    // Always get fresh template data
+    const templates = await window.electronAPI.getTemplates();
+    const foundTemplate = templates.find((t) => t.id === id);
+    if (foundTemplate) {
+      window.selectedTemplate = foundTemplate;
+      console.log("Selected template:", window.selectedTemplate);
+      if (typeof switchView === "function") {
+        switchView("fill-form");
+      } else {
+        console.error("switchView missing");
+      }
     } else {
-      console.error("switchView is not available");
-      alert("Navigation error");
+      showToast("Template not found", "warning");
     }
-  } else {
-    console.error("Template not found with id:", id);
-    alert("Template not found");
+  } catch (error) {
+    console.error("Error loading template:", error);
+    showToast("Error loading template", "error");
   }
 }
 async function editTemplate(id) {
   const template = allTemplates.find((t) => t.id === id);
   if (!template) {
-    alert("Template not found");
+    showToast("Template not found", "warning");
     return;
   }
 
@@ -54,10 +51,12 @@ async function editTemplate(id) {
                 <select id="edit-category">
                     ${[
                       "General",
+                      "Forms",
+                      "Attendance Sheets",
+                      "Contracts",
                       "Invoices",
                       "Reports",
                       "Letters",
-                      "Contracts",
                       "Other",
                     ]
                       .map(
@@ -96,7 +95,7 @@ async function editTemplate(id) {
     };
 
     if (!updates.name) {
-      alert("Template name is required");
+      showToast("Template name is required", "warning");
       return;
     }
 
@@ -109,14 +108,24 @@ async function editTemplate(id) {
       console.log("Template updated:", updatedTemplate);
       closeModal("template-modal");
       await loadTemplates();
-      alert("Template updated successfully!");
+      showToast("Template updated successfully!", "success");
     } catch (error) {
       console.error("Error updating template:", error);
-      alert("Error updating template: " + error.message);
+      showToast("Error updating template: " + error.message, "error");
     }
   });
 
   openModal("template-modal");
+}
+// Template Management
+// Load and display templates
+async function loadTemplates() {
+  try {
+    allTemplates = await window.electronAPI.getTemplates();
+    renderTemplates();
+  } catch (error) {
+    console.error("Error loading templates:", error);
+  }
 }
 async function renderTemplates() {
   const searchTerm =
@@ -165,7 +174,13 @@ async function renderTemplates() {
         <div class="template-card">
             <div class="template-card-header">
                 <h3>${escapeHtml(template.name)}</h3>
-                <span class="template-type-badge">${template.type === "word" ? "DOCX" : "XLSX"}</span>
+                <span class="template-type-badge">${
+                  template.type === "word"
+                    ? "DOCX"
+                    : template.type === "excel"
+                      ? "XLSX"
+                      : "PDF"
+                }</span>
             </div>
             <p>${escapeHtml(template.description || "No description")}</p>
             <p class="category">Category: ${escapeHtml(template.category)}</p>
@@ -175,10 +190,10 @@ async function renderTemplates() {
                 </span>
                 ${template.hasFields ? `<span style="font-size: 0.75rem;"> (${template.fields?.length || 0} fields)</span>` : ""}
             </p>
-            // In renderTemplates function, update the template-card-actions section
+            
             <div class="template-card-actions">
                 ${
-                template.hasFields
+                  template.hasFields
                     ? `
                     <button class="btn btn-success btn-small" onclick="fillTemplate('${template.id}')">Fill Form</button>
                     <button class="btn btn-primary btn-small" onclick="editTemplate('${template.id}')">Edit</button>
@@ -210,21 +225,22 @@ async function printStaticDocument(templateId) {
     const template = templates.find((t) => t.id === templateId);
 
     if (!template) {
-      alert("Template not found");
+      showToast("Template not found", "warning");
       return;
     }
 
     // Check if template has fields
     if (template.hasFields) {
-      alert(
+      showToast(
         "This is a fillable template. Please fill out the form first before printing.",
+        "warning"
       );
       return;
     }
 
     // Verify the file exists
     if (!template.filePath) {
-      alert("Template file not found. Please re-upload the template.");
+      showToast("Template file not found. Please re-upload the template.", "error");
       return;
     }
 
@@ -249,9 +265,9 @@ async function printStaticDocument(templateId) {
     const result = await window.electronAPI.printDocument(template.filePath);
 
     if (result) {
-      alert("Document sent to printer successfully!");
+      showToast("Document sent to printer successfully!", "success");
     } else {
-      alert("Failed to print. Please check if a printer is available.");
+      showToast("Failed to print. Please check if a printer is available.", "error");
     }
 
     // Reset buttons
@@ -261,7 +277,7 @@ async function printStaticDocument(templateId) {
     });
   } catch (error) {
     console.error("Error printing static document:", error);
-    alert("Error printing: " + error.message);
+    showToast("Error printing: " + error.message, "error");
 
     // Reset buttons
     const printButtons = document.querySelectorAll(
@@ -284,7 +300,7 @@ async function editFieldTypes(templateId) {
   const template = templates.find((t) => t.id === templateId);
 
   if (!template) {
-    alert("Template not found");
+    showToast("Template not found", "warning");
     return;
   }
 
@@ -294,7 +310,7 @@ async function editFieldTypes(templateId) {
 
   if (!modal || !modalBody) {
     console.error("Fields modal not found in DOM");
-    alert("Modal not found. Please check your HTML.");
+    showToast("Modal not found. Please check your HTML.", "error");
     return;
   }
 
@@ -375,7 +391,7 @@ async function saveFieldSettings(templateId) {
   const template = templates.find((t) => t.id === templateId);
 
   if (!template || !template.fields) {
-    alert("Template or fields not found");
+    showToast("Template or fields not found", "warning");
     return;
   }
 
@@ -414,10 +430,10 @@ async function saveFieldSettings(templateId) {
       await renderTemplates();
     }
 
-    alert("Field settings saved successfully!");
+    showToast("Field settings saved successfully!", "success");
   } catch (error) {
     console.error("Error saving field settings:", error);
-    alert("Error saving settings: " + error.message);
+    showToast("Error saving settings: " + error.message, "error");
   }
 }
 
@@ -431,7 +447,7 @@ async function removeField(templateId, fieldIndex) {
   const template = templates.find((t) => t.id === templateId);
 
   if (!template || !template.fields) {
-    alert("Template not found");
+    showToast("Template not found", "warning");
     return;
   }
 
@@ -460,37 +476,41 @@ async function removeField(templateId, fieldIndex) {
       await renderTemplates();
     }
 
-    alert("Field removed successfully!");
+    showToast("Field removed successfully!", "success");
   } catch (error) {
     console.error("Error removing field:", error);
-    alert("Error removing field: " + error.message);
+    showToast("Error removing field: " + error.message, "error");
   }
 }
 
 // Delete template function
 async function deleteTemplate(id) {
-    if (!confirm('Are you sure you want to delete this template? This action cannot be undone.')) {
-        return;
-    }
-    
-    try {
-        await window.electronAPI.deleteTemplate(id);
-        await loadTemplates();
-        alert('Template deleted successfully!');
-    } catch (error) {
-        console.error('Error deleting template:', error);
-        alert('Error deleting template: ' + error.message);
-    }
+  if (
+    !confirm(
+      "Are you sure you want to delete this template? This action cannot be undone.",
+    )
+  ) {
+    return;
+  }
+
+  try {
+    await window.electronAPI.deleteTemplate(id);
+    await loadTemplates();
+    showToast("Template deleted successfully!", "success");
+  } catch (error) {
+    console.error("Error deleting template:", error);
+    showToast("Error deleting template: " + error.message, "error");
+  }
 }
 
 // Preview template function
 async function previewTemplate(id) {
-    try {
-        await window.electronAPI.previewTemplate(id);
-    } catch (error) {
-        console.error('Error previewing template:', error);
-        alert('Error previewing template: ' + error.message);
-    }
+  try {
+    await window.electronAPI.previewTemplate(id);
+  } catch (error) {
+    console.error("Error previewing template:", error);
+    showToast("Error previewing template: " + error.message, "error");
+  }
 }
 // Make sure these functions are available globally
 window.editFieldTypes = editFieldTypes;
@@ -505,4 +525,3 @@ window.fillTemplate = fillTemplate;
 window.editTemplate = editTemplate;
 window.deleteTemplate = deleteTemplate;
 window.previewTemplate = previewTemplate;
-window.printStaticDocument = printStaticDocument;
