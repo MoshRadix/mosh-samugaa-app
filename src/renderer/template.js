@@ -467,6 +467,31 @@ async function removeField(templateId, fieldIndex) {
   }
 }
 
+// Delete template function
+async function deleteTemplate(id) {
+    if (!confirm('Are you sure you want to delete this template? This action cannot be undone.')) {
+        return;
+    }
+    
+    try {
+        await window.electronAPI.deleteTemplate(id);
+        await loadTemplates();
+        alert('Template deleted successfully!');
+    } catch (error) {
+        console.error('Error deleting template:', error);
+        alert('Error deleting template: ' + error.message);
+    }
+}
+
+// Preview template function
+async function previewTemplate(id) {
+    try {
+        await window.electronAPI.previewTemplate(id);
+    } catch (error) {
+        console.error('Error previewing template:', error);
+        alert('Error previewing template: ' + error.message);
+    }
+}
 // Make sure these functions are available globally
 window.editFieldTypes = editFieldTypes;
 window.saveFieldSettings = saveFieldSettings;

@@ -509,3 +509,536 @@ input[type="date"].rtl-input {
 .btn-info:hover {
     background: #138496;
 }
+/* Two-Column Form Layout */
+.two-column-form {
+    display: flex;
+    gap: 2rem;
+    margin-bottom: 2rem;
+}
+
+.form-column {
+    flex: 1;
+    min-width: 0; /* Prevents overflow */
+}
+
+/* Responsive: Stack on smaller screens */
+@media (max-width: 768px) {
+    .two-column-form {
+        flex-direction: column;
+        gap: 1rem;
+    }
+}
+
+/* Enhanced Form Groups */
+.form-group {
+    margin-bottom: 1.5rem;
+    background: white;
+    padding: 1rem;
+    border-radius: 8px;
+    border: 1px solid #e0e0e0;
+    transition: all 0.2s ease;
+}
+
+.form-group:hover {
+    border-color: #3498db;
+    box-shadow: 0 2px 8px rgba(52, 152, 219, 0.1);
+}
+
+.form-group:focus-within {
+    border-color: #3498db;
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: #2c3e50;
+    font-size: 0.9rem;
+}
+
+.required-star {
+    color: #e74c3c;
+    margin-left: 0.25rem;
+}
+
+.field-type-indicator {
+    margin-left: 0.5rem;
+    font-size: 0.8rem;
+    opacity: 0.7;
+}
+
+.form-input {
+    width: 100%;
+    padding: 0.75rem;
+    border: 2px solid #e0e0e0;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    transition: all 0.2s ease;
+    background: white;
+}
+
+.form-input:focus {
+    outline: none;
+    border-color: #3498db;
+    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+}
+
+.form-input:disabled {
+    background: #f5f5f5;
+    cursor: not-allowed;
+}
+
+.field-hint {
+    font-size: 0.7rem;
+    color: #95a5a6;
+    margin-top: 0.25rem;
+}
+
+/* Template Info Card */
+.template-info-card {
+    background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+    color: white;
+    padding: 0.5em;
+    padding-left: 1.5em;
+    padding-right: 1.5em;
+    border-radius: 12px;
+    margin-bottom: 0.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.template-info-content h3 {
+    margin-bottom: 0.1rem;
+    font-size: 1.3rem;
+}
+
+.template-info-content p {
+    opacity: 0.9;
+    margin-bottom: 0.75rem;
+}
+
+.template-meta {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.meta-badge {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+}
+
+.meta-badge.divehi-badge {
+    background: rgba(46, 204, 113, 0.3);
+}
+
+/* Auto Switch Control */
+.auto-switch-control {
+    text-align: right;
+}
+
+.auto-switch-btn {
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: all 0.2s;
+}
+
+.auto-switch-btn.active {
+    background: #27ae60;
+    border-color: #27ae60;
+}
+
+.auto-switch-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.keyboard-hint {
+    display: block;
+    font-size: 0.7rem;
+    opacity: 0.7;
+    margin-top: 0.25rem;
+}
+
+/* Form Actions */
+.form-actions-container {
+    margin-top: 2rem;
+    padding-top: 1rem;
+    border-top: 2px solid #ecf0f1;
+}
+
+.form-actions {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.btn-large {
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #3498db, #2980b9);
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, #2980b9, #2471a3);
+}
+
+.btn-secondary {
+    background: linear-gradient(135deg, #95a5a6, #7f8c8d);
+}
+
+.btn-secondary:hover {
+    background: linear-gradient(135deg, #7f8c8d, #6c7a7a);
+}
+
+.btn-outline {
+    background: white;
+    border: 2px solid #bdc3c7;
+    color: #2c3e50;
+}
+
+.btn-outline:hover {
+    background: #ecf0f1;
+    border-color: #95a5a6;
+}
+
+.btn-icon {
+    margin-right: 0.5rem;
+}
+
+/* Data Records Section */
+.data-records-section {
+    margin-top: 2rem;
+    background: #f8f9fa;
+    border-radius: 12px;
+    padding: 1.5rem;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid #e0e0e0;
+}
+
+.section-header h3 {
+    color: #2c3e50;
+    margin: 0;
+}
+
+.btn-icon-only {
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    transition: background 0.2s;
+}
+
+.btn-icon-only:hover {
+    background: #e0e0e0;
+}
+
+.records-list {
+    display: grid;
+    gap: 0.75rem;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.record-card {
+    background: white;
+    border-radius: 8px;
+    padding: 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 1px solid #e0e0e0;
+}
+
+.record-card:hover {
+    transform: translateX(4px);
+    border-color: #3498db;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.record-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.record-date {
+    font-size: 0.75rem;
+    color: #95a5a6;
+}
+
+.record-load-btn {
+    background: #3498db;
+    color: white;
+    border: none;
+    padding: 0.25rem 0.75rem;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    cursor: pointer;
+}
+
+.record-load-btn:hover {
+    background: #2980b9;
+}
+
+.record-preview {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    font-size: 0.8rem;
+}
+
+.record-field {
+    color: #555;
+}
+
+.record-more {
+    color: #3498db;
+    font-size: 0.7rem;
+}
+
+.loading-text, .no-records {
+    text-align: center;
+    color: #95a5a6;
+    padding: 2rem;
+}
+
+/* RTL Group Enhancement */
+.rtl-group {
+    direction: rtl;
+    text-align: right;
+}
+
+.rtl-group label {
+    text-align: right;
+}
+
+/* Divehi Input Styling */
+.divehi-input {
+    font-family: 'Noto Sans Thaana', 'MV Faseyha', 'Faruma', 'Segoe UI', Arial, sans-serif;
+    font-size: 1.05rem;
+    letter-spacing: normal;
+}
+
+.english-input {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+}
+
+/* Language Notification */
+.language-notification {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: #2c3e50;
+    color: white;
+    padding: 0.75rem 1.25rem;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    z-index: 2000;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all 0.3s ease;
+    pointer-events: none;
+}
+
+.language-notification.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.language-notification.divehi {
+    background: linear-gradient(135deg, #27ae60, #2ecc71);
+}
+
+.language-notification.english {
+    background: linear-gradient(135deg, #3498db, #2980b9);
+}
+
+.language-notification.info {
+    background: linear-gradient(135deg, #f39c12, #e67e22);
+}
+
+.language-notification .flag {
+    margin-right: 0.5rem;
+    font-size: 1.1rem;
+}
+
+/* Error state for inputs */
+.form-input.error {
+    border-color: #e74c3c;
+    background: #fff5f5;
+}
+
+/* Focus visible for keyboard navigation */
+.form-input:focus-visible {
+    outline: 2px solid #3498db;
+    outline-offset: 2px;
+}
+/* Add these styles to your styles.css file */
+
+.template-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.template-card-header h3 {
+    font-size: 1.2rem;
+    color: #2c3e50;
+    margin: 0;
+    flex: 1;
+}
+
+.template-badges {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.template-type-badge {
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    background: #3498db;
+    color: white;
+}
+
+.template-fields-badge {
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    background: #9b59b6;
+    color: white;
+}
+
+.template-language-badge {
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    background: #e67e22;
+    color: white;
+}
+/* Fix for record cards - prevent horizontal scroll */
+.records-list {
+    display: grid;
+    gap: 0.75rem;
+    max-height: 300px;
+    overflow-y: auto;
+    overflow-x: hidden; /* Prevent horizontal scroll */
+}
+
+.record-card {
+    background: white;
+    border-radius: 8px;
+    padding: 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 1px solid #e0e0e0;
+    overflow-x: auto; /* Allow scroll only if content is too wide */
+    max-width: 100%;
+}
+
+/* Remove the transform that causes scrollbar */
+.record-card:hover {
+    border-color: #3498db;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    /* Remove transform: translateX(4px) */
+}
+
+.record-preview {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    font-size: 0.8rem;
+    word-break: break-word; /* Prevent long words from breaking layout */
+    overflow-wrap: break-word;
+}
+
+.record-field {
+    color: #555;
+    word-break: break-word;
+    max-width: 100%;
+}
+
+.record-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.record-load-btn {
+    background: #3498db;
+    color: white;
+    border: none;
+    padding: 0.25rem 0.75rem;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.record-load-btn:hover {
+    background: #2980b9;
+}
+/* Make Fill Form view header text smaller */
+#fill-form-view .view-header h2 {
+    font-size: 1.4rem; /* Reduced from 1.8rem */
+}
+
+/* Or if you want to make all view headers smaller */
+.view-header h2 {
+    font-size: 1.4rem; /* Default was 1.8rem */
+    color: #2c3e50;
+}
+
+/* If you only want to target the Fill Form view specifically */
+.view#fill-form-view .view-header h2 {
+    font-size: 1.3rem;
+}
+/* Ensure form inputs are not disabled by default */
+.form-input:not([disabled]) {
+    background: white;
+    opacity: 1;
+}
+
+/* Style for enabled inputs */
+.form-input {
+    background: white;
+    opacity: 1;
+}
+
+/* Only apply disabled styling when actually disabled */
+.form-input:disabled {
+    background: #f5f5f5;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
