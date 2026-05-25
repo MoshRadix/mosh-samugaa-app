@@ -12,7 +12,7 @@ module.exports = {
       name: "@electron-forge/maker-squirrel",
       config: {
         setupIcon: "./assets/icons/app.ico", // installer icon
-        iconUrl: "https://example.com/app.ico", // public URL to your .ico file
+        iconUrl: "https://raw.githubusercontent.com/MoshRadix/mosh-forms-app/refs/heads/master/assets/icons/app.ico", // public URL to your .ico file
         shortcutName: "Mosh Forms App", // shortcut name in Start Menu/Desktop
         noMsi: true, // skip MSI, only generate .exe
       },
