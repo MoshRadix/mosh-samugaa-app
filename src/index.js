@@ -439,6 +439,66 @@ async function generateWordDocument(templatePath, outputPath, data) {
   }
 }
 
+// async function generateExcelDocument(templatePath, outputPath, data) {
+//   try {
+//     const workbook = new ExcelJS.Workbook();
+//     await workbook.xlsx.readFile(templatePath);
+
+//     // Replace placeholders in all sheets
+//     workbook.eachSheet((sheet) => {
+//       // Replace placeholders in cells
+//       sheet.eachRow((row) => {
+//         row.eachCell((cell) => {
+//           if (cell.value && typeof cell.value === "string") {
+//             let cellValue = cell.value;
+//             Object.keys(data).forEach((key) => {
+//               const placeholder = `{${key}}`;
+//               if (cellValue.includes(placeholder)) {
+//                 if (cellValue === placeholder) {
+//                   // If the entire cell is just the placeholder, preserve type
+//                   cell.value = data[key] !== undefined ? data[key] : "";
+//                 } else {
+//                   // Replace within text
+//                   cellValue = cellValue.replace(
+//                     new RegExp(
+//                       placeholder.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
+//                       "g",
+//                     ),
+//                     data[key] !== undefined ? String(data[key]) : "",
+//                   );
+//                   cell.value = cellValue;
+//                 }
+//               }
+//             });
+//           }
+//         });
+//       });
+
+//       // Set A4 page setup
+//       sheet.pageSetup = {
+//         paperSize: 9, // A4
+//         orientation: "portrait",
+//         fitToPage: true,
+//         fitToWidth: 1,
+//         fitToHeight: 0,
+//         margins: {
+//           left: 0.7,
+//           right: 0.7,
+//           top: 0.75,
+//           bottom: 0.75,
+//           header: 0.3,
+//           footer: 0.3,
+//         },
+//       };
+//     });
+
+//     await workbook.xlsx.writeFile(outputPath);
+//   } catch (error) {
+//     console.error("Error generating Excel document:", error);
+//     throw error;
+//   }
+// }
+
 async function generateExcelDocument(templatePath, outputPath, data) {
   try {
     const workbook = new ExcelJS.Workbook();
@@ -446,7 +506,6 @@ async function generateExcelDocument(templatePath, outputPath, data) {
 
     // Replace placeholders in all sheets
     workbook.eachSheet((sheet) => {
-      // Replace placeholders in cells
       sheet.eachRow((row) => {
         row.eachCell((cell) => {
           if (cell.value && typeof cell.value === "string") {
@@ -455,16 +514,13 @@ async function generateExcelDocument(templatePath, outputPath, data) {
               const placeholder = `{${key}}`;
               if (cellValue.includes(placeholder)) {
                 if (cellValue === placeholder) {
-                  // If the entire cell is just the placeholder, preserve type
+                  // Entire cell is just the placeholder → replace value directly
                   cell.value = data[key] !== undefined ? data[key] : "";
                 } else {
                   // Replace within text
                   cellValue = cellValue.replace(
-                    new RegExp(
-                      placeholder.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
-                      "g",
-                    ),
-                    data[key] !== undefined ? String(data[key]) : "",
+                    new RegExp(placeholder.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g"),
+                    data[key] !== undefined ? String(data[key]) : ""
                   );
                   cell.value = cellValue;
                 }
@@ -474,22 +530,8 @@ async function generateExcelDocument(templatePath, outputPath, data) {
         });
       });
 
-      // Set A4 page setup
-      sheet.pageSetup = {
-        paperSize: 9, // A4
-        orientation: "portrait",
-        fitToPage: true,
-        fitToWidth: 1,
-        fitToHeight: 0,
-        margins: {
-          left: 0.7,
-          right: 0.7,
-          top: 0.75,
-          bottom: 0.75,
-          header: 0.3,
-          footer: 0.3,
-        },
-      };
+      // 🟢 DO NOT override the original pageSetup – keep template’s print settings
+      // The original print area, paper size, orientation, margins are preserved automatically.
     });
 
     await workbook.xlsx.writeFile(outputPath);
