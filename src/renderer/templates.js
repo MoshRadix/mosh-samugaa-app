@@ -233,14 +233,17 @@ async function printStaticDocument(templateId) {
     if (template.hasFields) {
       showToast(
         "This is a fillable template. Please fill out the form first before printing.",
-        "warning"
+        "warning",
       );
       return;
     }
 
     // Verify the file exists
     if (!template.filePath) {
-      showToast("Template file not found. Please re-upload the template.", "error");
+      showToast(
+        "Template file not found. Please re-upload the template.",
+        "error",
+      );
       return;
     }
 
@@ -267,7 +270,10 @@ async function printStaticDocument(templateId) {
     if (result) {
       showToast("Document sent to printer successfully!", "success");
     } else {
-      showToast("Failed to print. Please check if a printer is available.", "error");
+      showToast(
+        "Failed to print. Please check if a printer is available.",
+        "error",
+      );
     }
 
     // Reset buttons
@@ -317,89 +323,162 @@ async function editFieldTypes(templateId) {
   modalTitle.textContent = `Configure Fields: ${template.name}`;
 
   modalBody.innerHTML = `
-        <div class="fields-list">
-            ${
-              template.fields && template.fields.length > 0
-                ? template.fields
-                    .map(
-                      (field, index) => `
-                <div class="field-item">
-                    <div class="field-item-header">
-                        <strong>${escapeHtml(field.key)}</strong>
-                        <button class="btn btn-danger btn-small" onclick="removeField('${templateId}', ${index})">Remove</button>
-                    </div>
-                    <div class="field-item-details">
-                        <div class="form-group">
-                            <label>Display Label</label>
-                            <input type="text" id="label-${index}" value="${escapeHtml(field.label || "")}" class="field-label-input">
-                        </div>
-                        <div class="form-group">
-                            <label>Field Type</label>
-                            <select id="type-${index}" class="field-type-select">
-                                <option value="string" ${field.type === "string" ? "selected" : ""}>Text</option>
-                                <option value="number" ${field.type === "number" ? "selected" : ""}>Number</option>
-                                <option value="date" ${field.type === "date" ? "selected" : ""}>Date Picker</option>
-                                <option value="email" ${field.type === "email" ? "selected" : ""}>Email</option>
-                                <option value="textarea" ${field.type === "textarea" ? "selected" : ""}>Text Area</option>
-                                <option value="boolean" ${field.type === "boolean" ? "selected" : ""}>Yes/No</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>
-                                <input type="checkbox" id="rtl-${index}" ${field.isRTL ? "checked" : ""}>
-                                RTL (Divehi) Support
-                            </label>
-                        </div>
-                        <div class="form-group">
-                            <label>
-                                <input type="checkbox" id="required-${index}" ${field.required ? "checked" : ""}>
-                                Required Field
-                            </label>
-                        </div>
-                    </div>
+    <div class="fields-list">
+      ${
+        template.fields && template.fields.length > 0
+          ? template.fields
+              .map(
+                (field, index) => `
+            <div class="field-item">
+              <div class="field-item-header">
+                <strong>${escapeHtml(field.key)}</strong>
+                <button class="btn btn-danger btn-small" onclick="removeField('${templateId}', ${index})">Remove</button>
+              </div>
+              <div class="field-item-details">
+                <div class="form-group">
+                  <label>Display Label</label>
+                  <input type="text" id="label-${index}" value="${escapeHtml(field.label || "")}" class="field-label-input">
                 </div>
-            `,
-                    )
-                    .join("")
-                : "<p>No fields detected in this template. Please ensure your template contains placeholders like {fieldname} or {divehi.fieldname} or {date.fieldname}</p>"
-            }
-        </div>
-        ${
-          template.fields && template.fields.length > 0
-            ? `
-            <div class="form-actions" style="margin-top: 2rem;">
-                <button class="btn btn-primary" onclick="saveFieldSettings('${templateId}')">Save Settings</button>
-                <button class="btn btn-secondary" onclick="closeModal('fields-modal')">Cancel</button>
+                <div class="form-group">
+                  <label>Field Type</label>
+                  <select id="type-${index}" class="field-type-select" onchange="toggleChoicesInput(${index})">
+                    <option value="string" ${field.type === "string" ? "selected" : ""}>Text</option>
+                    <option value="number" ${field.type === "number" ? "selected" : ""}>Number</option>
+                    <option value="date" ${field.type === "date" ? "selected" : ""}>Date Picker</option>
+                    <option value="email" ${field.type === "email" ? "selected" : ""}>Email</option>
+                    <option value="textarea" ${field.type === "textarea" ? "selected" : ""}>Text Area</option>
+                    <option value="boolean" ${field.type === "boolean" ? "selected" : ""}>Yes/No</option>
+                    <option value="dropdown" ${field.type === "dropdown" ? "selected" : ""}>Dropdown</option>
+                  </select>
+                </div>
+                <div class="form-group choices-group" id="choices-group-${index}" style="display: ${field.type === "dropdown" ? "block" : "none"}">
+                  <label>Dropdown Choices (one per line)</label>
+                  <textarea id="choices-${index}" rows="3" placeholder="Option 1&#10;Option 2&#10;Option 3">${field.choices ? field.choices.join("\n") : ""}</textarea>
+                  <small>Each line becomes one selectable option.</small>
+                </div>
+                <div class="form-group">
+                  <label>
+                    <input type="checkbox" id="rtl-${index}" ${field.isRTL ? "checked" : ""}>
+                    RTL (Divehi) Support
+                  </label>
+                </div>
+                <div class="form-group">
+                  <label>
+                    <input type="checkbox" id="required-${index}" ${field.required ? "checked" : ""}>
+                    Required Field
+                  </label>
+                </div>
+              </div>
             </div>
-        `
-            : `
-            <div class="form-actions">
-                <button class="btn btn-secondary" onclick="closeModal('fields-modal')">Close</button>
-            </div>
-        `
-        }
-    `;
+          `,
+              )
+              .join("")
+          : "<p>No fields detected...</p>"
+      }
+    </div>
+    <div class="form-actions" style="margin-top: 2rem;">
+      <button class="btn btn-primary" onclick="saveFieldSettings('${templateId}')">Save Settings</button>
+      <button class="btn btn-secondary" onclick="closeModal('fields-modal')">Cancel</button>
+    </div>
+  `;
 
   openModal("fields-modal");
 }
 
+// Helper function to toggle choices input visibility
+function toggleChoicesInput(index) {
+  const typeSelect = document.getElementById(`type-${index}`);
+  const choicesGroup = document.getElementById(`choices-group-${index}`);
+  if (typeSelect && choicesGroup) {
+    choicesGroup.style.display =
+      typeSelect.value === "dropdown" ? "block" : "none";
+  }
+}
 // Save field settings
+// async function saveFieldSettings(templateId) {
+//   console.log("saveFieldSettings called for template:", templateId);
+
+//   const templates = await window.electronAPI.getTemplates();
+//   const template = templates.find((t) => t.id === templateId);
+
+//   if (!template || !template.fields) {
+//     showToast("Template or fields not found", "warning");
+//     return;
+//   }
+
+//   const updatedFields = template.fields.map((field, index) => {
+//     const labelInput = document.getElementById(`label-${index}`);
+//     const typeSelect = document.getElementById(`type-${index}`);
+//     const rtlCheckbox = document.getElementById(`rtl-${index}`);
+//     const requiredCheckbox = document.getElementById(`required-${index}`);
+
+//     return {
+//       ...field,
+//       label: labelInput ? labelInput.value : field.label,
+//       type: typeSelect ? typeSelect.value : field.type,
+//       isRTL: rtlCheckbox ? rtlCheckbox.checked : false,
+//       required: requiredCheckbox ? requiredCheckbox.checked : false,
+//     };
+//   });
+
+//   try {
+//     await window.electronAPI.updateTemplateFields({
+//       templateId,
+//       fields: updatedFields,
+//     });
+
+//     closeModal("fields-modal");
+
+//     // Update the global allTemplates array
+//     const index = allTemplates.findIndex((t) => t.id === templateId);
+//     if (index !== -1) {
+//       allTemplates[index].fields = updatedFields;
+//       allTemplates[index].hasFields = updatedFields.length > 0;
+//     }
+
+//     // Refresh the templates view
+//     if (typeof renderTemplates === "function") {
+//       await renderTemplates();
+//     }
+
+//     showToast("Field settings saved successfully!", "success");
+//   } catch (error) {
+//     console.error("Error saving field settings:", error);
+//     showToast("Error saving settings: " + error.message, "error");
+//   }
+// }
+
+// Modified saveFieldSettings to store choices
+// Save field settings (including dropdown choices)
 async function saveFieldSettings(templateId) {
   console.log("saveFieldSettings called for template:", templateId);
 
-  const templates = await window.electronAPI.getTemplates();
-  const template = templates.find((t) => t.id === templateId);
-
+  // Get the latest template data (use global allTemplates or fetch fresh)
+  let template = allTemplates.find(t => t.id === templateId);
+  if (!template) {
+    const templates = await window.electronAPI.getTemplates();
+    template = templates.find(t => t.id === templateId);
+  }
   if (!template || !template.fields) {
     showToast("Template or fields not found", "warning");
     return;
   }
 
+  // Build updated fields array from form inputs
   const updatedFields = template.fields.map((field, index) => {
     const labelInput = document.getElementById(`label-${index}`);
     const typeSelect = document.getElementById(`type-${index}`);
     const rtlCheckbox = document.getElementById(`rtl-${index}`);
     const requiredCheckbox = document.getElementById(`required-${index}`);
+    const choicesTextarea = document.getElementById(`choices-${index}`);
+
+    let choices = null;
+    if (typeSelect && typeSelect.value === "dropdown" && choicesTextarea) {
+      choices = choicesTextarea.value
+        .split(/\r?\n/)
+        .map(line => line.trim())
+        .filter(line => line !== "");
+    }
 
     return {
       ...field,
@@ -407,35 +486,36 @@ async function saveFieldSettings(templateId) {
       type: typeSelect ? typeSelect.value : field.type,
       isRTL: rtlCheckbox ? rtlCheckbox.checked : false,
       required: requiredCheckbox ? requiredCheckbox.checked : false,
+      choices: choices, // store choices for dropdown
     };
   });
 
   try {
+    // Save to backend
     await window.electronAPI.updateTemplateFields({
       templateId,
       fields: updatedFields,
     });
 
-    closeModal("fields-modal");
-
-    // Update the global allTemplates array
-    const index = allTemplates.findIndex((t) => t.id === templateId);
+    // Update global state
+    const index = allTemplates.findIndex(t => t.id === templateId);
     if (index !== -1) {
       allTemplates[index].fields = updatedFields;
       allTemplates[index].hasFields = updatedFields.length > 0;
     }
 
-    // Refresh the templates view
-    if (typeof renderTemplates === "function") {
-      await renderTemplates();
-    }
-
+    // Refresh UI
+    if (typeof renderTemplates === "function") await renderTemplates();
+    closeModal("fields-modal");
     showToast("Field settings saved successfully!", "success");
   } catch (error) {
     console.error("Error saving field settings:", error);
     showToast("Error saving settings: " + error.message, "error");
   }
 }
+
+
+
 
 // Remove a field from template
 async function removeField(templateId, fieldIndex) {
@@ -525,3 +605,6 @@ window.fillTemplate = fillTemplate;
 window.editTemplate = editTemplate;
 window.deleteTemplate = deleteTemplate;
 window.previewTemplate = previewTemplate;
+// Make sure toggleChoicesInput is defined globally
+window.toggleChoicesInput = toggleChoicesInput;
+

@@ -1094,3 +1094,7 @@ input, select, textarea {
     justify-content: center;
   }
 }
+.choices-group textarea {
+  font-family: monospace;
+  font-size: 0.9rem;
+}

@@ -408,69 +408,119 @@ function convertToDivehiTransliteration(text) {
 }
 
 // Get field input with proper styling (used in two-column layout)
+// function getFieldInputWithAutoSwitch(field) {
+//   const fieldId = `field-${field.key.replace(/[^a-zA-Z0-9]/g, "_")}`;
+//   const placeholder = `Enter ${field.label || field.key}`;
+//   const isDivehiField = shouldUseDivehi(field);
+
+//   if (field.type === "date") {
+//     // Compute preset value from placeholder key
+//     const presetDate = getPresetDateFromPlaceholder(field.key);
+//     // Format as YYYY-MM-DD using LOCAL date components (avoids timezone shift)
+//     const year = presetDate.getFullYear();
+//     const month = String(presetDate.getMonth() + 1).padStart(2, "0");
+//     const day = String(presetDate.getDate()).padStart(2, "0");
+//     const presetValue = `${year}-${month}-${day}`;
+
+//     return `
+//         <input type="date" 
+//                id="${fieldId}" 
+//                name="${field.key}" 
+//                value="${presetValue}"
+//                ${field.required ? "required" : ""} 
+//                class="form-input ${isDivehiField ? "divehi-input" : "english-input"}"
+//                dir="ltr">
+//     `;
+//   }
+
+//   // Make sure NO disabled attribute is added
+//   if (field.type === "textarea") {
+//     return `
+//             <textarea id="${fieldId}" 
+//                       name="${field.key}" 
+//                       ${field.required ? "required" : ""} 
+//                       placeholder="${placeholder}" 
+//                       rows="3"
+//                       class="form-input ${isDivehiField ? "divehi-input" : "english-input"}"
+//                       dir="${isDivehiField ? "rtl" : "ltr"}"></textarea>
+//         `;
+//   }
+
+//   if (field.type === "boolean") {
+//     return `
+//             <select id="${fieldId}" 
+//                     name="${field.key}" 
+//                     ${field.required ? "required" : ""}
+//                     class="form-input ${isDivehiField ? "divehi-input" : "english-input"}"
+//                     dir="${isDivehiField ? "rtl" : "ltr"}">
+//                 <option value="">-- Select --</option>
+//                 <option value="true">Yes</option>
+//                 <option value="false">No</option>
+//             </select>
+//         `;
+//   }
+
+//   return `
+//         <input type="${field.type === "number" ? "number" : field.type === "email" ? "email" : "text"}" 
+//                id="${fieldId}" 
+//                name="${field.key}" 
+//                ${field.required ? "required" : ""} 
+//                placeholder="${placeholder}"
+//                class="form-input ${isDivehiField ? "divehi-input" : "english-input"}"
+//                dir="${isDivehiField ? "rtl" : "ltr"}">
+//     `;
+// }
+// form.js – getFieldInputWithAutoSwitch (add dropdown case)
+
 function getFieldInputWithAutoSwitch(field) {
   const fieldId = `field-${field.key.replace(/[^a-zA-Z0-9]/g, "_")}`;
   const placeholder = `Enter ${field.label || field.key}`;
   const isDivehiField = shouldUseDivehi(field);
 
+  // DATE TYPE
   if (field.type === "date") {
-    // Compute preset value from placeholder key
     const presetDate = getPresetDateFromPlaceholder(field.key);
-    // Format as YYYY-MM-DD using LOCAL date components (avoids timezone shift)
     const year = presetDate.getFullYear();
     const month = String(presetDate.getMonth() + 1).padStart(2, "0");
     const day = String(presetDate.getDate()).padStart(2, "0");
     const presetValue = `${year}-${month}-${day}`;
+    return `<input type="date" id="${fieldId}" name="${field.key}" value="${presetValue}" ${field.required ? "required" : ""} class="form-input ${isDivehiField ? "divehi-input" : "english-input"}" dir="ltr">`;
+  }
 
+  // DROPDOWN TYPE
+  if (field.type === "dropdown") {
+    const choices = field.choices || [];
+    const options = choices.map(choice => `<option value="${escapeHtml(choice)}">${escapeHtml(choice)}</option>`).join("");
     return `
-        <input type="date" 
-               id="${fieldId}" 
-               name="${field.key}" 
-               value="${presetValue}"
-               ${field.required ? "required" : ""} 
-               class="form-input ${isDivehiField ? "divehi-input" : "english-input"}"
-               dir="ltr">
+      <select id="${fieldId}" name="${field.key}" ${field.required ? "required" : ""} class="form-input ${isDivehiField ? "divehi-input" : "english-input"}" dir="${isDivehiField ? "rtl" : "ltr"}">
+        <option value="">-- Select an option --</option>
+        ${options}
+      </select>
     `;
   }
 
-  // Make sure NO disabled attribute is added
+  // TEXTAREA TYPE
   if (field.type === "textarea") {
-    return `
-            <textarea id="${fieldId}" 
-                      name="${field.key}" 
-                      ${field.required ? "required" : ""} 
-                      placeholder="${placeholder}" 
-                      rows="3"
-                      class="form-input ${isDivehiField ? "divehi-input" : "english-input"}"
-                      dir="${isDivehiField ? "rtl" : "ltr"}"></textarea>
-        `;
+    return `<textarea id="${fieldId}" name="${field.key}" ${field.required ? "required" : ""} placeholder="${placeholder}" rows="3" class="form-input ${isDivehiField ? "divehi-input" : "english-input"}" dir="${isDivehiField ? "rtl" : "ltr"}"></textarea>`;
   }
 
+  // BOOLEAN TYPE (Yes/No)
   if (field.type === "boolean") {
     return `
-            <select id="${fieldId}" 
-                    name="${field.key}" 
-                    ${field.required ? "required" : ""}
-                    class="form-input ${isDivehiField ? "divehi-input" : "english-input"}"
-                    dir="${isDivehiField ? "rtl" : "ltr"}">
-                <option value="">-- Select --</option>
-                <option value="true">Yes</option>
-                <option value="false">No</option>
-            </select>
-        `;
+      <select id="${fieldId}" name="${field.key}" ${field.required ? "required" : ""} class="form-input ${isDivehiField ? "divehi-input" : "english-input"}" dir="${isDivehiField ? "rtl" : "ltr"}">
+        <option value="">-- Select --</option>
+        <option value="true">Yes</option>
+        <option value="false">No</option>
+      </select>
+    `;
   }
 
-  return `
-        <input type="${field.type === "number" ? "number" : field.type === "email" ? "email" : "text"}" 
-               id="${fieldId}" 
-               name="${field.key}" 
-               ${field.required ? "required" : ""} 
-               placeholder="${placeholder}"
-               class="form-input ${isDivehiField ? "divehi-input" : "english-input"}"
-               dir="${isDivehiField ? "rtl" : "ltr"}">
-    `;
+  // DEFAULT: text / number / email etc.
+  return `<input type="${field.type === "number" ? "number" : field.type === "email" ? "email" : "text"}" 
+                id="${fieldId}" name="${field.key}" ${field.required ? "required" : ""} 
+                placeholder="${placeholder}" class="form-input ${isDivehiField ? "divehi-input" : "english-input"}" 
+                dir="${isDivehiField ? "rtl" : "ltr"}">`;
 }
-
 // Enhanced renderFillForm with two-column layout
 async function renderFillForm() {
   console.log("renderFillForm called");
