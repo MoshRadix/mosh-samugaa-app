@@ -883,7 +883,7 @@ body {
     text-align: right;
     display: block;
     font-weight: 600;
-    margin-bottom: 0.5rem;
+    /* margin-bottom: 0.5rem; */
 }
 
 .rtl-group {
@@ -920,14 +920,14 @@ input[type="date"].rtl-input {
 
 .form-group.rtl-group {
     margin-bottom: 1.5rem;
-    padding: 1.25rem;
+    /* padding: 1.25rem; */
     background: #fafafa;
     border-radius: var(--radius-md);
 }
 
 *[dir="rtl"] {
     letter-spacing: normal;
-    line-height: 1.7;
+    /* line-height: 1.7; */
 }
 
 .rtl-input,
@@ -938,8 +938,16 @@ input[type="date"].rtl-input {
 
 .divehi-input {
     font-family: 'Noto Sans Thaana', 'MV Faseyha', 'Faruma', sans-serif;
-    font-size: 1.1rem;
+    /* font-size: 1.1rem; */
     letter-spacing: normal;
+    
+    padding: 0.65rem 0.85rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    font-size: 0.95rem;
+    background: var(--bg-surface);
+    color: var(--text-main);
+    transition: var(--transition);
 }
 
 .english-input {
@@ -1097,4 +1105,96 @@ input, select, textarea {
 .choices-group textarea {
   font-family: monospace;
   font-size: 0.9rem;
+}
+/* Unified form grid layout - one box, fluid columns */
+
+/* Unified form grid layout - one box, fluid columns */
+.unified-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+  background: var(--bg-surface);
+  border-radius: var(--radius-lg);
+  padding: 1.75rem;
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-md);
+  margin-bottom: 1.5rem;
+}
+
+/* Individual field container */
+.field-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.field-container label {
+  font-weight: 600;
+  color: var(--text-main);
+  font-size: 0.9rem;
+  margin-bottom: 0;
+}
+
+/* UNIFIED INPUT STYLES – same height for all */
+.field-container input,
+.field-container select,
+.field-container textarea,
+.field-container .form-input {
+  width: 100%;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  font-size: 0.95rem;
+  line-height: 1.4;          /* fixed line-height for consistency */
+  background: var(--bg-surface);
+  transition: var(--transition);
+  box-sizing: border-box;    /* ensures padding does not add extra height */
+}
+
+/* Override for textarea to keep consistent */
+.field-container textarea {
+  resize: vertical;
+  min-height: calc(1.4em + 1.3rem); /* matches single-line inputs */
+}
+
+/* Divehi-specific font – adjust only font-family, not dimensions */
+.divehi-input,
+.field-container .divehi-input,
+input.divehi-input,
+select.divehi-input,
+textarea.divehi-input {
+  font-family: 'Noto Sans Thaana', 'MV Faseyha', 'Faruma', sans-serif;
+  font-size: 0.95rem;
+  line-height: 1.4;          /* same as English inputs */
+  padding: 0.65rem 0.85rem;  /* identical padding */
+}
+
+/* English inputs – explicit rule for safety */
+.english-input,
+.field-container .english-input {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 0.95rem;
+  line-height: 1.4;
+  padding: 0.65rem 0.85rem;
+}
+
+/* Focus state */
+.field-container input:focus,
+.field-container select:focus,
+.field-container textarea:focus,
+.field-container .form-input:focus {
+  outline: none;
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 2px var(--primary-glow);
+}
+
+.field-container .field-hint {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+/* Remove old card styles from .form-group inside fill form only */
+.form-group {
+  /* kept for other modals, but no longer used in fill form */
+  margin-bottom: 1.25rem;
 }

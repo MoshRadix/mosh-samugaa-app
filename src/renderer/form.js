@@ -522,6 +522,172 @@ function getFieldInputWithAutoSwitch(field) {
                 dir="${isDivehiField ? "rtl" : "ltr"}">`;
 }
 // Enhanced renderFillForm with two-column layout
+// async function renderFillForm() {
+//   console.log("renderFillForm called");
+
+//   if (!window.selectedTemplate) {
+//     console.log("No template selected");
+//     if (window.switchView) window.switchView("templates");
+//     return;
+//   }
+
+//   if (
+//     !window.selectedTemplate.fields ||
+//     window.selectedTemplate.fields.length === 0
+//   ) {
+//     alert("No fields found for this template.");
+//     if (window.switchView) window.switchView("templates");
+//     return;
+//   }
+
+//   const container = document.getElementById("form-container");
+//   if (!container) return;
+
+//   const hasDivehiFields = window.selectedTemplate.fields.some((f) =>
+//     shouldUseDivehi(f),
+//   );
+//   const fields = window.selectedTemplate.fields;
+
+//   // Split fields into two columns for better layout
+//   const midPoint = Math.ceil(fields.length / 2);
+//   const leftColumnFields = fields.slice(0, midPoint);
+//   const rightColumnFields = fields.slice(midPoint);
+
+//   container.innerHTML = `
+//         <div class="template-info-card">
+//             <div class="template-info-content">
+//                 <h3>📄 ${escapeHtml(window.selectedTemplate.name)}</h3>
+//                 ${window.selectedTemplate.description ? `<p>${escapeHtml(window.selectedTemplate.description)}</p>` : ""}
+//                 <!--
+//                 <div class="template-meta">
+
+//                     <span class="meta-badge">${window.selectedTemplate.type === "word" ? "📝 Word Document" : "📊 Excel Spreadsheet"}</span>
+//                     <span class="meta-badge">${fields.length} field${fields.length !== 1 ? "s" : ""}</span>
+//                     ${hasDivehiFields ? '<span class="meta-badge divehi-badge">🇲🇻 Divehi Support</span>' : ""}
+//                 </div>
+//                 -->
+//             </div>
+//             <div class="auto-switch-control">
+                
+//                 <div class="template-meta">
+//                     <span class="meta-badge">${window.selectedTemplate.type === "word" ? "📝 Word Document" : "📊 Excel Spreadsheet"}</span>
+//                     <span class="meta-badge">${fields.length} field${fields.length !== 1 ? "s" : ""}</span>
+//                     ${hasDivehiFields ? '<span class="meta-badge divehi-badge">🇲🇻 Divehi Support</span>' : ""}
+//                 </div>
+//                 <span class="keyboard-hint">Press Enter to move to next field</span>
+//             </div>
+//         </div>
+        
+//         <form id="data-form" class="two-column-form">
+//             <div class="form-column">
+//                 ${leftColumnFields
+//                   .map(
+//                     (field) => `
+//                     <div class="form-group ${shouldUseDivehi(field) ? "rtl-group" : ""}" data-field-key="${field.key}">
+//                         <label ${shouldUseDivehi(field) ? 'dir="rtl"' : ""}>
+//                             ${escapeHtml(field.label || field.key)}
+//                             ${field.required ? '<span class="required-star">*</span>' : ""}
+//                             ${field.type !== "string" ? `<span class="field-type-indicator">${getFieldTypeIcon(field.type)}</span>` : ""}
+//                         </label>
+//                         ${getFieldInputWithAutoSwitch(field)}
+//                         <div class="field-hint">${getFieldHint(field)}</div>
+//                     </div>
+//                 `,
+//                   )
+//                   .join("")}
+//             </div>
+//             <div class="form-column">
+//                 ${rightColumnFields
+//                   .map(
+//                     (field) => `
+//                     <div class="form-group ${shouldUseDivehi(field) ? "rtl-group" : ""}" data-field-key="${field.key}">
+//                         <label ${shouldUseDivehi(field) ? 'dir="rtl"' : ""}>
+//                             ${escapeHtml(field.label || field.key)}
+//                             ${field.required ? '<span class="required-star">*</span>' : ""}
+//                             ${field.type !== "string" ? `<span class="field-type-indicator">${getFieldTypeIcon(field.type)}</span>` : ""}
+//                         </label>
+//                         ${getFieldInputWithAutoSwitch(field)}
+//                         <div class="field-hint">${getFieldHint(field)}</div>
+//                     </div>
+//                 `,
+//                   )
+//                   .join("")}
+//             </div>
+//         </form>
+        
+//         <div class="form-actions-container">
+//             <div class="form-actions">
+//                 <button type="button" id="generate-btn" class="btn btn-primary btn-large">
+//                     <span class="btn-icon">📄</span> Generate Document
+//                 </button>
+//                 <button type="button" class="btn btn-secondary btn-large" onclick="saveDataRecord()">
+//                     <span class="btn-icon">💾</span> Save Record
+//                 </button>
+//                 <button type="button" class="btn btn-outline btn-large" onclick="clearForm()">
+//                     <span class="btn-icon">🔄</span> Clear Form
+//                 </button>
+//                 <button type="button" class="btn btn-outline btn-large" onclick="switchView('templates')">
+//                     <span class="btn-icon">←</span> Cancel
+//                 </button>
+//             </div>
+//         </div>
+        
+//         <div class="data-records-section" id="data-records">
+//             <div class="section-header">
+//                 <h3>📋 Saved Records</h3>
+//                 <button class="btn-icon-only" onclick="loadDataRecords()" title="Refresh">🔄</button>
+//             </div>
+//             <div class="records-list" id="records-list">
+//                 <p class="loading-text">Loading saved records...</p>
+//             </div>
+//         </div>
+//     `;
+
+//   // Set up automatic language switching for each field
+//   for (const field of window.selectedTemplate.fields) {
+//     const fieldId = `field-${field.key.replace(/[^a-zA-Z0-9]/g, "_")}`;
+//     const fieldElement = document.getElementById(fieldId);
+//     if (fieldElement) {
+//       const useDivehi = shouldUseDivehi(field);
+
+//       await setFieldLanguage(fieldElement, field, useDivehi);
+
+//       fieldElement.addEventListener("focus", async () => {
+//         currentActiveField = field.key;
+//         if (autoLanguageSwitch) {
+//           const shouldBeDivehi = shouldUseDivehi(field);
+//           const currentIsDivehi = fieldElement.dataset.divehiMode === "true";
+
+//           if (shouldBeDivehi !== currentIsDivehi) {
+//             await setFieldLanguage(fieldElement, field, shouldBeDivehi);
+//             showLanguageNotification(shouldBeDivehi ? "Divehi" : "English");
+//           }
+//         }
+//       });
+
+//       if (useDivehi) {
+//         setupAutomaticTransliteration(fieldElement, field.key);
+//       }
+//     }
+//   }
+
+//   // Setup Enter key navigation
+//   const formElement = document.getElementById("data-form");
+//   if (formElement) {
+//     setupEnterKeyNavigation(formElement);
+//   }
+
+//   // Add generate button listener
+//   const generateBtn = document.getElementById("generate-btn");
+//   if (generateBtn) {
+//     generateBtn.removeEventListener("click", handleGenerateClick);
+//     generateBtn.addEventListener("click", handleGenerateClick);
+//   }
+
+//   await loadDataRecords();
+//   // Inside renderFillForm, after setting up event listeners, add:
+//   ensureFieldsEditable();
+// }
 async function renderFillForm() {
   console.log("renderFillForm called");
 
@@ -544,112 +710,98 @@ async function renderFillForm() {
   if (!container) return;
 
   const hasDivehiFields = window.selectedTemplate.fields.some((f) =>
-    shouldUseDivehi(f),
+    shouldUseDivehi(f)
   );
   const fields = window.selectedTemplate.fields;
 
-  // Split fields into two columns for better layout
-  const midPoint = Math.ceil(fields.length / 2);
-  const leftColumnFields = fields.slice(0, midPoint);
-  const rightColumnFields = fields.slice(midPoint);
+  // Build the unified grid
+  const fieldsHtml = fields
+    .map((field) => {
+      const isDivehiField = shouldUseDivehi(field);
+      const fieldId = `field-${field.key.replace(/[^a-zA-Z0-9]/g, "_")}`;
+      return `
+        <div class="field-container" data-field-key="${field.key}">
+          <!-- <label ${isDivehiField ? 'dir="rtl"' : ""}> -->
+          <label>
+            ${escapeHtml(field.label || field.key)}
+            ${field.required ? '<span class="required-star">*</span>' : ""}
+            ${field.type !== "string" ? `<span class="field-type-indicator">${getFieldTypeIcon(field.type)}</span>` : ""}
+          </label>
+          ${getFieldInputWithAutoSwitch(field)}
+          <div class="field-hint">${getFieldHint(field)}</div>
+        </div>
+      `;
+    })
+    .join("");
 
   container.innerHTML = `
-        <div class="template-info-card">
-            <div class="template-info-content">
-                <h3>📄 ${escapeHtml(window.selectedTemplate.name)}</h3>
-                ${window.selectedTemplate.description ? `<p>${escapeHtml(window.selectedTemplate.description)}</p>` : ""}
-                <!--
-                <div class="template-meta">
+    <div class="template-info-card">
+      <div class="template-info-content">
+        <h3>📄 ${escapeHtml(window.selectedTemplate.name)}</h3>
+        ${
+          window.selectedTemplate.description
+            ? `<p>${escapeHtml(window.selectedTemplate.description)}</p>`
+            : ""
+        }
+      </div>
+      <div class="auto-switch-control">
+        <div class="template-meta">
+          <span class="meta-badge">${
+            window.selectedTemplate.type === "word"
+              ? "📝 Word Document"
+              : "📊 Excel Spreadsheet"
+          }</span>
+          <span class="meta-badge">${fields.length} field${
+            fields.length !== 1 ? "s" : ""
+          }</span>
+          ${
+            hasDivehiFields
+              ? '<span class="meta-badge divehi-badge">🇲🇻 Divehi Support</span>'
+              : ""
+          }
+        </div>
+        <span class="keyboard-hint">Press Enter to move to next field</span>
+      </div>
+    </div>
 
-                    <span class="meta-badge">${window.selectedTemplate.type === "word" ? "📝 Word Document" : "📊 Excel Spreadsheet"}</span>
-                    <span class="meta-badge">${fields.length} field${fields.length !== 1 ? "s" : ""}</span>
-                    ${hasDivehiFields ? '<span class="meta-badge divehi-badge">🇲🇻 Divehi Support</span>' : ""}
-                </div>
-                -->
-            </div>
-            <div class="auto-switch-control">
-                
-                <div class="template-meta">
-                    <span class="meta-badge">${window.selectedTemplate.type === "word" ? "📝 Word Document" : "📊 Excel Spreadsheet"}</span>
-                    <span class="meta-badge">${fields.length} field${fields.length !== 1 ? "s" : ""}</span>
-                    ${hasDivehiFields ? '<span class="meta-badge divehi-badge">🇲🇻 Divehi Support</span>' : ""}
-                </div>
-                <span class="keyboard-hint">Press Enter to move to next field</span>
-            </div>
-        </div>
-        
-        <form id="data-form" class="two-column-form">
-            <div class="form-column">
-                ${leftColumnFields
-                  .map(
-                    (field) => `
-                    <div class="form-group ${shouldUseDivehi(field) ? "rtl-group" : ""}" data-field-key="${field.key}">
-                        <label ${shouldUseDivehi(field) ? 'dir="rtl"' : ""}>
-                            ${escapeHtml(field.label || field.key)}
-                            ${field.required ? '<span class="required-star">*</span>' : ""}
-                            ${field.type !== "string" ? `<span class="field-type-indicator">${getFieldTypeIcon(field.type)}</span>` : ""}
-                        </label>
-                        ${getFieldInputWithAutoSwitch(field)}
-                        <div class="field-hint">${getFieldHint(field)}</div>
-                    </div>
-                `,
-                  )
-                  .join("")}
-            </div>
-            <div class="form-column">
-                ${rightColumnFields
-                  .map(
-                    (field) => `
-                    <div class="form-group ${shouldUseDivehi(field) ? "rtl-group" : ""}" data-field-key="${field.key}">
-                        <label ${shouldUseDivehi(field) ? 'dir="rtl"' : ""}>
-                            ${escapeHtml(field.label || field.key)}
-                            ${field.required ? '<span class="required-star">*</span>' : ""}
-                            ${field.type !== "string" ? `<span class="field-type-indicator">${getFieldTypeIcon(field.type)}</span>` : ""}
-                        </label>
-                        ${getFieldInputWithAutoSwitch(field)}
-                        <div class="field-hint">${getFieldHint(field)}</div>
-                    </div>
-                `,
-                  )
-                  .join("")}
-            </div>
-        </form>
-        
-        <div class="form-actions-container">
-            <div class="form-actions">
-                <button type="button" id="generate-btn" class="btn btn-primary btn-large">
-                    <span class="btn-icon">📄</span> Generate Document
-                </button>
-                <button type="button" class="btn btn-secondary btn-large" onclick="saveDataRecord()">
-                    <span class="btn-icon">💾</span> Save Record
-                </button>
-                <button type="button" class="btn btn-outline btn-large" onclick="clearForm()">
-                    <span class="btn-icon">🔄</span> Clear Form
-                </button>
-                <button type="button" class="btn btn-outline btn-large" onclick="switchView('templates')">
-                    <span class="btn-icon">←</span> Cancel
-                </button>
-            </div>
-        </div>
-        
-        <div class="data-records-section" id="data-records">
-            <div class="section-header">
-                <h3>📋 Saved Records</h3>
-                <button class="btn-icon-only" onclick="loadDataRecords()" title="Refresh">🔄</button>
-            </div>
-            <div class="records-list" id="records-list">
-                <p class="loading-text">Loading saved records...</p>
-            </div>
-        </div>
-    `;
+    <form id="data-form" class="unified-form-grid">
+      ${fieldsHtml}
+    </form>
 
-  // Set up automatic language switching for each field
+    <div class="form-actions-container">
+      <div class="form-actions">
+        <button type="button" id="generate-btn" class="btn btn-primary btn-large">
+          <span class="btn-icon">📄</span> Generate Document
+        </button>
+        <button type="button" class="btn btn-secondary btn-large" onclick="saveDataRecord()">
+          <span class="btn-icon">💾</span> Save Record
+        </button>
+        <button type="button" class="btn btn-outline btn-large" onclick="clearForm()">
+          <span class="btn-icon">🔄</span> Clear Form
+        </button>
+        <button type="button" class="btn btn-outline btn-large" onclick="switchView('templates')">
+          <span class="btn-icon">←</span> Cancel
+        </button>
+      </div>
+    </div>
+
+    <div class="data-records-section" id="data-records">
+      <div class="section-header">
+        <h3>📋 Saved Records</h3>
+        <button class="btn-icon-only" onclick="loadDataRecords()" title="Refresh">🔄</button>
+      </div>
+      <div class="records-list" id="records-list">
+        <p class="loading-text">Loading saved records...</p>
+      </div>
+    </div>
+  `;
+
+  // Setup language switching for each field
   for (const field of window.selectedTemplate.fields) {
     const fieldId = `field-${field.key.replace(/[^a-zA-Z0-9]/g, "_")}`;
     const fieldElement = document.getElementById(fieldId);
     if (fieldElement) {
       const useDivehi = shouldUseDivehi(field);
-
       await setFieldLanguage(fieldElement, field, useDivehi);
 
       fieldElement.addEventListener("focus", async () => {
@@ -657,7 +809,6 @@ async function renderFillForm() {
         if (autoLanguageSwitch) {
           const shouldBeDivehi = shouldUseDivehi(field);
           const currentIsDivehi = fieldElement.dataset.divehiMode === "true";
-
           if (shouldBeDivehi !== currentIsDivehi) {
             await setFieldLanguage(fieldElement, field, shouldBeDivehi);
             showLanguageNotification(shouldBeDivehi ? "Divehi" : "English");
@@ -685,10 +836,8 @@ async function renderFillForm() {
   }
 
   await loadDataRecords();
-  // Inside renderFillForm, after setting up event listeners, add:
   ensureFieldsEditable();
 }
-
 // Helper function to get field type icon
 function getFieldTypeIcon(type) {
   const icons = {
