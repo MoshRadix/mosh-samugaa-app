@@ -160,7 +160,9 @@ function switchView(view) {
     } else {
       console.error("Search functions not available");
     }
-  }
+  }else if (view === 'settings') {
+  if (typeof initSettings === 'function') initSettings();
+}
 }
 function openModal(modalId) {
   const modal = document.getElementById(modalId);

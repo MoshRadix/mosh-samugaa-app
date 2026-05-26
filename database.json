@@ -1,0 +1,101 @@
+{
+  "templates": [
+    {
+      "id": "590ffa4e-a076-4502-b198-2ce975ff10ae",
+      "name": "test",
+      "description": "test",
+      "category": "General",
+      "filePath": "C:\\Users\\shaam\\AppData\\Roaming\\mosh-forms-app\\templates\\590ffa4e-a076-4502-b198-2ce975ff10ae_test.xlsx",
+      "originalName": "test.xlsx",
+      "type": "excel",
+      "hasFields": true,
+      "fields": [
+        {
+          "key": "name",
+          "label": "Name",
+          "type": "string",
+          "required": false,
+          "value": "",
+          "isRTL": false,
+          "originalKey": "name"
+        },
+        {
+          "key": "address",
+          "label": "Address",
+          "type": "string",
+          "required": false,
+          "value": "",
+          "isRTL": false,
+          "originalKey": "address"
+        },
+        {
+          "key": "divehi.name",
+          "label": "Name",
+          "type": "string",
+          "required": false,
+          "value": "",
+          "isRTL": true,
+          "originalKey": "divehi.name"
+        },
+        {
+          "key": "date.startdate",
+          "label": "Startdate",
+          "type": "date",
+          "required": false,
+          "value": "",
+          "isRTL": false,
+          "originalKey": "date.startdate"
+        },
+        {
+          "key": "date_current_10",
+          "label": "Current 10",
+          "type": "date",
+          "required": false,
+          "value": "",
+          "isRTL": false,
+          "originalKey": "date_current_10"
+        },
+        {
+          "key": "date_divehi_current_10",
+          "label": "Divehi Current 10",
+          "type": "date",
+          "required": false,
+          "value": "",
+          "isRTL": false,
+          "originalKey": "date_divehi_current_10"
+        },
+        {
+          "key": "date_next_5",
+          "label": "Next 5",
+          "type": "date",
+          "required": false,
+          "value": "",
+          "isRTL": false,
+          "originalKey": "date_next_5"
+        },
+        {
+          "key": "date_divehi_next_5",
+          "label": "Divehi Next 5",
+          "type": "date",
+          "required": false,
+          "value": "",
+          "isRTL": false,
+          "originalKey": "date_divehi_next_5"
+        },
+        {
+          "key": "some_date_field",
+          "label": "Some Date Field",
+          "type": "string",
+          "required": false,
+          "value": "",
+          "isRTL": false,
+          "originalKey": "some_date_field"
+        }
+      ],
+      "isActive": true,
+      "createdAt": "2026-05-26T03:39:52.127Z",
+      "updatedAt": "2026-05-26T03:39:52.129Z"
+    }
+  ],
+  "dataRecords": []
+}

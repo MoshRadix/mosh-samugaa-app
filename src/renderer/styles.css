@@ -1002,3 +1002,95 @@ input, select, textarea {
     user-select: auto !important;
     opacity: 1 !important;
 }
+
+/* ==========================================================================
+   11. SETTINGS PAGE STYLES
+   ========================================================================== */
+.settings-container {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.settings-group {
+  background: var(--bg-surface);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
+}
+
+.settings-group h3 {
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--text-main);
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid var(--border-color);
+}
+
+.setting-item {
+  margin-bottom: 1.5rem;
+}
+
+.setting-item label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: var(--text-main);
+}
+
+.setting-control {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.setting-control input {
+  flex: 1;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: var(--bg-main);
+  font-size: 0.9rem;
+  color: var(--text-main);
+  cursor: default;
+}
+
+.setting-control input:focus {
+  outline: none;
+  border-color: var(--border-focus);
+}
+
+.setting-control .btn {
+  white-space: nowrap;
+  margin: 0;
+}
+
+.setting-item small {
+  display: block;
+  margin-top: 0.4rem;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+/* Ensure buttons in settings view align properly */
+#settings-view .form-actions {
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  gap: 1rem;
+  /* justify-content: flex-end; */
+}
+
+/* Responsive: stack browse button on very narrow screens */
+@media (max-width: 480px) {
+  .setting-control {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .setting-control .btn {
+    justify-content: center;
+  }
+}

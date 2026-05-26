@@ -11,38 +11,66 @@ const { v4: uuidv4 } = require("uuid");
 process.noDeprecation = true;
 
 let mainWindow;
-const DB_PATH = path.join(app.getPath("userData"), "database.json");
-const TEMPLATES_DIR = path.join(app.getPath("userData"), "templates");
-const OUTPUTS_DIR = path.join(app.getPath("userData"), "outputs");
+// const DB_PATH = path.join(app.getPath("userData"), "database.json");
+// const TEMPLATES_DIR = path.join(app.getPath("userData"), "templates");
+// const OUTPUTS_DIR = path.join(app.getPath("userData"), "outputs");
+const CONFIG_PATH = path.join(app.getPath("userData"), "config.json");
+
+// Default config
+let settings = {
+  dataDir: app.getPath("userData"),
+  templatesDir: path.join(app.getPath("userData"), "templates"),
+  outputsDir: path.join(app.getPath("userData"), "outputs"),
+  dbPath: path.join(app.getPath("userData"), "database.json"),
+};
+
+// Load saved config
+async function loadConfig() {
+  try {
+    const data = await fs.readFile(CONFIG_PATH, "utf8");
+    settings = { ...settings, ...JSON.parse(data) };
+  } catch (err) {
+    // No config file yet – use defaults
+  }
+}
+
+async function saveConfig() {
+  await fs.writeFile(CONFIG_PATH, JSON.stringify(settings, null, 2));
+}
+
+function getTemplatesDir() {
+  return settings.templatesDir;
+}
+function getOutputsDir() {
+  return settings.outputsDir;
+}
+function getDbPath() {
+  return settings.dbPath;
+}
 
 // Initialize database with better error handling for Node 24
 async function initDatabase() {
+  const dbPath = getDbPath();
+  const templatesDir = getTemplatesDir();
+  const outputsDir = getOutputsDir();
+
+  await fs.mkdir(templatesDir, { recursive: true });
+  await fs.mkdir(outputsDir, { recursive: true });
+
   try {
-    await fs.access(DB_PATH);
+    await fs.access(dbPath);
   } catch {
     await fs.writeFile(
-      DB_PATH,
+      dbPath,
       JSON.stringify({ templates: [], dataRecords: [] }, null, 2),
     );
-  }
-
-  try {
-    await fs.access(TEMPLATES_DIR);
-  } catch {
-    await fs.mkdir(TEMPLATES_DIR, { recursive: true });
-  }
-
-  try {
-    await fs.access(OUTPUTS_DIR);
-  } catch {
-    await fs.mkdir(OUTPUTS_DIR, { recursive: true });
   }
 }
 
 // Database operations
 async function getDatabase() {
   try {
-    const data = await fs.readFile(DB_PATH, "utf8");
+    const data = await fs.readFile(getDbPath(), "utf8");
     return JSON.parse(data);
   } catch (error) {
     console.error("Error reading database:", error);
@@ -51,7 +79,7 @@ async function getDatabase() {
 }
 
 async function saveDatabase(db) {
-  await fs.writeFile(DB_PATH, JSON.stringify(db, null, 2));
+  await fs.writeFile(getDbPath(), JSON.stringify(db, null, 2));
 }
 
 // Create the main application window
@@ -68,7 +96,7 @@ function createWindow() {
       sandbox: false,
     },
     title: "Document Generator",
-    autoHideMenuBar: true,   // <-- hides menu bar unless Alt is pressed
+    autoHideMenuBar: true, // <-- hides menu bar unless Alt is pressed
     show: false,
   });
 
@@ -131,7 +159,7 @@ ipcMain.handle("upload-template", async (event, { filePath, metadata }) => {
     const fileName = path.basename(filePath);
     const templateId = uuidv4();
     const templateFileName = `${templateId}_${fileName}`;
-    const templatePath = path.join(TEMPLATES_DIR, templateFileName);
+    const templatePath = path.join(getTemplatesDir(), templateFileName);
 
     // Save template file
     await fs.writeFile(templatePath, fileBuffer);
@@ -149,9 +177,9 @@ ipcMain.handle("upload-template", async (event, { filePath, metadata }) => {
           ? "word"
           : extension === ".xlsx"
             ? "excel"
-            : extension === ".pdf" 
+            : extension === ".pdf"
               ? "pdf" // <-- Added PDF identification type
-            : "unknown",
+              : "unknown",
       hasFields: false,
       fields: [],
       isActive: true,
@@ -351,7 +379,7 @@ ipcMain.handle(
 
       const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
       const outputFileName = `${template.name}_${timestamp}.${outputFormat}`;
-      const outputPath = path.join(OUTPUTS_DIR, outputFileName);
+      const outputPath = path.join(getOutputsDir(), outputFileName); // was OUTPUTS_DIR
 
       if (template.type === "word") {
         await generateWordDocument(template.filePath, outputPath, formData);
@@ -509,7 +537,7 @@ ipcMain.handle("reload-template-fields", async (event, templateId) => {
               const isDivehi = /^divehi[._]/.test(key.toLowerCase());
               const isDate = /^date[._]/.test(key.toLowerCase());
               // Remove the prefix (divehi. / divehi_ / date. / date_)
-              const cleanKey = key.replace(/^(divehi[._]|date[._])/, '');
+              const cleanKey = key.replace(/^(divehi[._]|date[._])/, "");
 
               fields.push({
                 key: key,
@@ -549,7 +577,7 @@ ipcMain.handle("reload-template-fields", async (event, templateId) => {
                     const isDivehi = /^divehi[._]/.test(key.toLowerCase());
                     const isDate = /^date[._]/.test(key.toLowerCase());
                     // Remove the prefix (divehi. / divehi_ / date. / date_)
-                    const cleanKey = key.replace(/^(divehi[._]|date[._])/, '');
+                    const cleanKey = key.replace(/^(divehi[._]|date[._])/, "");
 
                     fields.push({
                       key: key,
@@ -781,33 +809,46 @@ ipcMain.handle("print-document", async (event, filePath) => {
           let pdfWindow = new BrowserWindow({
             show: false,
             webPreferences: {
-              plugins: true // Allows internal loading of the PDF architecture
-            }
+              plugins: true, // Allows internal loading of the PDF architecture
+            },
           });
 
           pdfWindow.loadURL(`file://${filePath}`);
 
-          pdfWindow.webContents.on('did-finish-load', () => {
+          pdfWindow.webContents.on("did-finish-load", () => {
             // Use silent print to dispatch straight to the system's default printer
-            pdfWindow.webContents.print({ silent: true, printBackground: true }, (success, failureReason) => {
-              pdfWindow.close(); // Clean up memory allocation
-              if (success) {
-                console.log("PDF sent to printer successfully via Electron context");
-                resolve(true);
-              } else {
-                console.error("Print failure exception:", failureReason);
-                reject(new Error(`Electron native printing failed: ${failureReason}`));
-              }
-            });
+            pdfWindow.webContents.print(
+              { silent: true, printBackground: true },
+              (success, failureReason) => {
+                pdfWindow.close(); // Clean up memory allocation
+                if (success) {
+                  console.log(
+                    "PDF sent to printer successfully via Electron context",
+                  );
+                  resolve(true);
+                } else {
+                  console.error("Print failure exception:", failureReason);
+                  reject(
+                    new Error(
+                      `Electron native printing failed: ${failureReason}`,
+                    ),
+                  );
+                }
+              },
+            );
           });
 
-          pdfWindow.webContents.on('did-fail-load', (err) => {
+          pdfWindow.webContents.on("did-fail-load", (err) => {
             pdfWindow.close();
-            reject(new Error(`Failed to load target PDF into background window object`));
+            reject(
+              new Error(
+                `Failed to load target PDF into background window object`,
+              ),
+            );
           });
         });
-      } 
-      
+      }
+
       // Keep your existing working fallback for Word & Excel structures
       const { exec } = require("child_process");
       const command = `powershell -Command "Start-Process -FilePath '${filePath}' -Verb Print -WindowStyle Hidden"`;
@@ -866,13 +907,98 @@ ipcMain.handle("print-document", async (event, filePath) => {
   }
 });
 
-const { Menu } = require('electron');  // add this at the top with other requires
+const { Menu } = require("electron"); // add this at the top with other requires
 
+//IPC handlers for settings management
+ipcMain.handle("get-settings", () => ({
+  dataDir: settings.dataDir,
+  templatesDir: settings.templatesDir,
+  outputsDir: settings.outputsDir,
+  dbPath: settings.dbPath,
+}));
 
+ipcMain.handle("update-settings", async (event, newSettings) => {
+  const old = { ...settings };
+
+  // If dbFolder is provided, construct full dbPath
+  if (newSettings.dbFolder) {
+    newSettings.dbPath = path.join(newSettings.dbFolder, "database.json");
+    delete newSettings.dbFolder;
+  }
+
+  Object.assign(settings, newSettings);
+  await saveConfig();
+
+  // Ensure new directories exist
+  await fs.mkdir(settings.templatesDir, { recursive: true });
+  await fs.mkdir(settings.outputsDir, { recursive: true });
+  const dbDir = path.dirname(settings.dbPath);
+  await fs.mkdir(dbDir, { recursive: true });
+
+  // Migrate files if paths changed
+  const migrate = async (oldPath, newPath, name) => {
+    if (oldPath !== newPath && fsSync.existsSync(oldPath)) {
+      const answer = dialog.showMessageBoxSync(mainWindow, {
+        type: "question",
+        buttons: ["Yes", "No"],
+        message: `Move existing ${name} to the new location?`,
+        detail: `From: ${oldPath}\nTo: ${newPath}`,
+      });
+      if (answer === 0) {
+        try {
+          await fs.rename(oldPath, newPath);
+        } catch (err) {
+          if (err.code === "EXDEV") {
+            // Cross-device: copy recursively (directory) or copy file
+            const stat = await fs.stat(oldPath);
+            if (stat.isDirectory()) {
+              await fs.cp(oldPath, newPath, { recursive: true });
+              await fs.rm(oldPath, { recursive: true, force: true });
+            } else {
+              await fs.copyFile(oldPath, newPath);
+              await fs.unlink(oldPath);
+            }
+            console.log(
+              `Moved ${name} via copy/delete from ${oldPath} to ${newPath}`,
+            );
+          } else {
+            throw err;
+          }
+        }
+      }
+    }
+  };
+
+  await migrate(old.templatesDir, settings.templatesDir, "templates");
+  await migrate(old.outputsDir, settings.outputsDir, "outputs");
+  await migrate(old.dbPath, settings.dbPath, "database");
+
+  await initDatabase(); // recreate missing folders if needed
+  return true;
+});
+
+ipcMain.handle("reset-settings", async () => {
+  settings = {
+    dataDir: app.getPath("userData"),
+    templatesDir: path.join(app.getPath("userData"), "templates"),
+    outputsDir: path.join(app.getPath("userData"), "outputs"),
+    dbPath: path.join(app.getPath("userData"), "database.json"),
+  };
+  await saveConfig();
+  await initDatabase();
+  return true;
+});
+
+ipcMain.handle("open-directory-dialog", async () => {
+  const result = await dialog.showOpenDialog(mainWindow, {
+    properties: ["openDirectory", "createDirectory"],
+  });
+  return result.canceled ? null : result.filePaths[0];
+});
 // App lifecycle
 app.whenReady().then(async () => {
-  Menu.setApplicationMenu(null);      // <-- this removes the menu bar
-  
+  Menu.setApplicationMenu(null); // <-- this removes the menu bar
+  await loadConfig(); // <-- ADD THIS LINE
   await initDatabase();
   createWindow();
 
