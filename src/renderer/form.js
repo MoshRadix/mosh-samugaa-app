@@ -426,11 +426,11 @@ function convertToDivehiTransliteration(text) {
 //     const presetValue = `${year}-${month}-${day}`;
 
 //     return `
-//         <input type="date" 
-//                id="${fieldId}" 
-//                name="${field.key}" 
+//         <input type="date"
+//                id="${fieldId}"
+//                name="${field.key}"
 //                value="${presetValue}"
-//                ${field.required ? "required" : ""} 
+//                ${field.required ? "required" : ""}
 //                class="form-input ${isDivehiField ? "divehi-input" : "english-input"}"
 //                dir="ltr">
 //     `;
@@ -439,10 +439,10 @@ function convertToDivehiTransliteration(text) {
 //   // Make sure NO disabled attribute is added
 //   if (field.type === "textarea") {
 //     return `
-//             <textarea id="${fieldId}" 
-//                       name="${field.key}" 
-//                       ${field.required ? "required" : ""} 
-//                       placeholder="${placeholder}" 
+//             <textarea id="${fieldId}"
+//                       name="${field.key}"
+//                       ${field.required ? "required" : ""}
+//                       placeholder="${placeholder}"
 //                       rows="3"
 //                       class="form-input ${isDivehiField ? "divehi-input" : "english-input"}"
 //                       dir="${isDivehiField ? "rtl" : "ltr"}"></textarea>
@@ -451,8 +451,8 @@ function convertToDivehiTransliteration(text) {
 
 //   if (field.type === "boolean") {
 //     return `
-//             <select id="${fieldId}" 
-//                     name="${field.key}" 
+//             <select id="${fieldId}"
+//                     name="${field.key}"
 //                     ${field.required ? "required" : ""}
 //                     class="form-input ${isDivehiField ? "divehi-input" : "english-input"}"
 //                     dir="${isDivehiField ? "rtl" : "ltr"}">
@@ -464,10 +464,10 @@ function convertToDivehiTransliteration(text) {
 //   }
 
 //   return `
-//         <input type="${field.type === "number" ? "number" : field.type === "email" ? "email" : "text"}" 
-//                id="${fieldId}" 
-//                name="${field.key}" 
-//                ${field.required ? "required" : ""} 
+//         <input type="${field.type === "number" ? "number" : field.type === "email" ? "email" : "text"}"
+//                id="${fieldId}"
+//                name="${field.key}"
+//                ${field.required ? "required" : ""}
 //                placeholder="${placeholder}"
 //                class="form-input ${isDivehiField ? "divehi-input" : "english-input"}"
 //                dir="${isDivehiField ? "rtl" : "ltr"}">
@@ -493,7 +493,12 @@ function getFieldInputWithAutoSwitch(field) {
   // DROPDOWN TYPE
   if (field.type === "dropdown") {
     const choices = field.choices || [];
-    const options = choices.map(choice => `<option value="${escapeHtml(choice)}">${escapeHtml(choice)}</option>`).join("");
+    const options = choices
+      .map(
+        (choice) =>
+          `<option value="${escapeHtml(choice)}">${escapeHtml(choice)}</option>`,
+      )
+      .join("");
     return `
       <select id="${fieldId}" name="${field.key}" ${field.required ? "required" : ""} class="form-input ${isDivehiField ? "divehi-input" : "english-input"}" dir="${isDivehiField ? "rtl" : "ltr"}">
         <option value="">-- Select an option --</option>
@@ -571,7 +576,7 @@ function getFieldInputWithAutoSwitch(field) {
 //                 -->
 //             </div>
 //             <div class="auto-switch-control">
-                
+
 //                 <div class="template-meta">
 //                     <span class="meta-badge">${window.selectedTemplate.type === "word" ? "📝 Word Document" : "📊 Excel Spreadsheet"}</span>
 //                     <span class="meta-badge">${fields.length} field${fields.length !== 1 ? "s" : ""}</span>
@@ -580,7 +585,7 @@ function getFieldInputWithAutoSwitch(field) {
 //                 <span class="keyboard-hint">Press Enter to move to next field</span>
 //             </div>
 //         </div>
-        
+
 //         <form id="data-form" class="two-column-form">
 //             <div class="form-column">
 //                 ${leftColumnFields
@@ -617,7 +622,7 @@ function getFieldInputWithAutoSwitch(field) {
 //                   .join("")}
 //             </div>
 //         </form>
-        
+
 //         <div class="form-actions-container">
 //             <div class="form-actions">
 //                 <button type="button" id="generate-btn" class="btn btn-primary btn-large">
@@ -634,7 +639,7 @@ function getFieldInputWithAutoSwitch(field) {
 //                 </button>
 //             </div>
 //         </div>
-        
+
 //         <div class="data-records-section" id="data-records">
 //             <div class="section-header">
 //                 <h3>📋 Saved Records</h3>
@@ -713,7 +718,7 @@ async function renderFillForm() {
   if (!container) return;
 
   const hasDivehiFields = window.selectedTemplate.fields.some((f) =>
-    shouldUseDivehi(f)
+    shouldUseDivehi(f),
   );
   const fields = window.selectedTemplate.fields;
 
@@ -1003,19 +1008,28 @@ async function generateDocument() {
   // Convert date fields: Divehi if key contains 'divehi', otherwise English
   if (window.selectedTemplate.fields) {
     for (const field of window.selectedTemplate.fields) {
+      // if (field.type === "date" && formData[field.key]) {
+      //   const rawDate = formData[field.key];
+      //   const isDivehiDate = field.key.toLowerCase().includes("divehi");
+      //   if (isDivehiDate) {
+      //     formData[field.key] = formatDivehiDate(rawDate);
+      //     console.log(
+      //       `Converted date field ${field.key} to Divehi: ${formData[field.key]}`,
+      //     );
+      //   } else {
+      //     formData[field.key] = formatEnglishDate(rawDate);
+      //     console.log(
+      //       `Converted date field ${field.key} to English: ${formData[field.key]}`,
+      //     );
+      //   }
+      // }
       if (field.type === "date" && formData[field.key]) {
         const rawDate = formData[field.key];
-        const isDivehiDate = field.key.toLowerCase().includes("divehi");
-        if (isDivehiDate) {
+        // Use the isRTL flag from the field configuration
+        if (field.isRTL) {
           formData[field.key] = formatDivehiDate(rawDate);
-          console.log(
-            `Converted date field ${field.key} to Divehi: ${formData[field.key]}`,
-          );
         } else {
           formData[field.key] = formatEnglishDate(rawDate);
-          console.log(
-            `Converted date field ${field.key} to English: ${formData[field.key]}`,
-          );
         }
       }
     }
@@ -1171,7 +1185,6 @@ async function saveDataRecord() {
       data: formData,
     });
 
-   
     showToast("💾 Record saved successfully!", "success");
     await loadDataRecords();
   } catch (error) {
