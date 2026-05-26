@@ -24,11 +24,15 @@ const languageConfig = {
 };
 
 // Detect if field should use Divehi based on field properties
+// function shouldUseDivehi(field) {
+//   if (field.isRTL === true) return true;
+//   if (field.key && field.key.toLowerCase().startsWith("divehi.")) return true;
+//   if (field.label && /ދިވެހި|Divehi|ދިވެހިބަސް/i.test(field.label)) return true;
+//   return false;
+// }
+// Detect if field should use Divehi based ONLY on the "RTL (Divehi) Support" setting
 function shouldUseDivehi(field) {
-  if (field.isRTL === true) return true;
-  if (field.key && field.key.toLowerCase().startsWith("divehi.")) return true;
-  if (field.label && /ދިވެހި|Divehi|ދިވެހިބަސް/i.test(field.label)) return true;
-  return false;
+  return field.isRTL === true;
 }
 // ========== Date Placeholder & Divehi Formatting ==========
 // Month names in Thaana (Divehi script)
@@ -167,12 +171,12 @@ async function setFieldLanguage(fieldElement, field, useDivehi) {
   }
 
   const placeholder = field.placeholder || `Enter ${field.label || field.key}`;
-  if (useDivehi) {
-    fieldElement.placeholder =
-      convertToDivehiTransliteration(placeholder) || placeholder;
-  } else {
-    fieldElement.placeholder = placeholder;
-  }
+  // if (useDivehi) {
+  //   fieldElement.placeholder =
+  //     convertToDivehiTransliteration(placeholder) || placeholder;
+  // } else {
+  //   fieldElement.placeholder = placeholder;
+  // }
 
   try {
     if (useDivehi) {
@@ -400,7 +404,20 @@ const latinToDivehiMap = {
   Y: "ޔ",
   Z: "ޡ", // Zoa
 };
-
+// Helper function to get proper Divehi placeholder text
+function getDivehiPlaceholder(field) {
+  const label = field.label || field.key;
+  const divehiPlaceholders = {
+    string: `ލިޔޭ`,
+    number: `ޢަދަދު ލިޔޭ`,
+    email: `އީމެއިލް ލިޔޭ`,
+    date: `ތާރީޚް އިޚްތިޔާރު ކުރޭ`,
+    textarea: `ލިޔޭ`,
+    boolean: `އިޚްތިޔާރު ކުރޭ`,
+    dropdown: `ތިރީގައިވާ އޮޕްޝަންތަކުން އިޚްތިޔާރު ކުރޭ`,
+  };
+  return divehiPlaceholders[field.type] || `ލިޔޭ`;
+}
 function convertToDivehiTransliteration(text) {
   if (!text) return "";
   let result = "";
@@ -477,8 +494,13 @@ function convertToDivehiTransliteration(text) {
 
 function getFieldInputWithAutoSwitch(field) {
   const fieldId = `field-${field.key.replace(/[^a-zA-Z0-9]/g, "_")}`;
-  const placeholder = `Enter ${field.label || field.key}`;
+  //const placeholder = `Enter ${field.label || field.key}`;
+  // Inside getFieldInputWithAutoSwitch, for each input generation:
+  const englishPlaceholder = `Enter ${field.label || field.key}`;
+  const divehiPlaceholder = getDivehiPlaceholder(field);
   const isDivehiField = shouldUseDivehi(field);
+  const placeholder = isDivehiField ? divehiPlaceholder : englishPlaceholder;
+  
 
   // DATE TYPE
   if (field.type === "date") {
@@ -860,6 +882,18 @@ function getFieldTypeIcon(type) {
 
 // Helper function to get field hint text
 function getFieldHint(field) {
+  // If the field is marked as RTL (Divehi), return Divehi hints
+  // if (field.isRTL) {
+  //   const divehiHints = {
+  //     number: "ޢަދަދެއް ލިޔޭށެވެ",
+  //     email: "example@domain.com ފަދަ އީމެއިލް އެއް ލިޔޭ",
+  //     date: "ތާރީޚެއް އިޚްތިޔާރު ކުރޭ",
+  //     textarea: "އާ ލައިއަކަށް Enter ބިންދޭ",
+  //     boolean: "އިޚްތިޔާރު ކުރޭ",
+  //     dropdown: "ތިރީގައިވާ އޮޕްޝަންތަކުން އެއްޗެއް އިޚްތިޔާރު ކުރޭ",
+  //   };
+  //   return divehiHints[field.type] || "Press Enter to go to next field";
+  // }
   const hints = {
     number: "Enter a numeric value",
     email: "e.g., name@example.com",
