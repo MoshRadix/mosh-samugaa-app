@@ -295,6 +295,7 @@ function setupEnterKeyNavigation(formElement) {
 }
 
 // Setup automatic transliteration for Divehi mode
+// Setup automatic transliteration for Divehi mode
 function setupAutomaticTransliteration(fieldElement, fieldKey) {
   let lastValue = "";
 
@@ -310,8 +311,8 @@ function setupAutomaticTransliteration(fieldElement, fieldKey) {
         const latinRegex = /[a-zA-Z]/;
 
         if (latinRegex.test(typedChar)) {
-          const divehiChar =
-            latinToDivehiMap[typedChar.toLowerCase()] || typedChar;
+          // REMOVED .toLowerCase() so it preserves case-sensitivity for mapping
+          const divehiChar = latinToDivehiMap[typedChar] || typedChar;
 
           if (divehiChar !== typedChar) {
             const newValue =
@@ -341,61 +342,63 @@ function setupAutomaticTransliteration(fieldElement, fieldKey) {
     }
   });
 }
-
 // Latin to Divehi mapping
 const latinToDivehiMap = {
-  a: "ަ",
+  // Lowercase letters
+  a: "ަ", // short a
   b: "ބ",
   c: "ޗ",
   d: "ދ",
-  e: "ެ",
+  e: "ެ", // short e
   f: "ފ",
   g: "ގ",
   h: "ހ",
-  i: "ި",
+  i: "ި", // short i
   j: "ޖ",
   k: "ކ",
   l: "ލ",
   m: "މ",
   n: "ނ",
-  o: "ޮ",
+  o: "ޮ", // short o
   p: "ޕ",
-  q: "ގ",
+  q: "ް",
   r: "ރ",
   s: "ސ",
   t: "ތ",
-  u: "ު",
+  u: "ު", // short u
   v: "ވ",
-  w: "ވ",
-  x: "ޒ",
+  w: "އ", // alifu is more appropriate than duplicating v
+  x: "ށ", // commonly mapped to Shaviyani
   y: "ޔ",
-  z: "ޅ",
-  A: "ަ",
-  B: "ބ",
-  C: "ޗ",
-  D: "ދ",
-  E: "ެ",
-  F: "ފ",
-  G: "ގ",
-  H: "ހ",
-  I: "ި",
-  J: "ޖ",
-  K: "ކ",
-  L: "ލ",
-  M: "މ",
-  N: "ނ",
-  O: "ޮ",
-  P: "ޕ",
-  Q: "ގ",
-  R: "ރ",
-  S: "ސ",
-  T: "ތ",
-  U: "ު",
-  V: "ވ",
-  W: "ވ",
-  X: "ޒ",
+  z: "ޒ",
+
+  // Uppercase letters
+  A: "ާ", // long aa
+  B: "ޞ", // Arabic Saad / heavy s
+  C: "ޝ", // Sha
+  D: "ޑ", // hard d
+  E: "ޭ", // long ey
+  F: "ﷲ", // often used for Allah ligature
+  G: "ޣ", // Ghain
+  H: "ޙ", // Arabic Haa
+  I: "ީ", // long ee
+  J: "ޛ", // Zaal
+  K: "ޚ", // Khaa
+  L: "ޅ", // Lhaviyani
+  M: "ޟ", // Arabic Dhaad
+  N: "ޏ", // Gnaviyani
+  O: "ޯ", // long oo
+  P: "÷", // punctuation/symbol
+  Q: "ޤ", // sukun
+  R: "ޜ", // Zhaa
+  S: "ށ", // Shaviyani
+  T: "ޓ", // hard t
+  U: "ޫ", // long uu
+  V: "ޥ", // Waavu
+  W: "ޢ", // Ain
+  X: "×", // multiplication sign
   Y: "ޔ",
-  Z: "ޅ",
+  Z: "ޡ", // Zoa
 };
 
 function convertToDivehiTransliteration(text) {
