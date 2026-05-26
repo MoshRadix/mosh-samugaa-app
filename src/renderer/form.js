@@ -760,7 +760,7 @@ async function renderFillForm() {
               : ""
           }
         </div>
-        <span class="keyboard-hint">Press Enter to move to next field</span>
+        <!-- <span class="keyboard-hint">Press Enter to move to next field</span> -->
       </div>
     </div>
 
