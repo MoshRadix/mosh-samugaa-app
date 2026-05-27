@@ -500,7 +500,6 @@ function getFieldInputWithAutoSwitch(field) {
   const divehiPlaceholder = getDivehiPlaceholder(field);
   const isDivehiField = shouldUseDivehi(field);
   const placeholder = isDivehiField ? divehiPlaceholder : englishPlaceholder;
-  
 
   // DATE TYPE
   if (field.type === "date") {
@@ -801,7 +800,10 @@ async function renderFillForm() {
     <div class="form-actions-container">
       <div class="form-actions">
         <button type="button" id="generate-btn" class="btn btn-primary btn-large">
-          <span class="btn-icon">📄</span> Generate Document
+          <span class="btn-icon">📄</span> Generate & Print
+        </button>
+        <button type="button" id="generate-only-btn" class="btn btn-outline btn-large">
+          <span class="btn-icon">💾</span> Generate Only (Save)
         </button>
         <button type="button" class="btn btn-secondary btn-large" onclick="saveDataRecord()">
           <span class="btn-icon">💾</span> Save Record
@@ -864,6 +866,11 @@ async function renderFillForm() {
     generateBtn.removeEventListener("click", handleGenerateClick);
     generateBtn.addEventListener("click", handleGenerateClick);
   }
+  const generateOnlyBtn = document.getElementById("generate-only-btn");
+  if (generateOnlyBtn) {
+    generateOnlyBtn.removeEventListener("click", handleGenerateOnlyClick);
+    generateOnlyBtn.addEventListener("click", handleGenerateOnlyClick);
+  }
 
   await loadDataRecords();
   ensureFieldsEditable();
@@ -908,6 +915,10 @@ function getFieldHint(field) {
 async function handleGenerateClick(e) {
   e.preventDefault();
   await generateDocument();
+}
+async function handleGenerateOnlyClick(e) {
+  e.preventDefault();
+  await generateDocumentOnly();
 }
 
 function escapeHtml(text) {
@@ -1161,6 +1172,79 @@ async function generateDocument() {
     if (generateBtn) {
       generateBtn.innerHTML = originalBtnHTML;
       generateBtn.disabled = false;
+    }
+  }
+}
+async function generateDocumentOnly() {
+  console.log("generateDocumentOnly called");
+
+  if (!validateForm()) {
+    console.log("Form validation failed");
+    return;
+  }
+
+  if (!window.selectedTemplate) {
+    console.error("No template selected");
+    alert("No template selected");
+    return;
+  }
+
+  let formData = collectFormData();
+
+  // Convert date fields based on isRTL flag
+  if (window.selectedTemplate.fields) {
+    for (const field of window.selectedTemplate.fields) {
+      if (field.type === "date" && formData[field.key]) {
+        const rawDate = formData[field.key];
+        if (field.isRTL) {
+          formData[field.key] = formatDivehiDate(rawDate);
+        } else {
+          formData[field.key] = formatEnglishDate(rawDate);
+        }
+      }
+    }
+  }
+
+  if (!window.electronAPI) {
+    console.error("electronAPI not available");
+    alert("Application API not available. Please restart the app.");
+    return;
+  }
+
+  const outputFormat = window.selectedTemplate.type === "excel" ? "xlsx" : "docx";
+
+  const generateOnlyBtn = document.getElementById("generate-only-btn");
+  const originalBtnHTML = generateOnlyBtn ? generateOnlyBtn.innerHTML : "Generate Only";
+  if (generateOnlyBtn) {
+    generateOnlyBtn.innerHTML = '<span class="btn-icon">⏳</span> Generating...';
+    generateOnlyBtn.disabled = true;
+  }
+
+  try {
+    const result = await window.electronAPI.generateDocument({
+      templateId: window.selectedTemplate.id,
+      formData: formData,
+      outputFormat: outputFormat,
+    });
+
+    showToast(`✅ Document saved successfully!\n\nFile: ${result.outputPath}`, "success");
+
+    // Clear form after successful generation (optional)
+    clearForm();
+  } catch (error) {
+    console.error("Error generating document:", error);
+
+    let errorMessage = "❌ Error generating document: " + error.message;
+    if (error.message.includes("template not found")) {
+      errorMessage = "❌ Template file not found. Please re-upload the template.";
+    } else if (error.message.includes("permission")) {
+      errorMessage = "❌ Permission denied when saving document. Please check your folder permissions.";
+    }
+    alert(errorMessage);
+  } finally {
+    if (generateOnlyBtn) {
+      generateOnlyBtn.innerHTML = originalBtnHTML;
+      generateOnlyBtn.disabled = false;
     }
   }
 }
@@ -1494,6 +1578,7 @@ window.renderFillForm = renderFillForm;
 window.saveDataRecord = saveDataRecord;
 window.loadRecord = loadRecord;
 window.generateDocument = generateDocument;
+window.generateDocumentOnly = generateDocumentOnly;
 window.clearForm = clearForm;
 window.toggleAutoLanguageSwitch = toggleAutoLanguageSwitch;
 window.loadDataRecords = loadDataRecords;
