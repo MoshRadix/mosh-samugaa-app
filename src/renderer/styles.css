@@ -926,3 +926,7 @@ select:disabled {
     padding: 20px;
   }
 }
+/* Full-width for textarea fields */
+.unified-form-grid .field-container.full-width-field {
+    grid-column: 1 / -1;
+}

@@ -748,8 +748,12 @@ async function renderFillForm() {
     .map((field) => {
       const isDivehiField = shouldUseDivehi(field);
       const fieldId = `field-${field.key.replace(/[^a-zA-Z0-9]/g, "_")}`;
+      // In renderFillForm, inside the .map(field => ...) section:
+      const isTextarea = field.type === "textarea";
+      const fullWidthClass = isTextarea ? "full-width-field" : "";
       return `
-        <div class="field-container" data-field-key="${field.key}">
+      <div class="field-container ${fullWidthClass}" data-field-key="${field.key}">
+        
           <!-- <label ${isDivehiField ? 'dir="rtl"' : ""}> -->
           <label>
             ${escapeHtml(field.label || field.key)}
@@ -1211,12 +1215,16 @@ async function generateDocumentOnly() {
     return;
   }
 
-  const outputFormat = window.selectedTemplate.type === "excel" ? "xlsx" : "docx";
+  const outputFormat =
+    window.selectedTemplate.type === "excel" ? "xlsx" : "docx";
 
   const generateOnlyBtn = document.getElementById("generate-only-btn");
-  const originalBtnHTML = generateOnlyBtn ? generateOnlyBtn.innerHTML : "Generate Only";
+  const originalBtnHTML = generateOnlyBtn
+    ? generateOnlyBtn.innerHTML
+    : "Generate Only";
   if (generateOnlyBtn) {
-    generateOnlyBtn.innerHTML = '<span class="btn-icon">⏳</span> Generating...';
+    generateOnlyBtn.innerHTML =
+      '<span class="btn-icon">⏳</span> Generating...';
     generateOnlyBtn.disabled = true;
   }
 
@@ -1227,7 +1235,10 @@ async function generateDocumentOnly() {
       outputFormat: outputFormat,
     });
 
-    showToast(`✅ Document saved successfully!\n\nFile: ${result.outputPath}`, "success");
+    showToast(
+      `✅ Document saved successfully!\n\nFile: ${result.outputPath}`,
+      "success",
+    );
 
     // Clear form after successful generation (optional)
     clearForm();
@@ -1236,9 +1247,11 @@ async function generateDocumentOnly() {
 
     let errorMessage = "❌ Error generating document: " + error.message;
     if (error.message.includes("template not found")) {
-      errorMessage = "❌ Template file not found. Please re-upload the template.";
+      errorMessage =
+        "❌ Template file not found. Please re-upload the template.";
     } else if (error.message.includes("permission")) {
-      errorMessage = "❌ Permission denied when saving document. Please check your folder permissions.";
+      errorMessage =
+        "❌ Permission denied when saving document. Please check your folder permissions.";
     }
     alert(errorMessage);
   } finally {
