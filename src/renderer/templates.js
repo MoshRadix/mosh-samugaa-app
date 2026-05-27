@@ -453,11 +453,11 @@ function toggleChoicesInput(index) {
 async function saveFieldSettings(templateId) {
   console.log("saveFieldSettings called for template:", templateId);
 
-  // Get the latest template data (use global allTemplates or fetch fresh)
-  let template = allTemplates.find(t => t.id === templateId);
+  // Get the latest template data
+  let template = allTemplates.find((t) => t.id === templateId);
   if (!template) {
     const templates = await window.electronAPI.getTemplates();
-    template = templates.find(t => t.id === templateId);
+    template = templates.find((t) => t.id === templateId);
   }
   if (!template || !template.fields) {
     showToast("Template or fields not found", "warning");
@@ -476,8 +476,8 @@ async function saveFieldSettings(templateId) {
     if (typeSelect && typeSelect.value === "dropdown" && choicesTextarea) {
       choices = choicesTextarea.value
         .split(/\r?\n/)
-        .map(line => line.trim())
-        .filter(line => line !== "");
+        .map((line) => line.trim())
+        .filter((line) => line !== "");
     }
 
     return {
@@ -486,22 +486,34 @@ async function saveFieldSettings(templateId) {
       type: typeSelect ? typeSelect.value : field.type,
       isRTL: rtlCheckbox ? rtlCheckbox.checked : false,
       required: requiredCheckbox ? requiredCheckbox.checked : false,
-      choices: choices, // store choices for dropdown
+      choices: choices,
     };
   });
 
+  // Preserve dateRangeConfig if it exists
+  const dateRangeConfig = template.dateRangeConfig || null;
+
   try {
-    // Save to backend
+    // Save fields to backend
     await window.electronAPI.updateTemplateFields({
       templateId,
       fields: updatedFields,
     });
 
+    // If there is a dateRangeConfig, also update the template to keep it
+    if (dateRangeConfig) {
+      await window.electronAPI.updateTemplate({
+        id: templateId,
+        updates: { dateRangeConfig: dateRangeConfig },
+      });
+    }
+
     // Update global state
-    const index = allTemplates.findIndex(t => t.id === templateId);
+    const index = allTemplates.findIndex((t) => t.id === templateId);
     if (index !== -1) {
       allTemplates[index].fields = updatedFields;
       allTemplates[index].hasFields = updatedFields.length > 0;
+      if (dateRangeConfig) allTemplates[index].dateRangeConfig = dateRangeConfig;
     }
 
     // Refresh UI
@@ -513,9 +525,6 @@ async function saveFieldSettings(templateId) {
     showToast("Error saving settings: " + error.message, "error");
   }
 }
-
-
-
 
 // Remove a field from template
 async function removeField(templateId, fieldIndex) {
@@ -607,4 +616,3 @@ window.deleteTemplate = deleteTemplate;
 window.previewTemplate = previewTemplate;
 // Make sure toggleChoicesInput is defined globally
 window.toggleChoicesInput = toggleChoicesInput;
-

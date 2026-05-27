@@ -236,6 +236,14 @@ ipcMain.handle("upload-template", async (event, { filePath, metadata }) => {
                 originalKey: key,
               };
             });
+          // Now filter and replace date_range placeholders
+          
+          const processed = processDateRangePlaceholders(template.fields);
+          template.fields = processed.fields;
+          if (processed.dateRangeConfig) {
+            template.dateRangeConfig = processed.dateRangeConfig;
+            template.hasDateRange = true;
+          }
         }
       } catch (error) {
         console.log(
@@ -245,6 +253,7 @@ ipcMain.handle("upload-template", async (event, { filePath, metadata }) => {
       }
     }
 
+    // Auto-detect placeholders for XLSX with type detection
     // Auto-detect placeholders for XLSX with type detection
     if (extension === ".xlsx") {
       try {
@@ -263,9 +272,7 @@ ipcMain.handle("upload-template", async (event, { filePath, metadata }) => {
                   const key = match[1].trim();
                   if (!uniqueKeys.has(key)) {
                     uniqueKeys.add(key);
-                    // Check if key starts with "divehi." or "divehi_"
                     const isDivehi = /^divehi[._]/.test(key.toLowerCase());
-                    // Check if key starts with "date." or "date_"
                     const isDate = /^date[._]/.test(key.toLowerCase());
                     const cleanKey = key.replace(/^(divehi[._]|date[._])/, "");
 
@@ -290,7 +297,14 @@ ipcMain.handle("upload-template", async (event, { filePath, metadata }) => {
 
         if (placeholders.length > 0) {
           template.hasFields = true;
-          template.fields = placeholders;
+          // Apply date_range filtering
+          
+          const processed = processDateRangePlaceholders(placeholders);
+          template.fields = processed.fields;
+          if (processed.dateRangeConfig) {
+            template.dateRangeConfig = processed.dateRangeConfig;
+            template.hasDateRange = true;
+          }
         }
       } catch (error) {
         console.log(
@@ -519,8 +533,11 @@ async function generateExcelDocument(templatePath, outputPath, data) {
                 } else {
                   // Replace within text
                   cellValue = cellValue.replace(
-                    new RegExp(placeholder.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g"),
-                    data[key] !== undefined ? String(data[key]) : ""
+                    new RegExp(
+                      placeholder.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
+                      "g",
+                    ),
+                    data[key] !== undefined ? String(data[key]) : "",
                   );
                   cell.value = cellValue;
                 }
@@ -644,9 +661,23 @@ ipcMain.handle("reload-template-fields", async (event, templateId) => {
       }
     }
 
+
     // Update the template with reloaded fields
     template.fields = fields;
     template.hasFields = fields.length > 0;
+    template.updatedAt = new Date().toISOString();
+
+    // 🔥 APPLY DATE RANGE FILTERING
+    const processed = processDateRangePlaceholders(fields);
+    template.fields = processed.fields;
+    if (processed.dateRangeConfig) {
+      template.dateRangeConfig = processed.dateRangeConfig;
+      template.hasDateRange = true;
+    } else {
+      delete template.dateRangeConfig;
+      template.hasDateRange = false;
+    }
+    template.hasFields = template.fields.length > 0;
     template.updatedAt = new Date().toISOString();
 
     // Save to database
@@ -1056,3 +1087,56 @@ app.on("window-all-closed", () => {
     app.quit();
   }
 });
+
+// Helper to extract date_range placeholders and replace them with a single start date field
+function processDateRangePlaceholders(fields) {
+  const dateRangePattern = /^date_range_(\d+)$/i;
+  const dateRangeFields = [];
+  const otherFields = [];
+
+  for (const field of fields) {
+    if (dateRangePattern.test(field.key)) {
+      dateRangeFields.push(field);
+    } else {
+      otherFields.push(field);
+    }
+  }
+
+  if (dateRangeFields.length === 0) {
+    return { fields, dateRangeConfig: null };
+  }
+
+  // Find the highest index (e.g., date_range_31 -> 31)
+  let maxIndex = 0;
+  const keys = [];
+  for (const field of dateRangeFields) {
+    const match = field.key.match(dateRangePattern);
+    if (match) {
+      const idx = parseInt(match[1], 10);
+      if (idx > maxIndex) maxIndex = idx;
+      keys.push(field.key);
+    }
+  }
+
+  // Create the single Start Date field
+  const startDateField = {
+    key: "date_range_start",
+    label: "Start Date",
+    type: "date",
+    required: true,
+    value: "",
+    isRTL: false,
+    originalKey: "date_range_start",
+  };
+
+  otherFields.push(startDateField);
+
+  const dateRangeConfig = {
+    enabled: true,
+    startKey: "date_range_start",
+    count: maxIndex,
+    keys: keys,
+  };
+
+  return { fields: otherFields, dateRangeConfig };
+}

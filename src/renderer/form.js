@@ -22,6 +22,29 @@ const languageConfig = {
     imeMode: "inactive",
   },
 };
+// Add days to a local date string (YYYY-MM-DD) without timezone issues
+function addDaysToLocalDate(dateStr, days) {
+  const [year, month, day] = dateStr.split("-").map(Number);
+  const date = new Date(year, month - 1, day); // month is 0-indexed
+  date.setDate(date.getDate() + days);
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+// Helper to separate hidden fields (keys ending with _hidden)
+function separateHiddenFields(fields) {
+  const visibleFields = [];
+  const hiddenFields = [];
+  for (const field of fields) {
+    if (field.key.endsWith("_hidden")) {
+      hiddenFields.push(field);
+    } else {
+      visibleFields.push(field);
+    }
+  }
+  return { visibleFields, hiddenFields };
+}
 
 // Detect if field should use Divehi based on field properties
 // function shouldUseDivehi(field) {
@@ -831,6 +854,15 @@ async function renderFillForm() {
       </div>
     </div>
   `;
+  // if (window.selectedTemplate.dateRangeConfig) {
+  //   const hintDiv = document.createElement("div");
+  //   hintDiv.className = "date-range-hint";
+  //   hintDiv.innerHTML =
+  //     "📅 This template will generate dates for up to " +
+  //     window.selectedTemplate.dateRangeConfig.count +
+  //     " days based on the Start Date above.";
+  //   container.insertBefore(hintDiv, document.getElementById("data-form"));
+  // }
 
   // Setup language switching for each field
   for (const field of window.selectedTemplate.fields) {
@@ -1054,24 +1086,33 @@ async function generateDocument() {
   }
 
   let formData = collectFormData();
+
+  // --- Handle date_range placeholders: all get the selected start date (no increment) ---
+  if (
+    window.selectedTemplate.dateRangeConfig &&
+    window.selectedTemplate.dateRangeConfig.enabled
+  ) {
+    const startDateStr = formData["date_range_start"];
+    formData["start_date_hidden"] = formData["date_range_start"]; // Add a generic start_date for templates that use it
+    if (startDateStr && startDateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      const config = window.selectedTemplate.dateRangeConfig;
+      for (let i = 1; i <= config.count; i++) {
+        formData[`date_range_${i}`] = formatDivehiDate(
+          addDaysToLocalDate(startDateStr, i - 1),
+        );
+      }
+    } else {
+      showToast(
+        "Please select a valid Start Date for the date range.",
+        "warning",
+      );
+      return;
+    }
+  }
   // Convert date fields: Divehi if key contains 'divehi', otherwise English
   if (window.selectedTemplate.fields) {
     for (const field of window.selectedTemplate.fields) {
-      // if (field.type === "date" && formData[field.key]) {
-      //   const rawDate = formData[field.key];
-      //   const isDivehiDate = field.key.toLowerCase().includes("divehi");
-      //   if (isDivehiDate) {
-      //     formData[field.key] = formatDivehiDate(rawDate);
-      //     console.log(
-      //       `Converted date field ${field.key} to Divehi: ${formData[field.key]}`,
-      //     );
-      //   } else {
-      //     formData[field.key] = formatEnglishDate(rawDate);
-      //     console.log(
-      //       `Converted date field ${field.key} to English: ${formData[field.key]}`,
-      //     );
-      //   }
-      // }
+      if (field.key === "date_range_start") continue; // keep raw YYYY-MM-DD
       if (field.type === "date" && formData[field.key]) {
         const rawDate = formData[field.key];
         // Use the isRTL flag from the field configuration
@@ -1083,6 +1124,8 @@ async function generateDocument() {
       }
     }
   }
+
+
 
   if (!window.electronAPI) {
     console.error("electronAPI not available");
@@ -1194,10 +1237,33 @@ async function generateDocumentOnly() {
   }
 
   let formData = collectFormData();
-
+  // --- 1. Handle date_range placeholders FIRST (using raw start date) ---
+  // --- Sequential date_range placeholders (start date from picker) ---
+  if (
+    window.selectedTemplate.dateRangeConfig &&
+    window.selectedTemplate.dateRangeConfig.enabled
+  ) {
+    const startDateStr = formData["date_range_start"];
+    if (startDateStr && startDateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      const config = window.selectedTemplate.dateRangeConfig;
+      for (let i = 1; i <= config.count; i++) {
+        formData[`date_range_${i}`] = formatDivehiDate(
+          addDaysToLocalDate(startDateStr, i - 1),
+        );
+      }
+    } else {
+      showToast(
+        "Please select a valid Start Date for the date range.",
+        "warning",
+      );
+      return;
+    }
+  }
   // Convert date fields based on isRTL flag
   if (window.selectedTemplate.fields) {
     for (const field of window.selectedTemplate.fields) {
+      if (field.key === "date_range_start") continue; // keep raw YYYY-MM-DD
+      if (field.key.endsWith('_hidden')) continue;
       if (field.type === "date" && formData[field.key]) {
         const rawDate = formData[field.key];
         if (field.isRTL) {
@@ -1206,6 +1272,22 @@ async function generateDocumentOnly() {
           formData[field.key] = formatEnglishDate(rawDate);
         }
       }
+    }
+  }
+
+  // Populate hidden fields
+  if (
+    window.selectedTemplate.hiddenFields &&
+    window.selectedTemplate.hiddenFields.length > 0
+  ) {
+    for (const hiddenField of window.selectedTemplate.hiddenFields) {
+      if (
+        hiddenField.key === "start_date_hidden" &&
+        formData["date_range_start"]
+      ) {
+        formData[hiddenField.key] = formData["date_range_start"];
+      }
+      // Add more rules as needed
     }
   }
 

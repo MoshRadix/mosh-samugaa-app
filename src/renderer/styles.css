@@ -930,3 +930,12 @@ select:disabled {
 .unified-form-grid .field-container.full-width-field {
     grid-column: 1 / -1;
 }
+.date-range-hint {
+  background: var(--accent-info-light);
+  border-left: 4px solid var(--accent-info);
+  padding: 10px 16px;
+  border-radius: var(--radius-md);
+  margin-bottom: 20px;
+  font-size: 0.8rem;
+  color: var(--text-primary);
+}
