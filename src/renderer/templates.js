@@ -174,13 +174,10 @@ async function renderTemplates() {
         <div class="template-card">
             <div class="template-card-header">
                 <h3>${escapeHtml(template.name)}</h3>
-                <span class="template-type-badge">${
-                  template.type === "word"
-                    ? "DOCX"
-                    : template.type === "excel"
-                      ? "XLSX"
-                      : "PDF"
-                }</span>
+                <span class="template-type-badge">🖨️ ${template.recordCount || 0}</span>
+                <span class="template-type-badge">${template.type === "word" ? "DOCX" : template.type === "excel" ? "XLSX" : "PDF"}</span>
+                
+                
             </div>
             <p>${escapeHtml(template.description || "No description")}</p>
             <p class="category">Category: ${escapeHtml(template.category)}</p>
@@ -558,8 +555,6 @@ async function saveFieldSettings(templateId) {
   // Separate hidden fields from the original template
   const hiddenFields = template.fields.filter((f) => f.key.endsWith("_hidden"));
 
- 
-
   // Build updated fields array from form inputs
   const updatedVisibleFields = template.fields
     .filter((f) => !f.key.endsWith("_hidden"))
@@ -587,7 +582,7 @@ async function saveFieldSettings(templateId) {
         choices: choices,
       };
     });
-     // Combine visible + hidden
+  // Combine visible + hidden
   const updatedFields = [...updatedVisibleFields, ...hiddenFields];
 
   // Preserve dateRangeConfig if it exists

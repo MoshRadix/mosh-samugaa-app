@@ -939,3 +939,15 @@ select:disabled {
   font-size: 0.8rem;
   color: var(--text-primary);
 }
+.template-print-count-badge {
+  background: var(--bg-secondary);
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  margin-left: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}

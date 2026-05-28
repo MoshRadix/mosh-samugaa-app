@@ -66,6 +66,7 @@ function renderSearchResults(results) {
                     <h3>${escapeHtml(doc.name)}</h3>
                     <div class="template-badges">
                         <span class="template-type-badge">${doc.type.toUpperCase()}</span>
+                        <span class="template-print-count-badge">🖨️ ${doc.recordCount || 0}</span>
                         <span class="badge ${doc.hasFields ? 'badge-fillable' : 'badge-static'}">
                             ${doc.hasFields ? 'Fillable' : 'Static'}
                         </span>

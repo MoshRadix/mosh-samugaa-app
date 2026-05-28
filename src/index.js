@@ -119,8 +119,27 @@ function getOutputsDir() { return settings.outputsDir; }
 function getDbPath() { return settings.dbPath; }
 
 // ========== Database Operations ==========
+// function getTemplates() {
+//   const rows = db.exec("SELECT * FROM templates ORDER BY name");
+//   if (rows.length === 0) return [];
+//   return rows[0].values.map(row => ({
+//     id: row[0], name: row[1], description: row[2], category: row[3],
+//     filePath: row[4], originalName: row[5], type: row[6],
+//     hasFields: row[7] === 1,
+//     fields: JSON.parse(row[8] || "[]"),
+//     dateRangeConfig: row[9] ? JSON.parse(row[9]) : null,
+//     hasDateRange: row[10] === 1,
+//     isActive: row[11] === 1,
+//     createdAt: row[12], updatedAt: row[13]
+//   }));
+// }
 function getTemplates() {
-  const rows = db.exec("SELECT * FROM templates ORDER BY name");
+  const rows = db.exec(`
+    SELECT t.*, 
+           (SELECT COUNT(*) FROM data_records WHERE templateId = t.id) as recordCount 
+    FROM templates t 
+    ORDER BY name
+  `);
   if (rows.length === 0) return [];
   return rows[0].values.map(row => ({
     id: row[0], name: row[1], description: row[2], category: row[3],
@@ -130,7 +149,8 @@ function getTemplates() {
     dateRangeConfig: row[9] ? JSON.parse(row[9]) : null,
     hasDateRange: row[10] === 1,
     isActive: row[11] === 1,
-    createdAt: row[12], updatedAt: row[13]
+    createdAt: row[12], updatedAt: row[13],
+    recordCount: row[14] || 0      // <-- new field
   }));
 }
 
