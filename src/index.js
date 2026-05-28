@@ -218,9 +218,12 @@ ipcMain.handle("upload-template", async (event, { filePath, metadata }) => {
               const key = match[1].trim();
               // Determine field type and RTL requirement
               // Check if key starts with "divehi." or "divehi_"
-              const isDivehi = /^divehi[._]/.test(key.toLowerCase());
+              //const isDivehi = /^divehi[._]/.test(key.toLowerCase());
               // Check if key starts with "date." or "date_"
-              const isDate = /^date[._]/.test(key.toLowerCase());
+              //const isDate = /^date[._]/.test(key.toLowerCase());
+              //const cleanKey = key.replace(/^(divehi[._]|date[._])/, "");
+              const isDivehi = /divehi/i.test(key); // contains "divehi" anywhere
+              const isDate = /date/i.test(key); // contains "date" anywhere
               const cleanKey = key.replace(/^(divehi[._]|date[._])/, "");
 
               return {
@@ -237,7 +240,7 @@ ipcMain.handle("upload-template", async (event, { filePath, metadata }) => {
               };
             });
           // Now filter and replace date_range placeholders
-          
+
           const processed = processDateRangePlaceholders(template.fields);
           template.fields = processed.fields;
           if (processed.dateRangeConfig) {
@@ -272,8 +275,11 @@ ipcMain.handle("upload-template", async (event, { filePath, metadata }) => {
                   const key = match[1].trim();
                   if (!uniqueKeys.has(key)) {
                     uniqueKeys.add(key);
-                    const isDivehi = /^divehi[._]/.test(key.toLowerCase());
-                    const isDate = /^date[._]/.test(key.toLowerCase());
+                    // const isDivehi = /^divehi[._]/.test(key.toLowerCase());
+                    // const isDate = /^date[._]/.test(key.toLowerCase());
+                    // const cleanKey = key.replace(/^(divehi[._]|date[._])/, "");
+                    const isDivehi = /divehi/i.test(key); // contains "divehi" anywhere
+                    const isDate = /date/i.test(key); // contains "date" anywhere
                     const cleanKey = key.replace(/^(divehi[._]|date[._])/, "");
 
                     placeholders.push({
@@ -298,7 +304,7 @@ ipcMain.handle("upload-template", async (event, { filePath, metadata }) => {
         if (placeholders.length > 0) {
           template.hasFields = true;
           // Apply date_range filtering
-          
+
           const processed = processDateRangePlaceholders(placeholders);
           template.fields = processed.fields;
           if (processed.dateRangeConfig) {
@@ -593,9 +599,12 @@ ipcMain.handle("reload-template-fields", async (event, templateId) => {
             if (!uniqueKeys.has(key)) {
               uniqueKeys.add(key);
               // Determine field type and RTL requirement
-              const isDivehi = /^divehi[._]/.test(key.toLowerCase());
-              const isDate = /^date[._]/.test(key.toLowerCase());
-              // Remove the prefix (divehi. / divehi_ / date. / date_)
+              // const isDivehi = /^divehi[._]/.test(key.toLowerCase());
+              // const isDate = /^date[._]/.test(key.toLowerCase());
+              // // Remove the prefix (divehi. / divehi_ / date. / date_)
+              // const cleanKey = key.replace(/^(divehi[._]|date[._])/, "");
+              const isDivehi = /divehi/i.test(key); // contains "divehi" anywhere
+              const isDate = /date/i.test(key); // contains "date" anywhere
               const cleanKey = key.replace(/^(divehi[._]|date[._])/, "");
 
               fields.push({
@@ -633,8 +642,8 @@ ipcMain.handle("reload-template-fields", async (event, templateId) => {
                   if (!uniqueKeys.has(key)) {
                     uniqueKeys.add(key);
                     // Determine field type and RTL requirement
-                    const isDivehi = /^divehi[._]/.test(key.toLowerCase());
-                    const isDate = /^date[._]/.test(key.toLowerCase());
+                    const isDivehi = /divehi/i.test(key); // contains "divehi" anywhere
+                    const isDate = /date/i.test(key); // contains "date" anywhere
                     // Remove the prefix (divehi. / divehi_ / date. / date_)
                     const cleanKey = key.replace(/^(divehi[._]|date[._])/, "");
 
@@ -660,7 +669,6 @@ ipcMain.handle("reload-template-fields", async (event, templateId) => {
         console.log("Error reading XLSX template:", error.message);
       }
     }
-
 
     // Update the template with reloaded fields
     template.fields = fields;

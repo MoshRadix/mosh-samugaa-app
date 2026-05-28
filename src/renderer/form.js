@@ -45,6 +45,44 @@ function separateHiddenFields(fields) {
   }
   return { visibleFields, hiddenFields };
 }
+/**
+ * Populate hidden date fields that follow naming convention:
+ *   {sourceKey}_divehi_hidden   -> formatted in Divehi
+ *   {sourceKey}_english_hidden  -> formatted in English
+ * Example: start_date_divehi_hidden gets value from start_date
+ */
+function populateDerivedHiddenDateFields(formData, fields) {
+  for (const field of fields) {
+    const key = field.key;
+    if (field.type === "date" && key.endsWith("_hidden")) {
+      let match = null;
+      let targetFormat = null;
+      if (key.endsWith("_divehi_hidden")) {
+        match = key.slice(0, -"_divehi_hidden".length);
+        targetFormat = "divehi";
+      } else if (key.endsWith("_english_hidden")) {
+        match = key.slice(0, -"_english_hidden".length);
+        targetFormat = "english";
+      }
+      if (match && !formData[key]) {
+        // First try exact source match
+        let sourceDate = formData[match];
+        // If not found, fallback to date_range_start (common use case)
+        if (!sourceDate && formData["date_range_start"]) {
+          sourceDate = formData["date_range_start"];
+        }
+        if (sourceDate && sourceDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
+          if (targetFormat === "divehi") {
+            formData[key] = formatDivehiDate(sourceDate);
+          } else if (targetFormat === "english") {
+            formData[key] = formatEnglishDate(sourceDate);
+          }
+        }
+      }
+    }
+  }
+  return formData;
+}
 
 // Detect if field should use Divehi based on field properties
 // function shouldUseDivehi(field) {
@@ -1143,6 +1181,13 @@ async function generateDocument() {
   }
 
   let formData = collectFormData();
+  // 🔽 NEW: populate derived hidden date fields
+  if (window.selectedTemplate && window.selectedTemplate.fields) {
+    formData = populateDerivedHiddenDateFields(
+      formData,
+      window.selectedTemplate.fields,
+    );
+  }
 
   // --- Handle date_range placeholders: all get the selected start date (no increment) ---
   if (
@@ -1176,7 +1221,7 @@ async function generateDocument() {
         if (field.isRTL) {
           formData[field.key] = formatDivehiDate(rawDate);
         } else {
-          formData[field.key] = formatEnglishDate(rawDate);
+          //formData[field.key] = formatEnglishDate(rawDate);
         }
       }
     }
@@ -1292,6 +1337,29 @@ async function generateDocumentOnly() {
   }
 
   let formData = collectFormData();
+   // 🔽 NEW: populate derived hidden date fields
+  if (window.selectedTemplate && window.selectedTemplate.fields) {
+    formData = populateDerivedHiddenDateFields(
+      formData,
+      window.selectedTemplate.fields,
+    );
+  }
+  // Convert date fields based on isRTL flag
+  if (window.selectedTemplate.fields) {
+    for (const field of window.selectedTemplate.fields) {
+      console.log(formData[field.key] + " " + field.label);
+      if (field.key === "date_range_start") continue; // keep raw YYYY-MM-DD
+      //if (field.key.endsWith("_hidden")) continue;
+      if (field.type === "date" && formData[field.key]) {
+        const rawDate = formData[field.key];
+        if (field.isRTL) {
+          formData[field.key] = formatDivehiDate(rawDate);
+        } else {
+          //SformData[field.key] = formatEnglishDate(rawDate);
+        }
+      }
+    }
+  }
   // --- 1. Handle date_range placeholders FIRST (using raw start date) ---
   // --- Sequential date_range placeholders (start date from picker) ---
   if (
@@ -1314,37 +1382,23 @@ async function generateDocumentOnly() {
       return;
     }
   }
-  // Convert date fields based on isRTL flag
-  if (window.selectedTemplate.fields) {
-    for (const field of window.selectedTemplate.fields) {
-      if (field.key === "date_range_start") continue; // keep raw YYYY-MM-DD
-      if (field.key.endsWith("_hidden")) continue;
-      if (field.type === "date" && formData[field.key]) {
-        const rawDate = formData[field.key];
-        if (field.isRTL) {
-          formData[field.key] = formatDivehiDate(rawDate);
-        } else {
-          formData[field.key] = formatEnglishDate(rawDate);
-        }
-      }
-    }
-  }
+  
 
   // Populate hidden fields
-  if (
-    window.selectedTemplate.hiddenFields &&
-    window.selectedTemplate.hiddenFields.length > 0
-  ) {
-    for (const hiddenField of window.selectedTemplate.hiddenFields) {
-      if (
-        hiddenField.key === "start_date_hidden" &&
-        formData["date_range_start"]
-      ) {
-        formData[hiddenField.key] = formData["date_range_start"];
-      }
-      // Add more rules as needed
-    }
-  }
+  // if (
+  //   window.selectedTemplate.hiddenFields &&
+  //   window.selectedTemplate.hiddenFields.length > 0
+  // ) {
+  //   for (const hiddenField of window.selectedTemplate.hiddenFields) {
+  //     if (
+  //       hiddenField.key === "start_date_divehi_hidden" &&
+  //       formData["date_range_start"]
+  //     ) {
+  //       formData[hiddenField.key] = formData["date_range_start"];
+  //     }
+  //     // Add more rules as needed
+  //   }
+  // }
 
   if (!window.electronAPI) {
     console.error("electronAPI not available");
