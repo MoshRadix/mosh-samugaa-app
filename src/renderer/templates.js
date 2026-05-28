@@ -298,6 +298,93 @@ async function printStaticDocument(templateId) {
 // Add these functions to your existing template.js file
 
 // Edit field types for a template
+// async function editFieldTypes(templateId) {
+//   console.log("editFieldTypes called for template:", templateId);
+
+//   // Get the latest template data
+//   const templates = await window.electronAPI.getTemplates();
+//   const template = templates.find((t) => t.id === templateId);
+
+//   if (!template) {
+//     showToast("Template not found", "warning");
+//     return;
+//   }
+
+//   const modal = document.getElementById("fields-modal");
+//   const modalBody = document.getElementById("fields-modal-body");
+//   const modalTitle = document.querySelector("#fields-modal h2");
+
+//   if (!modal || !modalBody) {
+//     console.error("Fields modal not found in DOM");
+//     showToast("Modal not found. Please check your HTML.", "error");
+//     return;
+//   }
+
+//   modalTitle.textContent = `Configure Fields: ${template.name}`;
+// // In editFieldTypes() – filter out hidden fields before rendering
+// const visibleFields = template.fields.filter(f => !f.key.endsWith('_hidden'));
+//   modalBody.innerHTML = `
+//     <div class="fields-list">
+//       ${
+//         template.fields && template.fields.length > 0
+//           ? template.fields
+//               .map(
+//                 (field, index) => `
+//             <div class="field-item">
+//               <div class="field-item-header">
+//                 <strong>${escapeHtml(field.key)}</strong>
+//                 <button class="btn btn-danger btn-small" onclick="removeField('${templateId}', ${index})">Remove</button>
+//               </div>
+//               <div class="field-item-details">
+//                 <div class="form-group">
+//                   <label>Display Label</label>
+//                   <input type="text" id="label-${index}" value="${escapeHtml(field.label || "")}" class="field-label-input">
+//                 </div>
+//                 <div class="form-group">
+//                   <label>Field Type</label>
+//                   <select id="type-${index}" class="field-type-select" onchange="toggleChoicesInput(${index})">
+//                     <option value="string" ${field.type === "string" ? "selected" : ""}>Text</option>
+//                     <option value="number" ${field.type === "number" ? "selected" : ""}>Number</option>
+//                     <option value="date" ${field.type === "date" ? "selected" : ""}>Date Picker</option>
+//                     <option value="email" ${field.type === "email" ? "selected" : ""}>Email</option>
+//                     <option value="textarea" ${field.type === "textarea" ? "selected" : ""}>Text Area</option>
+//                     <option value="boolean" ${field.type === "boolean" ? "selected" : ""}>Yes/No</option>
+//                     <option value="dropdown" ${field.type === "dropdown" ? "selected" : ""}>Dropdown</option>
+//                   </select>
+//                 </div>
+//                 <div class="form-group choices-group" id="choices-group-${index}" style="display: ${field.type === "dropdown" ? "block" : "none"}">
+//                   <label>Dropdown Choices (one per line)</label>
+//                   <textarea id="choices-${index}" rows="3" placeholder="Option 1&#10;Option 2&#10;Option 3">${field.choices ? field.choices.join("\n") : ""}</textarea>
+//                   <small>Each line becomes one selectable option.</small>
+//                 </div>
+//                 <div class="form-group">
+//                   <label>
+//                     <input type="checkbox" id="rtl-${index}" ${field.isRTL ? "checked" : ""}>
+//                     RTL (Divehi) Support
+//                   </label>
+//                 </div>
+//                 <div class="form-group">
+//                   <label>
+//                     <input type="checkbox" id="required-${index}" ${field.required ? "checked" : ""}>
+//                     Required Field
+//                   </label>
+//                 </div>
+//               </div>
+//             </div>
+//           `,
+//               )
+//               .join("")
+//           : "<p>No fields detected...</p>"
+//       }
+//     </div>
+//     <div class="form-actions" style="margin-top: 2rem;">
+//       <button class="btn btn-primary" onclick="saveFieldSettings('${templateId}')">Save Settings</button>
+//       <button class="btn btn-secondary" onclick="closeModal('fields-modal')">Cancel</button>
+//     </div>
+//   `;
+
+//   openModal("fields-modal");
+// }
 async function editFieldTypes(templateId) {
   console.log("editFieldTypes called for template:", templateId);
 
@@ -309,6 +396,11 @@ async function editFieldTypes(templateId) {
     showToast("Template not found", "warning");
     return;
   }
+
+  // 🔽 FILTER OUT HIDDEN FIELDS (keys ending with '_hidden')
+  const visibleFields = template.fields.filter(
+    (f) => !f.key.endsWith("_hidden"),
+  );
 
   const modal = document.getElementById("fields-modal");
   const modalBody = document.getElementById("fields-modal-body");
@@ -325,8 +417,8 @@ async function editFieldTypes(templateId) {
   modalBody.innerHTML = `
     <div class="fields-list">
       ${
-        template.fields && template.fields.length > 0
-          ? template.fields
+        visibleFields.length > 0
+          ? visibleFields
               .map(
                 (field, index) => `
             <div class="field-item">
@@ -373,7 +465,7 @@ async function editFieldTypes(templateId) {
           `,
               )
               .join("")
-          : "<p>No fields detected...</p>"
+          : "<p>No visible fields detected. Hidden fields are not shown here.</p>"
       }
     </div>
     <div class="form-actions" style="margin-top: 2rem;">
@@ -463,32 +555,40 @@ async function saveFieldSettings(templateId) {
     showToast("Template or fields not found", "warning");
     return;
   }
+  // Separate hidden fields from the original template
+  const hiddenFields = template.fields.filter((f) => f.key.endsWith("_hidden"));
+
+ 
 
   // Build updated fields array from form inputs
-  const updatedFields = template.fields.map((field, index) => {
-    const labelInput = document.getElementById(`label-${index}`);
-    const typeSelect = document.getElementById(`type-${index}`);
-    const rtlCheckbox = document.getElementById(`rtl-${index}`);
-    const requiredCheckbox = document.getElementById(`required-${index}`);
-    const choicesTextarea = document.getElementById(`choices-${index}`);
+  const updatedVisibleFields = template.fields
+    .filter((f) => !f.key.endsWith("_hidden"))
+    .map((field, index) => {
+      const labelInput = document.getElementById(`label-${index}`);
+      const typeSelect = document.getElementById(`type-${index}`);
+      const rtlCheckbox = document.getElementById(`rtl-${index}`);
+      const requiredCheckbox = document.getElementById(`required-${index}`);
+      const choicesTextarea = document.getElementById(`choices-${index}`);
 
-    let choices = null;
-    if (typeSelect && typeSelect.value === "dropdown" && choicesTextarea) {
-      choices = choicesTextarea.value
-        .split(/\r?\n/)
-        .map((line) => line.trim())
-        .filter((line) => line !== "");
-    }
+      let choices = null;
+      if (typeSelect && typeSelect.value === "dropdown" && choicesTextarea) {
+        choices = choicesTextarea.value
+          .split(/\r?\n/)
+          .map((line) => line.trim())
+          .filter((line) => line !== "");
+      }
 
-    return {
-      ...field,
-      label: labelInput ? labelInput.value : field.label,
-      type: typeSelect ? typeSelect.value : field.type,
-      isRTL: rtlCheckbox ? rtlCheckbox.checked : false,
-      required: requiredCheckbox ? requiredCheckbox.checked : false,
-      choices: choices,
-    };
-  });
+      return {
+        ...field,
+        label: labelInput ? labelInput.value : field.label,
+        type: typeSelect ? typeSelect.value : field.type,
+        isRTL: rtlCheckbox ? rtlCheckbox.checked : false,
+        required: requiredCheckbox ? requiredCheckbox.checked : false,
+        choices: choices,
+      };
+    });
+     // Combine visible + hidden
+  const updatedFields = [...updatedVisibleFields, ...hiddenFields];
 
   // Preserve dateRangeConfig if it exists
   const dateRangeConfig = template.dateRangeConfig || null;
@@ -513,7 +613,8 @@ async function saveFieldSettings(templateId) {
     if (index !== -1) {
       allTemplates[index].fields = updatedFields;
       allTemplates[index].hasFields = updatedFields.length > 0;
-      if (dateRangeConfig) allTemplates[index].dateRangeConfig = dateRangeConfig;
+      if (dateRangeConfig)
+        allTemplates[index].dateRangeConfig = dateRangeConfig;
     }
 
     // Refresh UI

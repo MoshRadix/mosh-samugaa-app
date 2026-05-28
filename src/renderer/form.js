@@ -767,17 +767,42 @@ async function renderFillForm() {
   const fields = window.selectedTemplate.fields;
 
   // Build the unified grid
-  const fieldsHtml = fields
+  // const fieldsHtml = fields
+  //   .map((field) => {
+  //     const isDivehiField = shouldUseDivehi(field);
+  //     const fieldId = `field-${field.key.replace(/[^a-zA-Z0-9]/g, "_")}`;
+  //     // In renderFillForm, inside the .map(field => ...) section:
+  //     const isTextarea = field.type === "textarea";
+  //     const fullWidthClass = isTextarea ? "full-width-field" : "";
+  //     return `
+  //     <div class="field-container ${fullWidthClass}" data-field-key="${field.key}">
+
+  //         <!-- <label ${isDivehiField ? 'dir="rtl"' : ""}> -->
+  //         <label>
+  //           ${escapeHtml(field.label || field.key)}
+  //           ${field.required ? '<span class="required-star">*</span>' : ""}
+  //           ${field.type !== "string" ? `<span class="field-type-indicator">${getFieldTypeIcon(field.type)}</span>` : ""}
+  //         </label>
+  //         ${getFieldInputWithAutoSwitch(field)}
+  //         <div class="field-hint">${getFieldHint(field)}</div>
+  //       </div>
+  //     `;
+  //   })
+  //   .join("");
+  // Filter out hidden fields (keys ending with '_hidden')
+  const visibleFields = window.selectedTemplate.fields.filter(
+    (f) => !f.key.endsWith("_hidden"),
+  );
+
+  // Build fieldsHtml using visibleFields instead of all fields
+  const fieldsHtml = visibleFields
     .map((field) => {
       const isDivehiField = shouldUseDivehi(field);
       const fieldId = `field-${field.key.replace(/[^a-zA-Z0-9]/g, "_")}`;
-      // In renderFillForm, inside the .map(field => ...) section:
       const isTextarea = field.type === "textarea";
       const fullWidthClass = isTextarea ? "full-width-field" : "";
       return `
-      <div class="field-container ${fullWidthClass}" data-field-key="${field.key}">
-        
-          <!-- <label ${isDivehiField ? 'dir="rtl"' : ""}> -->
+        <div class="field-container ${fullWidthClass}" data-field-key="${field.key}">
           <label>
             ${escapeHtml(field.label || field.key)}
             ${field.required ? '<span class="required-star">*</span>' : ""}
@@ -974,16 +999,17 @@ function validateForm() {
 
   const firstInvalidField = null;
 
-  for (const field of window.selectedTemplate.fields) {
+  // Only validate visible fields (non-hidden)
+  const visibleFields = window.selectedTemplate.fields.filter(
+    (f) => !f.key.endsWith("_hidden"),
+  );
+
+  for (const field of visibleFields) {
     const fieldId = `field-${field.key.replace(/[^a-zA-Z0-9]/g, "_")}`;
     const input = document.getElementById(fieldId);
-    if (!input) {
-      console.warn(`Input not found for field: ${field.key}`);
-      continue;
-    }
+    if (!input) continue;
 
     let value = input.value;
-
     if (input.type === "checkbox") {
       value = input.checked;
     } else if (input.type === "select-one") {
@@ -992,6 +1018,7 @@ function validateForm() {
       value = input.value?.trim() || "";
     }
 
+    // Required validation
     if (field.required && (!value || value === "")) {
       alert(`❌ ${field.label || field.key} is required`);
       input.focus();
@@ -1047,12 +1074,36 @@ function collectFormData() {
   }
 
   const data = {};
-  for (const field of window.selectedTemplate.fields) {
+
+  // for (const field of window.selectedTemplate.fields) {
+  //   const fieldId = `field-${field.key.replace(/[^a-zA-Z0-9]/g, "_")}`;
+  //   const input = document.getElementById(fieldId);
+  //   if (input) {
+  //     let value = input.value;
+
+  //     if (input.type === "checkbox") {
+  //       value = input.checked;
+  //     } else if (input.type === "number") {
+  //       value = input.value ? parseFloat(input.value) : "";
+  //     } else if (input.type === "select-one" && field.type === "boolean") {
+  //       value = value === "true";
+  //     } else {
+  //       value = input.value?.trim() || "";
+  //     }
+
+  //     data[field.key] = value;
+  //     console.log(`Collected ${field.key}:`, value);
+  //   }
+  // }
+  // Collect visible fields only
+  const visibleFields = window.selectedTemplate.fields.filter(
+    (f) => !f.key.endsWith("_hidden"),
+  );
+  for (const field of visibleFields) {
     const fieldId = `field-${field.key.replace(/[^a-zA-Z0-9]/g, "_")}`;
     const input = document.getElementById(fieldId);
     if (input) {
       let value = input.value;
-
       if (input.type === "checkbox") {
         value = input.checked;
       } else if (input.type === "number") {
@@ -1062,10 +1113,16 @@ function collectFormData() {
       } else {
         value = input.value?.trim() || "";
       }
-
       data[field.key] = value;
-      console.log(`Collected ${field.key}:`, value);
     }
+  }
+
+  // Populate hidden field start_date_hidden from date_range_start
+  const hasStartDateHidden = window.selectedTemplate.fields.some(
+    (f) => f.key === "start_date_hidden",
+  );
+  if (hasStartDateHidden && data["date_range_start"]) {
+    data["start_date_hidden"] = data["date_range_start"];
   }
 
   return data;
@@ -1093,7 +1150,7 @@ async function generateDocument() {
     window.selectedTemplate.dateRangeConfig.enabled
   ) {
     const startDateStr = formData["date_range_start"];
-    formData["start_date_hidden"] = formData["date_range_start"]; // Add a generic start_date for templates that use it
+    //formData["start_date_hidden"] = formData["date_range_start"]; // Add a generic start_date for templates that use it
     if (startDateStr && startDateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
       const config = window.selectedTemplate.dateRangeConfig;
       for (let i = 1; i <= config.count; i++) {
@@ -1124,8 +1181,6 @@ async function generateDocument() {
       }
     }
   }
-
-
 
   if (!window.electronAPI) {
     console.error("electronAPI not available");
@@ -1263,7 +1318,7 @@ async function generateDocumentOnly() {
   if (window.selectedTemplate.fields) {
     for (const field of window.selectedTemplate.fields) {
       if (field.key === "date_range_start") continue; // keep raw YYYY-MM-DD
-      if (field.key.endsWith('_hidden')) continue;
+      if (field.key.endsWith("_hidden")) continue;
       if (field.type === "date" && formData[field.key]) {
         const rawDate = formData[field.key];
         if (field.isRTL) {
