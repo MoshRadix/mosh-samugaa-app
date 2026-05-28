@@ -547,43 +547,96 @@ ipcMain.handle("get-app-info", () => ({
   nodeVersion: process.versions.node, chromeVersion: process.versions.chrome,
   platform: process.platform, arch: process.arch
 }));
+// ipcMain.handle("print-document", async (event, filePath) => {
+//   await fs.access(filePath);
+//   const isPdf = path.extname(filePath).toLowerCase() === ".pdf";
+//   if (process.platform === "win32") {
+//     if (isPdf) {
+//       return new Promise((resolve, reject) => {
+//         let pdfWindow = new BrowserWindow({ show: false, webPreferences: { plugins: true } });
+//         pdfWindow.loadURL(`file://${filePath}`);
+//         pdfWindow.webContents.on("did-finish-load", () => {
+//           pdfWindow.webContents.print({ silent: true, printBackground: true }, (success, reason) => {
+//             pdfWindow.close();
+//             if (success) resolve(true);
+//             else reject(new Error(`Print failed: ${reason}`));
+//           });
+//         });
+//         pdfWindow.webContents.on("did-fail-load", () => {
+//           pdfWindow.close();
+//           reject(new Error("Failed to load PDF"));
+//         });
+//       });
+//     } else {
+//       const { exec } = require("child_process");
+//       const command = `powershell -Command "Start-Process -FilePath '${filePath}' -Verb Print -WindowStyle Hidden"`;
+//       return new Promise((resolve, reject) => {
+//         exec(command, { timeout: 30000 }, (error) => {
+//           if (error) reject(new Error(`Print failed: ${error.message}`));
+//           else resolve(true);
+//         });
+//       });
+//     }
+//   } else if (process.platform === "darwin" || process.platform === "linux") {
+//     const { exec } = require("child_process");
+//     const command = `lp "${filePath}"`;
+//     return new Promise((resolve, reject) => {
+//       exec(command, { timeout: 30000 }, (error) => {
+//         if (error) reject(new Error(`Print failed: ${error.message}`));
+//         else resolve(true);
+//       });
+//     });
+//   } else {
+//     throw new Error("Printing not supported on this platform");
+//   }
+// });
+const { print } = require("pdf-to-printer"); // add at top of file
+
 ipcMain.handle("print-document", async (event, filePath) => {
   await fs.access(filePath);
-  const isPdf = path.extname(filePath).toLowerCase() === ".pdf";
+  const ext = path.extname(filePath).toLowerCase();
+  const isPdf = ext === ".pdf";
+
   if (process.platform === "win32") {
     if (isPdf) {
-      return new Promise((resolve, reject) => {
-        let pdfWindow = new BrowserWindow({ show: false, webPreferences: { plugins: true } });
-        pdfWindow.loadURL(`file://${filePath}`);
-        pdfWindow.webContents.on("did-finish-load", () => {
-          pdfWindow.webContents.print({ silent: true, printBackground: true }, (success, reason) => {
-            pdfWindow.close();
-            if (success) resolve(true);
-            else reject(new Error(`Print failed: ${reason}`));
-          });
-        });
-        pdfWindow.webContents.on("did-fail-load", () => {
-          pdfWindow.close();
-          reject(new Error("Failed to load PDF"));
-        });
-      });
+      try {
+        // Direct PDF printing via Windows API – no viewer needed
+        await print(filePath);
+        return true;
+      } catch (err) {
+        console.error("PDF printing error:", err);
+        // Fallback: open the file for manual printing
+        await shell.openPath(filePath);
+        throw new Error(`PDF could not be printed automatically: ${err.message}. The file has been opened for manual printing.`);
+      }
     } else {
+      // Word / Excel – use PowerShell
       const { exec } = require("child_process");
-      const command = `powershell -Command "Start-Process -FilePath '${filePath}' -Verb Print -WindowStyle Hidden"`;
+      const escapedPath = filePath.replace(/'/g, "''");
+      const command = `powershell -Command "Start-Process -FilePath '${escapedPath}' -Verb Print -WindowStyle Hidden"`;
       return new Promise((resolve, reject) => {
         exec(command, { timeout: 30000 }, (error) => {
-          if (error) reject(new Error(`Print failed: ${error.message}`));
-          else resolve(true);
+          if (error) {
+            shell.openPath(filePath).catch(() => {});
+            reject(new Error(`Print failed: ${error.message}. File opened for manual printing.`));
+          } else {
+            resolve(true);
+          }
         });
       });
     }
   } else if (process.platform === "darwin" || process.platform === "linux") {
     const { exec } = require("child_process");
-    const command = `lp "${filePath}"`;
+    const escapedPath = filePath.replace(/(["\s'$`\\])/g, "\\$1");
+    const command = `lp "${escapedPath}"`;
     return new Promise((resolve, reject) => {
       exec(command, { timeout: 30000 }, (error) => {
-        if (error) reject(new Error(`Print failed: ${error.message}`));
-        else resolve(true);
+        if (error) {
+          shell.openPath(filePath).catch(() => {});
+          reject(new Error(`Print failed: ${error.message}. File opened for manual printing.`));
+        } else {
+          resolve(true);
+        }
       });
     });
   } else {
