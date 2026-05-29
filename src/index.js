@@ -14,6 +14,7 @@ const Docxtemplater = require("docxtemplater");
 const ExcelJS = require("exceljs");
 const { v4: uuidv4 } = require("uuid");
 const initSqlJs = require("sql.js");
+const { updateElectronApp, UpdateSourceType } = require("update-electron-app");
 
 process.noDeprecation = true;
 
@@ -988,11 +989,15 @@ app.whenReady().then(async () => {
   await migrateFromJSONIfNeeded();
   await fs.mkdir(settings.templatesDir, { recursive: true });
   await fs.mkdir(settings.outputsDir, { recursive: true });
-  // 👇 INSERT AUTO-UPDATE HERE (before createWindow)
-  require("update-electron-app")({
-    repo: "moshradix/mosh-forms-app", // your GitHub repo
-    updateInterval: "1 hour", // check every hour
-    logger: require("electron-log"), // optional, for logging
+  //updateElectronApp(); // additional configuration options available
+  
+  updateElectronApp({
+    updateSource: {
+      type: UpdateSourceType.ElectronPublicUpdateService,
+      repo: "moshradix/mosh-forms-app",
+    },
+    updateInterval: "1 hour",
+    logger: require("electron-log"),
   });
   createWindow();
   app.on("activate", () => {

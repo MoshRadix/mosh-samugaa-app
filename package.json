@@ -20,11 +20,13 @@
   "license": "MIT",
   "dependencies": {
     "docxtemplater": "^3.52.3",
+    "electron-log": "^5.4.4",
     "electron-squirrel-startup": "^1.0.1",
     "exceljs": "^4.4.0",
     "pdf-to-printer": "^5.8.0",
     "pizzip": "^3.1.8",
     "sql.js": "^1.14.1",
+    "update-electron-app": "^3.2.0",
     "uuid": "^11.1.0"
   },
   "devDependencies": {

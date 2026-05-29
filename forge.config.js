@@ -39,8 +39,13 @@ module.exports = {
           name: 'mosh-forms-app'
         },
         prerelease: false,
+<<<<<<< HEAD
         draft: true,
         authToken: process.env.GITHUB_TOKEN   // uses the token from .env
+=======
+        draft: false,
+        process.env.GITHUB_TOKEN   // uses the token from .env
+>>>>>>> 2e056fe (few changes to the auto updater)
       }
     }
   ],
