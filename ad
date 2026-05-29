@@ -1,0 +1,185 @@
+[33mcommit 1f4fe0f920cd82c08ca240356634fa0e29a3bb0a[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmaster[m[33m)[m
+Author: Mohamed Shamil <shaamil.is@gmail.com>
+Date:   Fri May 29 14:49:48 2026 +0500
+
+    minor change
+
+[33mcommit 301d5b551a4d626be988a1509382f6feeed6eab7[m
+Author: Mohamed Shamil <shaamil.is@gmail.com>
+Date:   Fri May 29 14:45:14 2026 +0500
+
+    removed sensitive information
+
+[33mcommit 441db331c6c6628c56fe16000fc26e626d093f80[m
+Author: Mohamed Shamil <shaamil.is@gmail.com>
+Date:   Fri May 29 14:41:10 2026 +0500
+
+    Improved auto update
+
+[33mcommit 2e056fe78b77f81c44e671836906cf02523c358e[m
+Author: Mohamed Shamil <shaamil.is@gmail.com>
+Date:   Fri May 29 13:41:20 2026 +0500
+
+    few changes to the auto updater
+
+[33mcommit c4e6b9e889dd36eb317eda1076f55621cc65698a[m
+Author: Mohamed Shamil <shaamil.is@gmail.com>
+Date:   Fri May 29 13:07:19 2026 +0500
+
+    Auto update testing
+
+[33mcommit dbb463925520f3d68bac89f1ae1e9c583f06cdce[m[33m ([m[1;33mtag: [m[1;33mv1.0.1[m[33m, [m[1;31morigin/master[m[33m)[m
+Author: Mohamed Shamil <shaamil.is@gmail.com>
+Date:   Fri May 29 11:51:11 2026 +0500
+
+    deleted some files
+
+[33mcommit d6385a5d2bbc3f6258380869deb15bb4538d70fe[m
+Author: Mohamed Shamil <shaamil.is@gmail.com>
+Date:   Fri May 29 11:51:07 2026 +0500
+
+    deleted files
+
+[33mcommit e7716808b223b9f688d19cb48b4353d101afcda1[m
+Author: Mohamed Shamil <shaamil.is@gmail.com>
+Date:   Fri May 29 07:55:21 2026 +0500
+
+    Minor changes
+
+[33mcommit 16293655e509d0115418c3ae1968157d6923267b[m
+Author: Mohamed Shamil <shaamil.is@gmail.com>
+Date:   Fri May 29 01:49:19 2026 +0500
+
+    optmizations
+
+[33mcommit a3a69668593517a1b37c1f4e9b51895bc98595f7[m
+Author: Mohamed Shamil <shaamil.is@gmail.com>
+Date:   Fri May 29 01:40:04 2026 +0500
+
+    Pdf printing issue solved
+
+[33mcommit f4c84d5a8af3992e9c52b577025c0eec4df6c095[m
+Author: Mohamed Shamil <shaamil.is@gmail.com>
+Date:   Thu May 28 22:28:09 2026 +0500
+
+    added print count badge
+
+[33mcommit 707442b4a6441bb36039e2d7962a0e3dbba78a69[m
+Author: Mohamed Shamil <shaamil.is@gmail.com>
+Date:   Thu May 28 21:23:54 2026 +0500
+
+    changed database from json to  sqlite3
+
+[33mcommit 37209d1fcda9dd598208c3e1b772710b6d128082[m
+Author: Mohamed Shamil <shaamil.is@gmail.com>
+Date:   Thu May 28 16:14:16 2026 +0500
+
+    Mnor changes to hidden fields
+
+[33mcommit d4bb19c00c91a63573feb134c010ca8d5c9ec8be[m
+Author: Mohamed Shamil <shaamil.is@gmail.com>
+Date:   Thu May 28 08:37:10 2026 +0500
+
+    minor changes to hidden fields
+
+[33mcommit c3262df9d18802a0c93cb88db8a6e29d635218bd[m
+Author: Mohamed Shamil <shaamil.is@gmail.com>
+Date:   Wed May 27 15:51:53 2026 +0500
+
+    Added date range selection
+
+[33mcommit 92e9d12fdab9319ead6da455c9f479804024ba8b[m
+Author: Mohamed Shamil <shaamil.is@gmail.com>
+Date:   Wed May 27 08:41:02 2026 +0500
+
+    If the input type is a textarea the width will span across the container.
+
+[33mcommit 54f1715c47efed397fc1be0e920f6f61677d12fa[m
+Author: Mohamed Shamil <shaamil.is@gmail.com>
+Date:   Wed May 27 08:27:12 2026 +0500
+
+    Added a document generate only button
+
+[33mcommit 2c21d0b053d95a363bf4544f624566c9f0fd2b9a[m
+Author: Mohamed Shamil <shaamil.is@gmail.com>
+Date:   Wed May 27 03:34:00 2026 +0500
+
+    Fixed Divehi place holder
+
+[33mcommit 9d36bd627b0296bbcd023989b1c022999bb687ef[m
+Author: Mohamed Shamil <shaamil.is@gmail.com>
+Date:   Tue May 26 19:57:17 2026 +0500
+
+    Fixed RTL(Dhivehi SUpport) for Date FIelds
+
+[33mcommit 2864bb53f52872b2a91bcde2ef12d900d089dfd3[m
+Author: Mohamed Shamil <shaamil.is@gmail.com>
+Date:   Tue May 26 19:36:32 2026 +0500
+
+    fixed dhivehi transliteration bugs
+
+[33mcommit fe91290ac431d2f5beec51eaeb8f74607584fafc[m
+Author: Mohamed Shamil <shaamil.is@gmail.com>
+Date:   Tue May 26 17:44:45 2026 +0500
+
+    Colour scheme change
+
+[33mcommit a04df89e644d6c39dda495e3794d60e6295a67e3[m
+Author: Mohamed Shamil <shaamil.is@gmail.com>
+Date:   Tue May 26 13:54:40 2026 +0500
+
+    FOrm layout change and unify the input control sizes.
+
+[33mcommit 0e9d53a12c2d5d841483a06fc27e6d9bd3e4078b[m
+Author: Mohamed Shamil <shaamil.is@gmail.com>
+Date:   Tue May 26 12:48:00 2026 +0500
+
+    Minor changes
+
+[33mcommit 4f72fac8357433f2133f48dd8708b4016508e0a1[m
+Author: Mohamed Shamil <shaamil.is@gmail.com>
+Date:   Tue May 26 09:24:42 2026 +0500
+
+    New field types including dropdown added
+
+[33mcommit 15d3b41dd78c02c5aa683d954cb5651d92b8de39[m
+Author: Mohamed Shamil <shaamil.is@gmail.com>
+Date:   Tue May 26 08:58:33 2026 +0500
+
+    Fixed change database, outputs and tempalte paths. Fixed broese buttons on the settings page.
+
+[33mcommit 171575426e51f5b8e607465b7371fb2a75567d18[m
+Author: Mohamed Shamil <shaamil.is@gmail.com>
+Date:   Mon May 25 11:38:22 2026 +0500
+
+    Icon update
+
+[33mcommit 92e0e58d865a5056226cc3dcf707f2e1e77d7a41[m
+Author: Mohamed Shamil <shaamil.is@gmail.com>
+Date:   Mon May 25 11:37:33 2026 +0500
+
+    many improvements
+
+[33mcommit 607eff442d952afe268bde296fe0fdf7970759a5[m
+Author: Mohamed Shamil <shaamil.is@gmail.com>
+Date:   Mon May 25 06:49:55 2026 +0500
+
+    Correct current and next date
+
+[33mcommit 62fe90b0bf38ada3b10caafc3f1ecf9e32070a35[m
+Author: Mohamed Shamil <shaamil.is@gmail.com>
+Date:   Mon May 25 05:19:19 2026 +0500
+
+    use Enter key to move to the next field.
+
+[33mcommit b765fae48981da9c10a7692c5ee4d21fe2a2c232[m
+Author: Mohamed Shamil <shaamil.is@gmail.com>
+Date:   Sun May 24 10:55:15 2026 +0500
+
+    Add DIvehi Field and calender field support
+
+[33mcommit a7c930f5b3a0f684ecd4f47c8804d720f8b54fe8[m
+Author: Mohamed Shamil <shaamil.is@gmail.com>
+Date:   Sun May 24 10:28:51 2026 +0500
+
+    Initial

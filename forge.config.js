@@ -30,6 +30,20 @@ module.exports = {
       config: {},
     },
   ],
+  publishers: [
+    {
+      name: '@electron-forge/publisher-github',
+      config: {
+        repository: {
+          owner: 'moshradix',
+          name: 'mosh-forms-app'
+        },
+        prerelease: false,
+        draft: true,
+        authToken: process.env.GITHUB_TOKEN   // uses the token from .env
+      }
+    }
+  ],
   plugins: [
     {
       name: "@electron-forge/plugin-auto-unpack-natives",
