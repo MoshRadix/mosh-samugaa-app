@@ -172,13 +172,13 @@ async function renderTemplates() {
     .map(
       (template) => `
         <div class="template-card">
-            <div class="template-card-header">
-                <h3>${escapeHtml(template.name)}</h3>
-                <span class="template-type-badge">🖨️ ${template.recordCount || 0}</span>
-                <span class="template-type-badge">${template.type === "word" ? "DOCX" : template.type === "excel" ? "XLSX" : "PDF"}</span>
-                
-                
-            </div>
+            <div class="template-badges">
+        <span class="template-type-badge">🖨️ ${template.recordCount || 0}</span>
+        <span class="template-type-badge">${template.type === "word" ? "DOCX" : template.type === "excel" ? "XLSX" : "PDF"}</span>
+        <span class="badge ${template.hasFields ? "badge-fillable" : "badge-static"}">
+            ${template.hasFields ? "Fillable" : "Static"}
+        </span>
+    </div>
             <p>${escapeHtml(template.description || "No description")}</p>
             <p class="category">Category: ${escapeHtml(template.category)}</p>
             <p>
