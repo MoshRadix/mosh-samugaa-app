@@ -91,9 +91,31 @@ function setupSettings() {
     });
   }
 }
+async function loadAboutInfo() {
+  const aboutContainer = document.getElementById('about-content');
+  if (!aboutContainer) return;
+  
+  try {
+    const info = await window.electronAPI.getAppInfo();
+    aboutContainer.innerHTML = `
+      <p><strong>📦 App Name:</strong> ${escapeHtml(info.name)}</p>
+      <p><strong>🔢 Version:</strong> ${escapeHtml(info.version)}</p>
+      <p><strong>👨‍💻 Developer:</strong> ${escapeHtml(info.author)}</p>
+      <p><strong>📧 Email:</strong> <a href="mailto:${escapeHtml(info.email)}">${escapeHtml(info.email)}</a></p>
+      <p><strong>📞 Phone:</strong> <a href="tel:${escapeHtml(info.phone)}">${escapeHtml(info.phone)}</a></p>
+      <p><strong>🔗 Repository:</strong> <a href="${escapeHtml(info.repo)}" target="_blank">${escapeHtml(info.repo)}</a></p>
+      <p><strong>🖥️ Platform:</strong> ${escapeHtml(info.platform)} (${escapeHtml(info.arch)})</p>
+      <div class="about-quote">“${escapeHtml(info.quote)}”</div>
+    `;
+  } catch (error) {
+    console.error("Failed to load about info:", error);
+    aboutContainer.innerHTML = '<p class="error">Unable to load application information.</p>';
+  }
+}
 
 // Called when Settings view becomes active
 window.initSettings = () => {
   loadSettings();
   setupSettings();
+   loadAboutInfo();   // ← add this line
 };

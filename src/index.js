@@ -1,3 +1,4 @@
+
 const {
   app,
   BrowserWindow,
@@ -17,6 +18,10 @@ const initSqlJs = require("sql.js");
 const { updateElectronApp, UpdateSourceType } = require("update-electron-app");
 
 process.noDeprecation = true;
+// At the very top of src/index.js, before any other code
+if (require('electron-squirrel-startup')) {
+  app.quit();
+}
 
 let mainWindow;
 let db = null; // SQL.js database instance
@@ -750,11 +755,17 @@ ipcMain.handle(
 ipcMain.handle("get-app-info", () => ({
   version: app.getVersion(),
   name: app.getName(),
+  version: app.getVersion(),
+  author: "Mohamed Shamil",
+  email: "shaamil.is@gmail.com",
+  phone: "+960 999-0166", // 👈 Add your phone number here
+  repo: "https://github.com/MoshRadix/mosh-forms-app",
+  quote: "Simplify document generation, one form at a time.",
   electronVersion: process.versions.electron,
   nodeVersion: process.versions.node,
   chromeVersion: process.versions.chrome,
   platform: process.platform,
-  arch: process.arch,
+  arch: process.arch
 }));
 // ipcMain.handle("print-document", async (event, filePath) => {
 //   await fs.access(filePath);
@@ -990,7 +1001,7 @@ app.whenReady().then(async () => {
   await fs.mkdir(settings.templatesDir, { recursive: true });
   await fs.mkdir(settings.outputsDir, { recursive: true });
   //updateElectronApp(); // additional configuration options available
-  
+  process.env.ELECTRON_IS_DEV = 'false';
   updateElectronApp({
     updateSource: {
       type: UpdateSourceType.ElectronPublicUpdateService,

@@ -951,3 +951,10 @@ select:disabled {
   align-items: center;
   gap: 4px;
 }
+.about-content a[href^="tel:"] {
+  color: var(--accent-primary);
+  text-decoration: none;
+}
+.about-content a[href^="tel:"]:hover {
+  text-decoration: underline;
+}
