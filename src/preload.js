@@ -16,7 +16,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   // Document Generation
   generateDocument: (data) => ipcRenderer.invoke("generate-document", data),
   printDocument: (filePath) => ipcRenderer.invoke("print-document", filePath),
-  //openAndPrint: (filePath) => ipcRenderer.invoke("print-document", filePath), // Make sure this line exists
+  openAndPrint: (filePath) => ipcRenderer.invoke("print-document", filePath), // Make sure this line exists
 
   // Data Records
   saveDataRecord: (data) => ipcRenderer.invoke("save-data-record", data),
