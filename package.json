@@ -1,7 +1,7 @@
 {
   "name": "mosh-forms-app",
   "productName": "mosh-forms-app",
-  "version": "1.0.1",
+  "version": "1.0.0",
   "description": "My Electron application description",
   "main": "src/index.js",
   "private": true,

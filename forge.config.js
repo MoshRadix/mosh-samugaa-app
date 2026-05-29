@@ -44,8 +44,16 @@ module.exports = {
         authToken: process.env.GITHUB_TOKEN   // uses the token from .env
 =======
         draft: false,
+<<<<<<< HEAD
         process.env.GITHUB_TOKEN   // uses the token from .env
+=======
+<<<<<<< HEAD
+        authToken: process.env.GITHUB_TOKEN   // uses the token from .env
+>>>>>>> 4a85667 (removed sensitive information)
 >>>>>>> 2e056fe (few changes to the auto updater)
+=======
+        authToken: process.env.GITHUB_TOKEN   // uses the token from .env
+>>>>>>> 301d5b5 (removed sensitive information)
       }
     }
   ],
