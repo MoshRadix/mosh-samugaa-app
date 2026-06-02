@@ -1,4 +1,3 @@
-
 const {
   app,
   BrowserWindow,
@@ -19,7 +18,7 @@ const { updateElectronApp, UpdateSourceType } = require("update-electron-app");
 
 process.noDeprecation = true;
 // At the very top of src/index.js, before any other code
-if (require('electron-squirrel-startup')) {
+if (require("electron-squirrel-startup")) {
   app.quit();
 }
 
@@ -765,7 +764,7 @@ ipcMain.handle("get-app-info", () => ({
   nodeVersion: process.versions.node,
   chromeVersion: process.versions.chrome,
   platform: process.platform,
-  arch: process.arch
+  arch: process.arch,
 }));
 // ipcMain.handle("print-document", async (event, filePath) => {
 //   await fs.access(filePath);
@@ -810,47 +809,132 @@ ipcMain.handle("get-app-info", () => ({
 //     throw new Error("Printing not supported on this platform");
 //   }
 // });
-const { print } = require("pdf-to-printer"); // add at top of file
+//const { print } = require("pdf-to-printer"); // add at top of file
 
+// ipcMain.handle("print-document", async (event, filePath) => {
+//   await fs.access(filePath);
+//   const ext = path.extname(filePath).toLowerCase();
+//   const isPdf = ext === ".pdf";
+
+//   if (process.platform === "win32") {
+//     if (isPdf) {
+//       try {
+//         // Direct PDF printing via Windows API – no viewer needed
+//         await print(filePath);
+//         return true;
+//       } catch (err) {
+//         console.error("PDF printing error:", err);
+//         // Fallback: open the file for manual printing
+//         await shell.openPath(filePath);
+//         throw new Error(
+//           `PDF could not be printed automatically: ${err.message}. The file has been opened for manual printing.`,
+//         );
+//       }
+//     } else {
+//       // Word / Excel – use PowerShell
+//       const { exec } = require("child_process");
+//       const escapedPath = filePath.replace(/'/g, "''");
+//       const command = `powershell -Command "Start-Process -FilePath '${escapedPath}' -Verb Print -WindowStyle Hidden"`;
+//       return new Promise((resolve, reject) => {
+//         exec(command, { timeout: 30000 }, (error) => {
+//           if (error) {
+//             shell.openPath(filePath).catch(() => {});
+//             reject(
+//               new Error(
+//                 `Print failed: ${error.message}. File opened for manual printing.`,
+//               ),
+//             );
+//           } else {
+//             resolve(true);
+//           }
+//         });
+//       });
+//     }
+//   } else if (process.platform === "darwin" || process.platform === "linux") {
+//     const { exec } = require("child_process");
+//     const escapedPath = filePath.replace(/(["\s'$`\\])/g, "\\$1");
+//     const command = `lp "${escapedPath}"`;
+//     return new Promise((resolve, reject) => {
+//       exec(command, { timeout: 30000 }, (error) => {
+//         if (error) {
+//           shell.openPath(filePath).catch(() => {});
+//           reject(
+//             new Error(
+//               `Print failed: ${error.message}. File opened for manual printing.`,
+//             ),
+//           );
+//         } else {
+//           resolve(true);
+//         }
+//       });
+//     });
+//   } else {
+//     throw new Error("Printing not supported on this platform");
+//   }
+// });
 ipcMain.handle("print-document", async (event, filePath) => {
   await fs.access(filePath);
   const ext = path.extname(filePath).toLowerCase();
   const isPdf = ext === ".pdf";
 
-  if (process.platform === "win32") {
-    if (isPdf) {
-      try {
-        // Direct PDF printing via Windows API – no viewer needed
-        await print(filePath);
-        return true;
-      } catch (err) {
-        console.error("PDF printing error:", err);
-        // Fallback: open the file for manual printing
-        await shell.openPath(filePath);
-        throw new Error(
-          `PDF could not be printed automatically: ${err.message}. The file has been opened for manual printing.`,
-        );
-      }
-    } else {
-      // Word / Excel – use PowerShell
-      const { exec } = require("child_process");
-      const escapedPath = filePath.replace(/'/g, "''");
-      const command = `powershell -Command "Start-Process -FilePath '${escapedPath}' -Verb Print -WindowStyle Hidden"`;
-      return new Promise((resolve, reject) => {
-        exec(command, { timeout: 30000 }, (error) => {
-          if (error) {
-            shell.openPath(filePath).catch(() => {});
-            reject(
-              new Error(
-                `Print failed: ${error.message}. File opened for manual printing.`,
-              ),
-            );
-          } else {
-            resolve(true);
-          }
-        });
+  if (isPdf) {
+    // Cross-platform native silent PDF printing using a hidden window
+    return new Promise((resolve, reject) => {
+      let workerWindow = new BrowserWindow({
+        show: false,
+        webPreferences: {
+          plugins: true, // Allows PDF rendering internally
+        },
       });
-    }
+
+      // Load the PDF file directly into the hidden window
+      workerWindow.loadURL(`file://${filePath}`);
+
+      workerWindow.webContents.on("did-finish-load", () => {
+        // Trigger silent printing once loaded
+        workerWindow.webContents.print(
+          {
+            silent: true,
+            printBackground: true,
+          },
+          (success, failureReason) => {
+            workerWindow.close();
+            if (success) {
+              resolve(true);
+            } else {
+              reject(new Error(`Silent print failed: ${failureReason}`));
+            }
+          },
+        );
+      });
+
+      workerWindow.webContents.on("did-fail-load", (err) => {
+        workerWindow.close();
+        reject(new Error(`Failed to load PDF into printing engine: ${err}`));
+      });
+    });
+  }
+
+  // --- Non-PDF fallback handling (Word / Excel) ---
+  if (process.platform === "win32") {
+    // Word / Excel – use PowerShell
+    const { exec } = require("child_process");
+    const escapedPath = filePath.replace(/'/g, "''");
+    const command = `powershell -Command "Start-Process -FilePath '${escapedPath}' -Verb Print -WindowStyle Hidden"`;
+    return new Promise((resolve, reject) => {
+      exec(command, { timeout: 30000 }, (error) => {
+        if (error) {
+          shell.openPath(filePath).catch(() => {});
+          reject(
+            new Error(
+              `Print failed: ${error.message}. File opened for manual printing.`,
+            ),
+          );
+        } else {
+          resolve(true);
+        }
+      });
+    });
   } else if (process.platform === "darwin" || process.platform === "linux") {
     const { exec } = require("child_process");
     const escapedPath = filePath.replace(/(["\s'$`\\])/g, "\\$1");
@@ -1001,7 +1085,7 @@ app.whenReady().then(async () => {
   await fs.mkdir(settings.templatesDir, { recursive: true });
   await fs.mkdir(settings.outputsDir, { recursive: true });
   //updateElectronApp(); // additional configuration options available
-  process.env.ELECTRON_IS_DEV = 'false';
+  process.env.ELECTRON_IS_DEV = "false";
   updateElectronApp({
     updateSource: {
       type: UpdateSourceType.ElectronPublicUpdateService,
