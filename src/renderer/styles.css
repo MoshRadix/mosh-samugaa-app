@@ -274,12 +274,18 @@ body {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 12px;
+  gap: 12px;                /* Adds safe breathing room between text and badge */
+  width: 100%;
 }
 
 .template-card-header h3 {
   font-size: 1.1rem;
   font-weight: 600;
   color: var(--text-primary);
+  white-space: nowrap;      /* Keep title to one line */
+  overflow: hidden;         /* Hide overflowing text */
+  text-overflow: ellipsis;  /* Add trailing ellipsis if title is too long */
+  flex: 1;                  /* Let title fill dynamic space up to the badge */
 }
 
 .template-type-badge {
@@ -290,6 +296,7 @@ body {
   font-weight: 600;
   text-transform: uppercase;
   color: var(--text-tertiary);
+  flex-shrink: 0;           /* Locks badge footprint, preventing collapse or wrap */
 }
 
 .template-card p {
@@ -543,16 +550,24 @@ select:disabled {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 10px;
+  flex-wrap: nowrap;        /* Changed from wrap to nowrap to force horizontal lock */
+  gap: 16px;
   box-shadow: var(--shadow-md);
   color: white;
+}
+
+.template-info-content {
+  flex: 1;
+  min-width: 0;             /* Essential structural addition for text scaling in flex containers */
 }
 
 .template-info-content h3 {
   font-size: 1.4rem;
   font-weight: 600;
   margin-bottom: 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .template-info-content p {
@@ -563,7 +578,8 @@ select:disabled {
 .template-meta {
   display: flex;
   gap: 12px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;        /* Keeps badges lined up cleanly adjacent to each other */
+  flex-shrink: 0;           /* Prevents the group of badges from breaking downward */
 }
 
 .meta-badge {
@@ -916,20 +932,20 @@ select:disabled {
     justify-content: center;
   }
   
-  .template-info-card {
-    flex-direction: column;
-    text-align: center;
-  }
+  /* Note: Removed the template-info-card structural column stacking rules here 
+     to ensure alignment layout remains pristine and horizontal across viewpoints. */
   
   .modal-content {
     width: 95%;
     padding: 20px;
   }
 }
+
 /* Full-width for textarea fields */
 .unified-form-grid .field-container.full-width-field {
     grid-column: 1 / -1;
 }
+
 .date-range-hint {
   background: var(--accent-info-light);
   border-left: 4px solid var(--accent-info);
@@ -939,6 +955,7 @@ select:disabled {
   font-size: 0.8rem;
   color: var(--text-primary);
 }
+
 .template-print-count-badge {
   background: var(--bg-secondary);
   padding: 4px 10px;
@@ -951,10 +968,12 @@ select:disabled {
   align-items: center;
   gap: 4px;
 }
+
 .about-content a[href^="tel:"] {
   color: var(--accent-primary);
   text-decoration: none;
 }
+
 .about-content a[href^="tel:"]:hover {
   text-decoration: underline;
 }

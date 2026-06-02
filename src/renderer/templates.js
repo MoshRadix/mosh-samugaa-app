@@ -127,6 +127,91 @@ async function loadTemplates() {
     console.error("Error loading templates:", error);
   }
 }
+// async function renderTemplates() {
+//   const searchTerm =
+//     document.getElementById("template-search")?.value?.toLowerCase() || "";
+//   const typeFilter = document.getElementById("type-filter")?.value || "all";
+//   const fillableFilter =
+//     document.getElementById("fillable-filter")?.value || "all";
+
+//   let filtered = allTemplates;
+
+//   // Apply search
+//   if (searchTerm) {
+//     filtered = filtered.filter(
+//       (t) =>
+//         t.name.toLowerCase().includes(searchTerm) ||
+//         (t.description && t.description.toLowerCase().includes(searchTerm)) ||
+//         (t.category && t.category.toLowerCase().includes(searchTerm)),
+//     );
+//   }
+
+//   // Apply type filter
+//   if (typeFilter !== "all") {
+//     filtered = filtered.filter((t) => t.type === typeFilter);
+//   }
+
+//   // Apply fillable filter
+//   if (fillableFilter === "static") {
+//     filtered = filtered.filter((t) => !t.hasFields);
+//   } else if (fillableFilter === "fillable") {
+//     filtered = filtered.filter((t) => t.hasFields);
+//   }
+
+//   const container = document.getElementById("templates-grid");
+
+//   if (!container) return;
+
+//   if (filtered.length === 0) {
+//     container.innerHTML =
+//       '<p class="no-results">No templates found matching your criteria.</p>';
+//     return;
+//   }
+
+//   container.innerHTML = filtered
+//     .map(
+//       (template) => `
+//         <div class="template-card">
+//             <div class="template-badges">
+//         <span class="template-type-badge">🖨️ ${template.recordCount || 0}</span>
+//         <span class="template-type-badge">${template.type === "word" ? "DOCX" : template.type === "excel" ? "XLSX" : "PDF"}</span>
+//         <span class="badge ${template.hasFields ? "badge-fillable" : "badge-static"}">
+//             ${template.hasFields ? "Fillable" : "Static"}
+//         </span>
+//     </div>
+//             <p>${escapeHtml(template.description || "No description")}</p>
+//             <p class="category">Category: ${escapeHtml(template.category)}</p>
+//             <p>
+//                 <span class="badge ${template.hasFields ? "badge-fillable" : "badge-static"}">
+//                     ${template.hasFields ? "Fillable" : "Static"}
+//                 </span>
+//                 ${template.hasFields ? `<span style="font-size: 0.75rem;"> (${template.fields?.length || 0} fields)</span>` : ""}
+//             </p>
+            
+//             <div class="template-card-actions">
+//                 ${
+//                   template.hasFields
+//                     ? `
+//                     <button class="btn btn-success btn-small" onclick="fillTemplate('${template.id}')">Fill Form</button>
+//                     <button class="btn btn-primary btn-small" onclick="editTemplate('${template.id}')">Edit</button>
+//                     <button class="btn btn-info btn-small" onclick="editFieldTypes('${template.id}')">⚙️ Fields</button>
+//                     <button class="btn btn-secondary btn-small" onclick="previewTemplate('${template.id}')">Preview</button>
+//                     <button class="btn btn-danger btn-small" onclick="deleteTemplate('${template.id}')">Delete</button>
+//                 `
+//                     : `
+//                     <button class="btn btn-success btn-small" onclick="printStaticDocument('${template.id}')">Print</button>
+//                     <button class="btn btn-primary btn-small" onclick="editTemplate('${template.id}')">Edit</button>
+//                     <button class="btn btn-info btn-small" onclick="editFieldTypes('${template.id}')">⚙️ Fields</button>
+//                     <button class="btn btn-secondary btn-small" onclick="previewTemplate('${template.id}')">Preview</button>
+//                     <button class="btn btn-danger btn-small" onclick="deleteTemplate('${template.id}')">Delete</button>
+//                 `
+//                 }
+//             </div>
+//         </div>
+//     `,
+//     )
+//     .join("");
+// }
 async function renderTemplates() {
   const searchTerm =
     document.getElementById("template-search")?.value?.toLowerCase() || "";
@@ -136,22 +221,17 @@ async function renderTemplates() {
 
   let filtered = allTemplates;
 
-  // Apply search
   if (searchTerm) {
     filtered = filtered.filter(
       (t) =>
         t.name.toLowerCase().includes(searchTerm) ||
         (t.description && t.description.toLowerCase().includes(searchTerm)) ||
-        (t.category && t.category.toLowerCase().includes(searchTerm)),
+        (t.category && t.category.toLowerCase().includes(searchTerm))
     );
   }
-
-  // Apply type filter
   if (typeFilter !== "all") {
     filtered = filtered.filter((t) => t.type === typeFilter);
   }
-
-  // Apply fillable filter
   if (fillableFilter === "static") {
     filtered = filtered.filter((t) => !t.hasFields);
   } else if (fillableFilter === "fillable") {
@@ -159,7 +239,6 @@ async function renderTemplates() {
   }
 
   const container = document.getElementById("templates-grid");
-
   if (!container) return;
 
   if (filtered.length === 0) {
@@ -171,44 +250,38 @@ async function renderTemplates() {
   container.innerHTML = filtered
     .map(
       (template) => `
-        <div class="template-card">
+      <div class="template-card" data-template-id="${template.id}">
+        <div>
+          <div class="template-card-header">
+            <h3>${escapeHtml(template.name)}</h3>
             <div class="template-badges">
-        <span class="template-type-badge">🖨️ ${template.recordCount || 0}</span>
-        <span class="template-type-badge">${template.type === "word" ? "DOCX" : template.type === "excel" ? "XLSX" : "PDF"}</span>
-        <span class="badge ${template.hasFields ? "badge-fillable" : "badge-static"}">
-            ${template.hasFields ? "Fillable" : "Static"}
-        </span>
-    </div>
-            <p>${escapeHtml(template.description || "No description")}</p>
-            <p class="category">Category: ${escapeHtml(template.category)}</p>
-            <p>
-                <span class="badge ${template.hasFields ? "badge-fillable" : "badge-static"}">
-                    ${template.hasFields ? "Fillable" : "Static"}
-                </span>
-                ${template.hasFields ? `<span style="font-size: 0.75rem;"> (${template.fields?.length || 0} fields)</span>` : ""}
-            </p>
-            
-            <div class="template-card-actions">
-                ${
-                  template.hasFields
-                    ? `
-                    <button class="btn btn-success btn-small" onclick="fillTemplate('${template.id}')">Fill Form</button>
-                    <button class="btn btn-primary btn-small" onclick="editTemplate('${template.id}')">Edit</button>
-                    <button class="btn btn-info btn-small" onclick="editFieldTypes('${template.id}')">⚙️ Fields</button>
-                    <button class="btn btn-secondary btn-small" onclick="previewTemplate('${template.id}')">Preview</button>
-                    <button class="btn btn-danger btn-small" onclick="deleteTemplate('${template.id}')">Delete</button>
-                `
-                    : `
-                    <button class="btn btn-success btn-small" onclick="printStaticDocument('${template.id}')">Print</button>
-                    <button class="btn btn-primary btn-small" onclick="editTemplate('${template.id}')">Edit</button>
-                    <button class="btn btn-info btn-small" onclick="editFieldTypes('${template.id}')">⚙️ Fields</button>
-                    <button class="btn btn-secondary btn-small" onclick="previewTemplate('${template.id}')">Preview</button>
-                    <button class="btn btn-danger btn-small" onclick="deleteTemplate('${template.id}')">Delete</button>
-                `
-                }
+              <span class="template-type-badge">${template.type.toUpperCase()}</span>
+              <span class="template-print-count-badge">🖨️ ${template.recordCount || 0}</span>
+              <span class="badge ${template.hasFields ? "badge-fillable" : "badge-static"}">
+                ${template.hasFields ? "Fillable" : "Static"}
+              </span>
             </div>
+          </div>
+          <p>${escapeHtml(template.description || "No description provided")}</p>
+          <div class="category">
+            Category: ${escapeHtml(template.category || "General")}
+            ${template.hasFields ? ` • (${template.fields?.length || 0} fields)` : ""}
+          </div>
         </div>
-    `,
+
+        <div class="template-card-actions">
+          ${
+            template.hasFields
+              ? `<button class="btn btn-primary btn-small" onclick="fillTemplate('${template.id}')">Fill Form</button>`
+              : `<button class="btn btn-success btn-small" onclick="printStaticDocument('${template.id}')">Print</button>`
+          }
+          <button class="btn btn-outline btn-small" onclick="previewTemplate('${template.id}')">Preview</button>
+          <button class="btn btn-outline btn-small" onclick="editTemplate('${template.id}')">Edit</button>
+          <button class="btn btn-outline btn-small" onclick="editFieldTypes('${template.id}')">⚙️ Fields</button>
+          <button class="btn btn-danger btn-small" onclick="deleteTemplate('${template.id}')">Delete</button>
+        </div>
+      </div>
+    `
     )
     .join("");
 }
