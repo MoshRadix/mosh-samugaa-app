@@ -138,7 +138,10 @@ function switchView(view) {
   // 4. Trigger isolated component updates contextually depending on selected pathway targets
   switch (view) {
     case "templates":
-      if (typeof renderTemplates === "function") {
+      // Always re-fetch so recordCount (and any other live data) is up to date
+      if (typeof loadTemplates === "function") {
+        loadTemplates();
+      } else if (typeof renderTemplates === "function") {
         renderTemplates();
       } else {
         console.error("renderTemplates function context missing unexpectedly.");
@@ -171,6 +174,12 @@ function switchView(view) {
     case "settings":
       if (typeof initSettings === "function") {
         initSettings();
+      }
+      break;
+
+    case "help":
+      if (typeof initHelp === "function") {
+        initHelp();
       }
       break;
   }

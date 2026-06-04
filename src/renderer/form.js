@@ -32,6 +32,91 @@ function addDaysToLocalDate(dateStr, days) {
   const dd = String(date.getDate()).padStart(2, "0");
   return `${yyyy}-${mm}-${dd}`;
 }
+/**
+ * Populate all date_range_* placeholders in formData from a start date string.
+ *
+ * Handles three placeholder families (all indexed from 1):
+ *   date_range_N            → Divehi formatted  (legacy, keeps existing behaviour)
+ *   date_range_divehi_N     → Divehi formatted
+ *   date_range_english_N    → English formatted
+ *
+ * The index N is the day offset: N=1 → startDate, N=2 → startDate+1, …
+ *
+ * @param {Object} formData      - The live formData object (mutated in place).
+ * @param {string} startDateStr  - A YYYY-MM-DD date string chosen by the user.
+ * @param {number} count         - How many days the range covers (e.g. 21).
+ */
+function populateDateRangePlaceholders(formData, startDateStr, count) {
+  const templateKeys = new Set(
+    (window.selectedTemplate?.fields || []).map((f) => f.key)
+  );
+
+  // Find the highest index across all families — both short-before and short-after lang
+  let maxIndex = count || 0;
+  for (const key of templateKeys) {
+    const m = key.match(/^date_range_(?:short_)?(?:divehi_|english_)?(?:short_)?(\d+)$/);
+    if (m) maxIndex = Math.max(maxIndex, parseInt(m[1], 10));
+  }
+
+  for (let i = 1; i <= maxIndex; i++) {
+    const dateStr = addDaysToLocalDate(startDateStr, i - 1);
+    if (templateKeys.has(`date_range_${i}`))
+      formData[`date_range_${i}`] = formatDivehiDate(dateStr);
+    if (templateKeys.has(`date_range_divehi_${i}`))
+      formData[`date_range_divehi_${i}`] = formatDivehiDate(dateStr);
+    if (templateKeys.has(`date_range_english_${i}`))
+      formData[`date_range_english_${i}`] = formatEnglishDate(dateStr);
+    // Short after lang: date_range_divehi_short_N, date_range_english_short_N
+    if (templateKeys.has(`date_range_divehi_short_${i}`))
+      formData[`date_range_divehi_short_${i}`] = formatDivehiDate(dateStr, true);
+    if (templateKeys.has(`date_range_english_short_${i}`))
+      formData[`date_range_english_short_${i}`] = formatEnglishDate(dateStr, true);
+    // Short before lang: date_range_short_divehi_N, date_range_short_english_N
+    if (templateKeys.has(`date_range_short_divehi_${i}`))
+      formData[`date_range_short_divehi_${i}`] = formatDivehiDate(dateStr, true);
+    if (templateKeys.has(`date_range_short_english_${i}`))
+      formData[`date_range_short_english_${i}`] = formatEnglishDate(dateStr, true);
+  }
+}
+
+/**
+ * Returns true if the template has a visible (non-hidden) field whose key is
+ * one of: start_date, start_date_divehi, start_date_english.
+ * When true, date_range_divehi/english/short_N fields are auto-computed from
+ * that field and must not be shown as form inputs.
+ */
+function hasVisibleStartDateField(fields) {
+  return (fields || []).some((f) =>
+    !f.key.endsWith("_hidden") &&
+    /^start_date(_divehi|_english)?$/.test(f.key)
+  );
+}
+
+/**
+ * Returns true for fields that are auto-computed at generation time and must
+ * never appear as user-facing inputs in the form.
+ *
+ * Covers:
+ *   - _hidden suffix fields
+ *   - weekday_divehi/english_(short_)?hidden_* patterns
+ *   - date_range_N (N >= 2), date_range_divehi_N, date_range_english_N
+ *   - date_range_divehi_short_N, date_range_english_short_N
+ *   - date_range_divehi_N / english_N / short variants when a visible start_date
+ *     field exists (fields context required)
+ */
+function isAutoComputedField(key, fields) {
+  if (key.endsWith("_hidden")) return true;
+  // Any weekday field that contains "hidden" is always auto-computed
+  if (/^weekday_(divehi|english)_/.test(key) && key.includes("hidden")) return true;
+  // date_range with short after lang:  date_range_divehi_short_N, date_range_english_short_N
+  if (/^date_range_(divehi|english)_(?:short_)?\d+$/.test(key)) return true;
+  // date_range with short before lang: date_range_short_divehi_N, date_range_short_english_N
+  if (/^date_range_short_(divehi|english)_\d+$/.test(key)) return true;
+  const legacyMatch = key.match(/^date_range_(\d+)$/);
+  if (legacyMatch && parseInt(legacyMatch[1], 10) >= 2) return true;
+  return false;
+}
+
 // Helper to separate hidden fields (keys ending with _hidden)
 function separateHiddenFields(fields) {
   const visibleFields = [];
@@ -46,39 +131,34 @@ function separateHiddenFields(fields) {
   return { visibleFields, hiddenFields };
 }
 /**
- * Populate hidden date fields that follow naming convention:
- *   {sourceKey}_divehi_hidden   -> formatted in Divehi
- *   {sourceKey}_english_hidden  -> formatted in English
- * Example: start_date_divehi_hidden gets value from start_date
+ * Populate hidden date fields (keys ending with _hidden).
+ * Format is determined by the field's isRTL flag: Divehi if true, English if false.
+ *
+ * Source resolution for e.g. "start_date_hidden":
+ *   1. Strip "_hidden" → look for formData["start_date"] as raw YYYY-MM-DD → format it
+ *   2. Fallback: formData["date_range_start"] → format it
  */
 function populateDerivedHiddenDateFields(formData, fields) {
   for (const field of fields) {
     const key = field.key;
-    if (field.type === "date" && key.endsWith("_hidden")) {
-      let match = null;
-      let targetFormat = null;
-      if (key.endsWith("_divehi_hidden")) {
-        match = key.slice(0, -"_divehi_hidden".length);
-        targetFormat = "divehi";
-      } else if (key.endsWith("_english_hidden")) {
-        match = key.slice(0, -"_english_hidden".length);
-        targetFormat = "english";
-      }
-      if (match && !formData[key]) {
-        // First try exact source match
-        let sourceDate = formData[match];
-        // If not found, fallback to date_range_start (common use case)
-        if (!sourceDate && formData["date_range_start"]) {
-          sourceDate = formData["date_range_start"];
-        }
-        if (sourceDate && sourceDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
-          if (targetFormat === "divehi") {
-            formData[key] = formatDivehiDate(sourceDate);
-          } else if (targetFormat === "english") {
-            formData[key] = formatEnglishDate(sourceDate);
-          }
-        }
-      }
+    if (!key.endsWith("_hidden")) continue;
+    if (formData[key]) continue; // already has a value
+
+    const short = field.key.toLowerCase().includes("_short");
+    const format = (raw) => field.isRTL ? formatDivehiDate(raw, short) : formatEnglishDate(raw, short);
+
+    // 1. Strip "_hidden" to find the source field, try exact raw date match
+    const sourceKey = key.slice(0, -"_hidden".length);
+    const exactRaw = formData[sourceKey];
+    if (exactRaw && exactRaw.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      formData[key] = format(exactRaw);
+      continue;
+    }
+
+    // 2. Fallback: date_range_start
+    const rawStart = formData["date_range_start"];
+    if (rawStart && rawStart.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      formData[key] = format(rawStart);
     }
   }
   return formData;
@@ -112,10 +192,153 @@ const DIVEHI_MONTHS = [
   "ޑިސެމްބަރ",
 ];
 /**
+ * Resolve the start date string (YYYY-MM-DD) for date range / weekday population.
+ *
+ * Resolution order:
+ *   1. formData["date_range_start"]              — dedicated range start field
+ *   2. Any date-type field whose key contains "start"
+ *   3. Any field (any type) whose key contains "start" and whose value is YYYY-MM-DD
+ *      — covers cases where field type was not explicitly set to "date"
+ */
+function resolveStartDateStr(formData, fields) {
+  // 1. Dedicated field
+  if (formData["date_range_start"] &&
+      formData["date_range_start"].match(/^\d{4}-\d{2}-\d{2}$/)) {
+    return formData["date_range_start"];
+  }
+  // 2 & 3. Any field whose key contains "start", prioritising date-typed fields
+  let fallback = null;
+  for (const field of (fields || [])) {
+    if (!field.key.toLowerCase().includes("start")) continue;
+    const val = formData[field.key];
+    if (!val || !val.match(/^\d{4}-\d{2}-\d{2}$/)) continue;
+    if (field.type === "date") return val;   // best match — return immediately
+    if (!fallback) fallback = val;            // keep as fallback if no date-typed found
+  }
+  return fallback;
+}
+
+// Divehi weekday names (Sunday = index 0, matching JS Date.getDay())
+const DIVEHI_WEEKDAYS = [
+  "އާދިއްތަ",   // Sunday
+  "ހޯމަ",       // Monday
+  "އަންގާރަ",   // Tuesday
+  "ބުދަ",       // Wednesday
+  "ބުރާސްފަތި", // Thursday
+  "ހުކުރު",     // Friday
+  "ހޮނިހިރު",   // Saturday
+];
+
+// Divehi short weekday names (Sunday = index 0)
+const DIVEHI_WEEKDAYS_SHORT = [
+  "އާދި",   // Sunday
+  "ހޯމަ",   // Monday
+  "އަން",   // Tuesday
+  "ބުދަ",   // Wednesday
+  "ބުރާ",   // Thursday
+  "ހުކު",   // Friday
+  "ހޮނި",   // Saturday
+];
+
+// English weekday names (Sunday = index 0)
+const ENGLISH_WEEKDAYS = [
+  "Sunday", "Monday", "Tuesday", "Wednesday",
+  "Thursday", "Friday", "Saturday",
+];
+
+// English short weekday names (Sunday = index 0)
+const ENGLISH_WEEKDAYS_SHORT = [
+  "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat",
+];
+
+// Map of start-day tokens to their JS Date.getDay() index
+const WEEKDAY_START_MAP = {
+  sun: 0,
+  mon: 1,
+  tue: 2,
+  wed: 3,
+  thu: 4,
+  fri: 5,
+  sat: 6,
+};
+
+/**
+ * Populate weekday hidden fields from the template's field list.
+ *
+ * Two naming conventions:
+ *
+ * A) With explicit start-day token — weekday_(divehi|english)_(short_)?hidden_<start>_<N>
+ *    e.g. {weekday_divehi_hidden_sun_1} .. {weekday_divehi_hidden_sun_N}
+ *    The sequence cycles through weekdays starting from the named day, ignoring the date.
+ *    N=1 → <start>, N=2 → <start>+1, … (mod 7)
+ *    e.g. _sun_: 1=Sun 2=Mon 3=Tue 4=Wed 5=Thu 6=Fri 7=Sat 8=Sun …
+ *    e.g. _mon_: 1=Mon 2=Tue 3=Wed 4=Thu 5=Fri 6=Sat 7=Sun 8=Mon …
+ *
+ * B) Without start-day token — weekday_(divehi|english)_(short_)?hidden_<N>
+ *    e.g. {weekday_divehi_hidden_1}
+ *    N=1 → weekday of startDate, N=2 → weekday of startDate+1, …
+ */
+function populateWeekdayHiddenFields(formData, fields) {
+  const startDateStr = resolveStartDateStr(formData, fields);
+  if (!startDateStr) return;
+
+  const [sy, sm, sd] = startDateStr.split("-").map(Number);
+  const startJsDate = new Date(sy, sm - 1, sd);
+
+  const templateKeys = new Set(fields.map((f) => f.key));
+
+  for (const key of templateKeys) {
+    let lang, isShort, n, jsDay;
+
+    // Pattern A: explicit start-day token
+    // Supports short before or after hidden:
+    //   weekday_divehi_short_hidden_sun_4
+    //   weekday_divehi_hidden_short_sun_4  (short after hidden)
+    //   weekday_divehi_hidden_sun_4        (no short)
+    const mA = key.match(/^weekday_(divehi|english)_(?:short_)?hidden_(?:short_)?([a-z]{3})_(\d+)$/);
+    // Pattern B: no start-day token
+    // Supports short before or after hidden:
+    //   weekday_divehi_short_hidden_4
+    //   weekday_divehi_hidden_short_4      (short after hidden)
+    //   weekday_divehi_hidden_4            (no short)
+    const mB = key.match(/^weekday_(divehi|english)_(?:short_)?hidden_(?:short_)?(\d+)$/);
+
+    if (mA) {
+      lang      = mA[1];
+      isShort   = key.includes("_short_");
+      const startCode = mA[2];
+      n         = parseInt(mA[3], 10);
+
+      const startDayIndex = WEEKDAY_START_MAP[startCode];
+      if (startDayIndex === undefined) continue;
+
+      jsDay = (startDayIndex + (n - 1)) % 7;
+
+    } else if (mB) {
+      lang    = mB[1];
+      isShort = key.includes("_short_");
+      n       = parseInt(mB[2], 10);
+
+      const slotDate = new Date(startJsDate);
+      slotDate.setDate(slotDate.getDate() + (n - 1));
+      jsDay = slotDate.getDay();
+
+    } else {
+      continue;
+    }
+
+    if (lang === "divehi") {
+      formData[key] = isShort ? DIVEHI_WEEKDAYS_SHORT[jsDay] : DIVEHI_WEEKDAYS[jsDay];
+    } else {
+      formData[key] = isShort ? ENGLISH_WEEKDAYS_SHORT[jsDay] : ENGLISH_WEEKDAYS[jsDay];
+    }
+  }
+}
+/**
  * Convert YYYY-MM-DD date string to English format: "DD Month YYYY"
  * Example: "2026-05-12" -> "12 May 2026"
  */
-function formatEnglishDate(dateString) {
+function formatEnglishDate(dateString, short = false) {
   if (!dateString) return "";
   const parts = dateString.split("-");
   if (parts.length !== 3) return dateString;
@@ -127,21 +350,11 @@ function formatEnglishDate(dateString) {
   if (isNaN(year) || isNaN(month) || isNaN(day)) return dateString;
 
   const monthNames = [
-    "January",
-    "February",
-    "March",
-    "April",
-    "May",
-    "June",
-    "July",
-    "August",
-    "September",
-    "October",
-    "November",
-    "December",
+    "January", "February", "March", "April",
+    "May", "June", "July", "August",
+    "September", "October", "November", "December",
   ];
-  // Or use short format: 'Jan', 'Feb', ... depending on preference
-  return `${day} ${monthNames[month]} ${year}`;
+  return short ? `${day} ${monthNames[month]}` : `${day} ${monthNames[month]} ${year}`;
 }
 
 /**
@@ -198,7 +411,7 @@ function getPresetDateFromPlaceholder(key) {
  * Convert YYYY-MM-DD date string to Divehi format: "Day Month Year"
  * Example: "2026-05-12" -> "12 މެއި 2026"
  */
-function formatDivehiDate(dateString) {
+function formatDivehiDate(dateString, short = false) {
   if (!dateString) return "";
   const parts = dateString.split("-");
   if (parts.length !== 3) return dateString;
@@ -210,7 +423,7 @@ function formatDivehiDate(dateString) {
   if (isNaN(year) || isNaN(month) || isNaN(day)) return dateString;
   if (month < 0 || month > 11) return dateString;
 
-  return `${day} ${DIVEHI_MONTHS[month]} ${year}`;
+  return short ? `${day} ${DIVEHI_MONTHS[month]}` : `${day} ${DIVEHI_MONTHS[month]} ${year}`;
 }
 
 // Set input language for a specific field
@@ -827,9 +1040,9 @@ async function renderFillForm() {
   //     `;
   //   })
   //   .join("");
-  // Filter out hidden fields (keys ending with '_hidden')
+  // Filter out hidden and auto-computed fields (never shown in the form)
   const visibleFields = window.selectedTemplate.fields.filter(
-    (f) => !f.key.endsWith("_hidden"),
+    (f) => !isAutoComputedField(f.key, window.selectedTemplate.fields),
   );
 
   // Build fieldsHtml using visibleFields instead of all fields
@@ -1037,9 +1250,9 @@ function validateForm() {
 
   const firstInvalidField = null;
 
-  // Only validate visible fields (non-hidden)
+  // Only validate visible fields (non-hidden, non-auto-computed)
   const visibleFields = window.selectedTemplate.fields.filter(
-    (f) => !f.key.endsWith("_hidden"),
+    (f) => !isAutoComputedField(f.key, window.selectedTemplate.fields),
   );
 
   for (const field of visibleFields) {
@@ -1133,9 +1346,9 @@ function collectFormData() {
   //     console.log(`Collected ${field.key}:`, value);
   //   }
   // }
-  // Collect visible fields only
+  // Collect visible fields only (exclude hidden and auto-computed)
   const visibleFields = window.selectedTemplate.fields.filter(
-    (f) => !f.key.endsWith("_hidden"),
+    (f) => !isAutoComputedField(f.key, window.selectedTemplate.fields),
   );
   for (const field of visibleFields) {
     const fieldId = `field-${field.key.replace(/[^a-zA-Z0-9]/g, "_")}`;
@@ -1181,49 +1394,41 @@ async function generateDocument() {
   }
 
   let formData = collectFormData();
-  // 🔽 NEW: populate derived hidden date fields
-  if (window.selectedTemplate && window.selectedTemplate.fields) {
-    formData = populateDerivedHiddenDateFields(
-      formData,
-      window.selectedTemplate.fields,
-    );
-  }
 
-  // --- Handle date_range placeholders: all get the selected start date (no increment) ---
-  if (
-    window.selectedTemplate.dateRangeConfig &&
-    window.selectedTemplate.dateRangeConfig.enabled
-  ) {
-    const startDateStr = formData["date_range_start"];
-    //formData["start_date_hidden"] = formData["date_range_start"]; // Add a generic start_date for templates that use it
-    if (startDateStr && startDateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
-      const config = window.selectedTemplate.dateRangeConfig;
-      for (let i = 1; i <= config.count; i++) {
-        formData[`date_range_${i}`] = formatDivehiDate(
-          addDaysToLocalDate(startDateStr, i - 1),
-        );
+  if (window.selectedTemplate && window.selectedTemplate.fields) {
+    // 1. Populate date_range_* first (hidden fields may source from these)
+    const hasDateRange = window.selectedTemplate.fields.some((f) =>
+      /^date_range_(?:short_)?(?:divehi_|english_)?(?:short_)?\d+$/.test(f.key)
+    );
+    if (hasDateRange) {
+      const startDateStr = resolveStartDateStr(formData, window.selectedTemplate.fields);
+      if (startDateStr) {
+        populateDateRangePlaceholders(formData, startDateStr, 0);
+      } else {
+        showToast("Please select a valid Start Date for the date range.", "warning");
+        return;
       }
-    } else {
-      showToast(
-        "Please select a valid Start Date for the date range.",
-        "warning",
-      );
-      return;
     }
+
+    // 2. Now populate derived hidden date fields (can reference date_range_divehi_1 etc.)
+    formData = populateDerivedHiddenDateFields(formData, window.selectedTemplate.fields);
+
+    // 3. Populate weekday hidden fields
+    populateWeekdayHiddenFields(formData, window.selectedTemplate.fields);
   }
-  // Convert date fields: Divehi if key contains 'divehi', otherwise English
+  // Format date values at render time: Divehi if isRTL, English otherwise.
+  // Applies to any field whose value is still a raw YYYY-MM-DD string.
+  // Skips date_range_start (range seed) and _hidden fields (handled separately).
   if (window.selectedTemplate.fields) {
     for (const field of window.selectedTemplate.fields) {
-      if (field.key === "date_range_start") continue; // keep raw YYYY-MM-DD
-      if (field.type === "date" && formData[field.key]) {
-        const rawDate = formData[field.key];
-        // Use the isRTL flag from the field configuration
-        if (field.isRTL) {
-          formData[field.key] = formatDivehiDate(rawDate);
-        } else {
-          //formData[field.key] = formatEnglishDate(rawDate);
-        }
-      }
+      if (field.key === "date_range_start") continue;
+      if (isAutoComputedField(field.key, window.selectedTemplate.fields)) continue;
+      const rawDate = formData[field.key];
+      if (!rawDate || !rawDate.match(/^\d{4}-\d{2}-\d{2}$/)) continue;
+      const short = field.key.toLowerCase().includes("_short");
+      formData[field.key] = field.isRTL
+        ? formatDivehiDate(rawDate, short)
+        : formatEnglishDate(rawDate, short);
     }
   }
 
@@ -1337,49 +1542,41 @@ async function generateDocumentOnly() {
   }
 
   let formData = collectFormData();
-   // 🔽 NEW: populate derived hidden date fields
+
   if (window.selectedTemplate && window.selectedTemplate.fields) {
-    formData = populateDerivedHiddenDateFields(
-      formData,
-      window.selectedTemplate.fields,
+    // 1. Populate date_range_* first (hidden fields may source from these)
+    const hasDateRange = window.selectedTemplate.fields.some((f) =>
+      /^date_range_(?:short_)?(?:divehi_|english_)?(?:short_)?\d+$/.test(f.key)
     );
-  }
-  // Convert date fields based on isRTL flag
-  if (window.selectedTemplate.fields) {
-    for (const field of window.selectedTemplate.fields) {
-      console.log(formData[field.key] + " " + field.label);
-      if (field.key === "date_range_start") continue; // keep raw YYYY-MM-DD
-      //if (field.key.endsWith("_hidden")) continue;
-      if (field.type === "date" && formData[field.key]) {
-        const rawDate = formData[field.key];
-        if (field.isRTL) {
-          formData[field.key] = formatDivehiDate(rawDate);
-        } else {
-          //SformData[field.key] = formatEnglishDate(rawDate);
-        }
+    if (hasDateRange) {
+      const startDateStr = resolveStartDateStr(formData, window.selectedTemplate.fields);
+      if (startDateStr) {
+        populateDateRangePlaceholders(formData, startDateStr, 0);
+      } else {
+        showToast("Please select a valid Start Date for the date range.", "warning");
+        return;
       }
     }
+
+    // 2. Now populate derived hidden date fields (can reference date_range_divehi_1 etc.)
+    formData = populateDerivedHiddenDateFields(formData, window.selectedTemplate.fields);
+
+    // 3. Populate weekday hidden fields
+    populateWeekdayHiddenFields(formData, window.selectedTemplate.fields);
   }
-  // --- 1. Handle date_range placeholders FIRST (using raw start date) ---
-  // --- Sequential date_range placeholders (start date from picker) ---
-  if (
-    window.selectedTemplate.dateRangeConfig &&
-    window.selectedTemplate.dateRangeConfig.enabled
-  ) {
-    const startDateStr = formData["date_range_start"];
-    if (startDateStr && startDateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
-      const config = window.selectedTemplate.dateRangeConfig;
-      for (let i = 1; i <= config.count; i++) {
-        formData[`date_range_${i}`] = formatDivehiDate(
-          addDaysToLocalDate(startDateStr, i - 1),
-        );
-      }
-    } else {
-      showToast(
-        "Please select a valid Start Date for the date range.",
-        "warning",
-      );
-      return;
+  // Format date values at render time: Divehi if isRTL, English otherwise.
+  // Applies to any field whose value is still a raw YYYY-MM-DD string.
+  // Skips date_range_start (range seed) and _hidden fields (handled separately).
+  if (window.selectedTemplate.fields) {
+    for (const field of window.selectedTemplate.fields) {
+      if (field.key === "date_range_start") continue;
+      if (isAutoComputedField(field.key, window.selectedTemplate.fields)) continue;
+      const rawDate = formData[field.key];
+      if (!rawDate || !rawDate.match(/^\d{4}-\d{2}-\d{2}$/)) continue;
+      const short = field.key.toLowerCase().includes("_short");
+      formData[field.key] = field.isRTL
+        ? formatDivehiDate(rawDate, short)
+        : formatEnglishDate(rawDate, short);
     }
   }
   
