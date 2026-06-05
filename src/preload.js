@@ -1,4 +1,3 @@
-
 /**
  * @file preload.js
  * @description Secure Electron Preload Script.
@@ -171,6 +170,23 @@ contextBridge.exposeInMainWorld("electronAPI", {
    * @returns {Promise<string|null>} Path identifier string indicating picked targeted context locations.
    */
   openDirectoryDialog: () => ipcRenderer.invoke("open-directory-dialog"),
+
+  /**
+   * Saves a base64-encoded watermarked image to a "watermarked/" subfolder
+   * alongside the original source image file.
+   * @param {Object} data - { sourceFilePath, outputFileName, base64Data, mimeType }
+   * @returns {Promise<{ success: boolean, outputPath: string }>}
+   */
+  saveWatermarkedImage: (data) =>
+    ipcRenderer.invoke("save-watermarked-image", data),
+
+  /**
+   * Opens a native folder-picker so the renderer can obtain a real filesystem
+   * path without relying on File.path (which is stripped in sandboxed renderers).
+   * @returns {Promise<string|null>} Absolute path chosen by the user, or null.
+   */
+  chooseOutputDirectory: () =>
+    ipcRenderer.invoke("choose-output-directory"),
 });
 
 

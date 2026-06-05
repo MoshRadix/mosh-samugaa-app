@@ -16,6 +16,7 @@
           <button class="nav-btn active" data-view="templates">
             Templates
           </button>
+          <button class="nav-btn" data-view="watermark">🖼️ Watermark</button>
           <button class="nav-btn" data-view="settings">⚙️ Settings</button>
           <button class="nav-btn" data-view="help">❓ Help</button>
         </nav>
@@ -95,10 +96,183 @@
             <!-- Search results will be rendered here -->
           </div>
         </div>
-        <div id="settings-view" class="view">
+        <!-- Watermark Tool View -->
+        <div id="watermark-view" class="view">
+
+          <!-- Hidden file inputs -->
+          <input type="file" id="wm-image-input" accept="image/*" multiple style="display:none">
+          <input type="file" id="wm-watermark-input" accept="image/*" style="display:none">
+
+          <!-- Page header -->
           <div class="view-header">
-            <h2>⚙️ Application Settings</h2>
+            <div class="wm-page-title">
+              <h2>Image Watermark</h2>
+              <p class="wm-page-subtitle">Apply watermarks to multiple images at once</p>
+            </div>
+            <div class="wm-header-actions">
+              <button id="wm-clear-images-btn" class="btn btn-secondary" disabled>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                Clear All
+              </button>
+              <button id="wm-apply-btn" class="btn btn-primary wm-apply-btn" disabled>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+                Apply Watermark
+              </button>
+            </div>
           </div>
+
+          <!-- Notification banner -->
+          <div id="wm-notification" class="wm-notification" aria-live="polite"></div>
+
+          <!-- Progress strip -->
+          <div id="wm-progress-wrap" class="wm-progress-wrap" style="display:none">
+            <div class="wm-progress-header">
+              <span id="wm-status-text" class="wm-status-text">Processing…</span>
+              <span id="wm-progress-pct" class="wm-progress-pct">0%</span>
+            </div>
+            <div class="wm-progress-track">
+              <div id="wm-progress-bar" class="wm-progress-bar" style="width:0%"></div>
+            </div>
+          </div>
+
+          <!-- Body: two-column -->
+          <div class="wm-layout">
+
+            <!-- ── LEFT: Source images ─────────────────────────────── -->
+            <section class="wm-panel wm-panel-images">
+
+              <div class="wm-panel-header">
+                <div class="wm-panel-title-row">
+                  <div class="wm-panel-icon-wrap wm-icon-images">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                  </div>
+                  <div>
+                    <h3 class="wm-panel-title">Source Images</h3>
+                    <span id="wm-image-count" class="wm-panel-subtitle">No images selected</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Drop zone -->
+              <div class="wm-drop-zone" id="wm-drop-zone">
+                <div id="wm-image-empty" class="wm-empty-state">
+                  <div class="wm-empty-illustration">
+                    <div class="wm-empty-img-stack">
+                      <div class="wm-stack-card wm-stack-card-3"></div>
+                      <div class="wm-stack-card wm-stack-card-2"></div>
+                      <div class="wm-stack-card wm-stack-card-1">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                      </div>
+                    </div>
+                  </div>
+                  <p class="wm-empty-title">Drop images here</p>
+                  <p class="wm-empty-hint">or click <strong>Add Images</strong> to browse</p>
+                  <p class="wm-empty-formats">PNG · JPG · WEBP · GIF</p>
+                </div>
+                <div id="wm-image-grid" class="wm-image-grid"></div>
+              </div>
+
+              <button id="wm-select-images-btn" class="btn wm-add-images-btn">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Add Images
+              </button>
+
+            </section>
+
+            <!-- ── RIGHT: Config ──────────────────────────────────── -->
+            <aside class="wm-sidebar">
+
+              <!-- Watermark picker card -->
+              <div class="wm-card" id="wm-card-watermark">
+                <div class="wm-card-header">
+                  <div class="wm-panel-icon-wrap wm-icon-wm">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                  </div>
+                  <h3 class="wm-card-title">Watermark Image</h3>
+                </div>
+
+                <div class="wm-wm-picker">
+                  <div class="wm-wm-preview-box" id="wm-preview-box">
+                    <div id="wm-watermark-empty" class="wm-wm-empty">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.35"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                      <span>None</span>
+                    </div>
+                    <img id="wm-watermark-preview" class="wm-watermark-img" alt="Watermark" style="display:none">
+                    <div class="wm-wm-active-badge" id="wm-active-badge" style="display:none">✓ Active</div>
+                  </div>
+                  <div class="wm-wm-info">
+                    <p id="wm-watermark-name" class="wm-wm-name"></p>
+                    <button id="wm-select-watermark-btn" class="btn btn-secondary wm-choose-btn">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                      Choose File
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Recent watermarks -->
+                <div id="wm-recents-section" class="wm-recents" style="display:none">
+                  <div class="wm-recents-label">Recent</div>
+                  <div id="wm-recents-grid" class="wm-recents-grid"></div>
+                </div>
+              </div>
+
+              <!-- Placement mode card -->
+              <div class="wm-card">
+                <div class="wm-card-header">
+                  <div class="wm-panel-icon-wrap wm-icon-mode">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                  </div>
+                  <h3 class="wm-card-title">Placement Mode</h3>
+                </div>
+
+                <div class="wm-mode-grid">
+                  <label class="wm-mode-option" for="wm-mode-corner">
+                    <input type="radio" id="wm-mode-corner" name="wm-mode" value="corner" checked>
+                    <div class="wm-mode-visual wm-mode-corner-visual">
+                      <div class="wm-mode-img-mock"></div>
+                      <div class="wm-mode-wm-mock wm-mode-wm-corner"></div>
+                    </div>
+                    <div class="wm-mode-info">
+                      <span class="wm-mode-name">Corner</span>
+                      <span class="wm-mode-desc">Bottom-right, 15% height</span>
+                    </div>
+                    <div class="wm-mode-check">
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+                    </div>
+                  </label>
+
+                  <label class="wm-mode-option" for="wm-mode-fullwidth">
+                    <input type="radio" id="wm-mode-fullwidth" name="wm-mode" value="fullwidth">
+                    <div class="wm-mode-visual wm-mode-fullwidth-visual">
+                      <div class="wm-mode-img-mock"></div>
+                      <div class="wm-mode-wm-mock wm-mode-wm-full"></div>
+                    </div>
+                    <div class="wm-mode-info">
+                      <span class="wm-mode-name">Full Width</span>
+                      <span class="wm-mode-desc">Spans entire bottom edge</span>
+                    </div>
+                    <div class="wm-mode-check">
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              <!-- Output info card -->
+              <div class="wm-card wm-output-card">
+                <svg class="wm-output-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><polyline points="8 18 12 22 16 18"/><line x1="12" y1="10" x2="12" y2="22"/></svg>
+                <div class="wm-output-text">
+                  <strong>Output location</strong>
+                  <span>Saved to a <code>watermarked/</code> folder next to the originals, with <code>_wm</code> suffix added.</span>
+                </div>
+              </div>
+
+            </aside><!-- /.wm-sidebar -->
+
+          </div><!-- /.wm-layout -->
+        </div><!-- /#watermark-view -->
+
+        <div id="settings-view" class="view">
 
           <div class="settings-container">
             <!-- NEW: About card -->
@@ -188,6 +362,7 @@
       </div>
     </div>
 
+    <script src="watermark.js"></script>
     <script src="templates.js"></script>
     <script src="fields.js"></script>
     <script src="form.js"></script>

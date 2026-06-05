@@ -146,6 +146,7 @@ function switchView(view) {
       } else {
         console.error("renderTemplates function context missing unexpectedly.");
       }
+      setTimeout(() => document.getElementById("template-search")?.focus(), 50);
       break;
 
     case "fill-form":
@@ -169,6 +170,7 @@ function switchView(view) {
       } else {
         console.error("Search module indexing pathways could not resolve successfully.");
       }
+      setTimeout(() => document.getElementById("document-search")?.focus(), 50);
       break;
 
     case "settings":
@@ -180,6 +182,12 @@ function switchView(view) {
     case "help":
       if (typeof initHelp === "function") {
         initHelp();
+      }
+      break;
+
+    case "watermark":
+      if (typeof initWatermarkTool === "function") {
+        initWatermarkTool();
       }
       break;
   }

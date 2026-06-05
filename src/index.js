@@ -1160,6 +1160,27 @@ ipcMain.handle("reset-settings", async () => {
   return true;
 });
 
+// ========== Watermark Tool ==========
+ipcMain.handle("choose-output-directory", async () => {
+  const result = await dialog.showOpenDialog(mainWindow, {
+    title: "Choose folder to save watermarked images",
+    properties: ["openDirectory", "createDirectory"],
+  });
+  return result.canceled ? null : result.filePaths[0];
+});
+
+ipcMain.handle("save-watermarked-image", async (event, { outputDirectory, outputFileName, base64Data }) => {
+  if (!outputDirectory || !outputFileName || !base64Data) {
+    throw new Error("save-watermarked-image: missing required fields");
+  }
+  const outputDir = path.join(outputDirectory, "watermarked");
+  await fs.mkdir(outputDir, { recursive: true });
+  const outputPath = path.join(outputDir, outputFileName);
+  const buffer = Buffer.from(base64Data, "base64");
+  await fs.writeFile(outputPath, buffer);
+  return { success: true, outputPath };
+});
+
 // ========== App Lifecycle ==========
 function createWindow() {
   mainWindow = new BrowserWindow({
