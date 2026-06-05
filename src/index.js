@@ -11,6 +11,9 @@ const fs = require("fs").promises;
 const fsSync = require("fs");
 const PizZip = require("pizzip");
 const Docxtemplater = require("docxtemplater");
+// Safe optional require — app works normally even if package not yet installed
+let ImageModule = null;
+try { ImageModule = require("docxtemplater-image-module-free"); } catch (_) {}
 // const ExcelJS = require("exceljs");
 const ExcelJS = require("@protobi/exceljs");
 const { v4: uuidv4 } = require("uuid");
@@ -67,12 +70,25 @@ async function initSQLite(filePath) {
       templateId TEXT NOT NULL,
       data TEXT NOT NULL,
       outputPath TEXT,
+      printed INTEGER NOT NULL DEFAULT 0,
       createdAt TEXT NOT NULL
     );
     CREATE INDEX IF NOT EXISTS idx_templates_type ON templates(type);
     CREATE INDEX IF NOT EXISTS idx_templates_hasFields ON templates(hasFields);
     CREATE INDEX IF NOT EXISTS idx_records_templateId ON data_records(templateId);
   `);
+
+  // Schema migrations — add new columns to existing databases safely.
+  // PRAGMA table_info returns one row per column; we check if a column exists before adding it.
+  const recordCols = db.exec("PRAGMA table_info(data_records)");
+  const recordColNames = recordCols.length > 0
+    ? recordCols[0].values.map((r) => r[1])  // column index 1 = name
+    : [];
+  if (!recordColNames.includes("printed")) {
+    db.exec("ALTER TABLE data_records ADD COLUMN printed INTEGER NOT NULL DEFAULT 0");
+    console.log("[DB Migration] Added 'printed' column to data_records");
+  }
+
   await saveDatabase();
 }
 
@@ -119,14 +135,15 @@ async function migrateFromJSONIfNeeded() {
     for (const r of dataRecords) {
       db.run(
         `
-        INSERT OR REPLACE INTO data_records (id, templateId, data, outputPath, createdAt)
-        VALUES (?, ?, ?, ?, ?)
+        INSERT OR REPLACE INTO data_records (id, templateId, data, outputPath, printed, createdAt)
+        VALUES (?, ?, ?, ?, ?, ?)
       `,
         [
           r.id,
           r.templateId,
           JSON.stringify(r.data),
           r.outputPath || "",
+          r.printed ? 1 : 0,
           r.createdAt,
         ],
       );
@@ -159,24 +176,10 @@ function getDbPath() {
 }
 
 // ========== Database Operations ==========
-// function getTemplates() {
-//   const rows = db.exec("SELECT * FROM templates ORDER BY name");
-//   if (rows.length === 0) return [];
-//   return rows[0].values.map(row => ({
-//     id: row[0], name: row[1], description: row[2], category: row[3],
-//     filePath: row[4], originalName: row[5], type: row[6],
-//     hasFields: row[7] === 1,
-//     fields: JSON.parse(row[8] || "[]"),
-//     dateRangeConfig: row[9] ? JSON.parse(row[9]) : null,
-//     hasDateRange: row[10] === 1,
-//     isActive: row[11] === 1,
-//     createdAt: row[12], updatedAt: row[13]
-//   }));
-// }
 function getTemplates() {
   const rows = db.exec(`
     SELECT t.*, 
-           (SELECT COUNT(*) FROM data_records WHERE templateId = t.id) as recordCount 
+           (SELECT COUNT(*) FROM data_records WHERE templateId = t.id AND printed = 1) as recordCount 
     FROM templates t 
     ORDER BY name
   `);
@@ -196,7 +199,7 @@ function getTemplates() {
     isActive: row[11] === 1,
     createdAt: row[12],
     updatedAt: row[13],
-    recordCount: row[14] || 0, // <-- new field
+    recordCount: row[14] || 0,
   }));
 }
 
@@ -300,7 +303,6 @@ function deleteTemplateRecord(templateId) {
   db.run("DELETE FROM templates WHERE id = ?", [templateId]);
 }
 
-// --- NEW HELPER: count records for a template ---
 function getDataRecordCount(templateId) {
   const stmt = db.prepare(
     "SELECT COUNT(*) as count FROM data_records WHERE templateId = ?",
@@ -312,7 +314,6 @@ function getDataRecordCount(templateId) {
   return result.count;
 }
 
-// --- NEW HELPER: delete oldest records until keepCount remains ---
 function deleteOldestDataRecords(templateId, keepCount) {
   const currentCount = getDataRecordCount(templateId);
   const toDelete = currentCount - keepCount;
@@ -331,23 +332,21 @@ function deleteOldestDataRecords(templateId, keepCount) {
   }
 }
 
-// --- MODIFIED: saveDataRecord with auto-rollover (limit 30) ---
 function saveDataRecord(record) {
   db.run(
     `
-    INSERT INTO data_records (id, templateId, data, outputPath, createdAt)
-    VALUES (?, ?, ?, ?, ?)
+    INSERT INTO data_records (id, templateId, data, outputPath, printed, createdAt)
+    VALUES (?, ?, ?, ?, ?, ?)
   `,
     [
       record.id,
       record.templateId,
       JSON.stringify(record.data),
       record.outputPath || "",
+      record.printed ? 1 : 0,
       record.createdAt,
     ],
   );
-
-  // Enforce maximum 30 records per template (delete oldest if exceeded)
   deleteOldestDataRecords(record.templateId, 30);
 }
 
@@ -364,6 +363,30 @@ function getDataRecords(templateId) {
     outputPath: row[3],
     createdAt: row[4],
   }));
+}
+
+// ========== Helper: image placeholders ==========
+function extractImagePlaceholderFields(text) {
+  const regex = /\{%%?([a-zA-Z0-9_]+)\}/g;
+  const seen = new Set();
+  const fields = [];
+  let m;
+  while ((m = regex.exec(text)) !== null) {
+    const key = m[1];
+    if (seen.has(key)) continue;
+    seen.add(key);
+    fields.push({
+      key,
+      label: key.replace(/[._]/g, " ").replace(/\b\w/g, (l) => l.toUpperCase()),
+      type: "image",
+      required: false,
+      value: "",
+      isRTL: false,
+      originalKey: key,
+      widthPx: null,
+    });
+  }
+  return fields;
 }
 
 // ========== Helper: date_range placeholders ==========
@@ -404,19 +427,136 @@ function processDateRangePlaceholders(fields) {
 async function generateWordDocument(templatePath, outputPath, data) {
   const content = await fs.readFile(templatePath);
   const zip = new PizZip(content);
+
+  // Store image buffers and widths
+  const imageDataMap = {};
+  const imageWidthMap = {};
+
+  // Process image fields: extract base64 to buffer, then replace with key string
+  // (data[k] must stay as a string value so docxtemplater resolves the {%key} tag
+  //  and the image module's getImage() callback gets invoked)
+  for (const [k, v] of Object.entries(data)) {
+    if (v && typeof v === "object" && v.base64) {
+      imageDataMap[k] = Buffer.from(v.base64, "base64");
+      if (v.widthPx) imageWidthMap[k] = v.widthPx;
+      data[k] = k; // keep the key as value — image module uses tagName to look up the buffer
+      delete data[`%${k}`]; // remove any phantom %key entries
+      console.log(`[Image] Stored buffer for key "${k}"`);
+    }
+  }
+
+  const hasImages = Object.keys(imageDataMap).length > 0;
+  console.log(`[Image] hasImages: ${hasImages}, keys:`, Object.keys(imageDataMap));
+
+  // Clean legacy {image:key} tags (remove them completely)
+  const cleanLegacyImageTags = (xml) => {
+    xml = xml.replace(/\{image:[a-zA-Z0-9_]+(?::\d+)?\}/g, "");
+    return xml;
+  };
+
+  const xmlPartsToClean = ["word/document.xml"];
+  for (const fname of Object.keys(zip.files)) {
+    if (/^word\/(header|footer)\d*\.xml$/.test(fname)) xmlPartsToClean.push(fname);
+  }
+  for (const fname of xmlPartsToClean) {
+    const part = zip.file(fname);
+    if (!part) continue;
+    const cleaned = cleanLegacyImageTags(part.asText());
+    zip.file(fname, cleaned);
+  }
+
+  // Log placeholders found in the template
+  const docXmlFile = zip.file("word/document.xml");
+  if (docXmlFile) {
+    const rawXml = docXmlFile.asText();
+    const tags = [...rawXml.matchAll(/\{([^}]+)\}/g)].map(m => m[1]);
+    console.log("[Template] Placeholders found:", [...new Set(tags)]);
+  }
+
+  const modules = [];
+
+  if (ImageModule && hasImages) {
+    const DEFAULT_W_PX = 150;
+
+    modules.push(new ImageModule({
+      centered: false,
+      getImage(tagValue, tagName) {
+        console.log(`[ImageModule] getImage called: tagName="${tagName}"`);
+        // The tagName will be e.g. "%photo" (because delimiters are { } and content is %photo)
+        // Strip leading '%' to get the clean key
+        let cleanKey = tagName;
+        if (cleanKey.startsWith('%')) cleanKey = cleanKey.slice(1);
+        const buffer = imageDataMap[cleanKey] || null;
+        console.log(`[ImageModule] Looking for key "${cleanKey}", buffer exists: ${!!buffer}`);
+        return buffer;
+      },
+      getSize(imgBuffer, tagValue, tagName) {
+        // NOTE: docxtemplater-image-module-free multiplies return values by 9525 internally
+        // to convert pixels → EMU. So getSize must return PIXELS, not EMU.
+        let cleanKey = tagName;
+        if (cleanKey.startsWith('%')) cleanKey = cleanKey.slice(1);
+        const wPx = imageWidthMap[cleanKey] || DEFAULT_W_PX;
+        if (!imgBuffer) return [wPx, wPx];
+        try {
+          let nW = 0, nH = 0;
+          if (imgBuffer[0] === 0x89 && imgBuffer[1] === 0x50) { // PNG
+            nW = imgBuffer.readUInt32BE(16);
+            nH = imgBuffer.readUInt32BE(20);
+          } else if (imgBuffer[0] === 0xff && imgBuffer[1] === 0xd8) { // JPEG
+            let i = 2;
+            while (i < imgBuffer.length - 8) {
+              if (imgBuffer[i] !== 0xff) break;
+              const seg = imgBuffer.readUInt16BE(i + 2);
+              if (imgBuffer[i + 1] >= 0xc0 && imgBuffer[i + 1] <= 0xc3) {
+                nH = imgBuffer.readUInt16BE(i + 5);
+                nW = imgBuffer.readUInt16BE(i + 7);
+                break;
+              }
+              i += 2 + seg;
+            }
+          }
+          // Return [width, height] in PIXELS — module converts to EMU automatically
+          if (nW > 0 && nH > 0) return [wPx, Math.round(wPx * (nH / nW))];
+        } catch (_) {}
+        return [wPx, wPx];
+      },
+    }));
+  } else if (hasImages && !ImageModule) {
+    throw new Error("Image module not installed. Run: npm install docxtemplater-image-module-free");
+  }
+
   const doc = new Docxtemplater(zip, {
     paragraphLoop: true,
     linebreaks: true,
     nullGetter: () => "",
     delimiters: { start: "{", end: "}" },
+    modules,
   });
-  doc.render(data);
-  const buf = doc
-    .getZip()
-    .generate({ type: "nodebuffer", compression: "DEFLATE" });
-  await fs.writeFile(outputPath, buf);
-}
 
+  try {
+    doc.render(data);
+  } catch (renderError) {
+    let msg = renderError.message || "Unknown render error";
+    if (renderError.properties && renderError.properties.errors) {
+      msg = renderError.properties.errors
+        .map(e => e.properties ? (e.properties.explanation || e.message) : e.message)
+        .join("; ");
+    }
+    throw new Error("Template render error: " + msg);
+  }
+
+  const buf = doc.getZip().generate({ type: "nodebuffer", compression: "DEFLATE" });
+
+  // Validate the output is a valid zip before writing
+  try {
+    new PizZip(buf);
+  } catch (zipErr) {
+    throw new Error("Generated document is corrupt (invalid zip): " + zipErr.message);
+  }
+
+  await fs.writeFile(outputPath, buf);
+  console.log("[Image] Document written to", outputPath);
+}
 async function generateExcelDocument(templatePath, outputPath, data) {
   const workbook = new ExcelJS.Workbook();
   await workbook.xlsx.readFile(templatePath);
@@ -482,6 +622,7 @@ ipcMain.handle("upload-template", async (event, { filePath, metadata }) => {
           nullGetter: () => "",
         });
         const fullText = doc.getFullText();
+        const rawXml = zip.file("word/document.xml") ? zip.file("word/document.xml").asText() : "";
         const regex = /\{([^}]+)\}/g;
         const matches = [...fullText.matchAll(regex)];
         const uniqueKeys = new Set();
@@ -489,6 +630,8 @@ ipcMain.handle("upload-template", async (event, { filePath, metadata }) => {
           .filter((m) => {
             const k = m[1].trim();
             if (uniqueKeys.has(k)) return false;
+            if (/^%/.test(k)) return false;           // skip {%key} image module tags
+            if (/^image:[a-zA-Z0-9_]/.test(k)) return false; // skip legacy {image:key} tags
             uniqueKeys.add(k);
             return true;
           })
@@ -512,6 +655,10 @@ ipcMain.handle("upload-template", async (event, { filePath, metadata }) => {
         const processed = processDateRangePlaceholders(fields);
         fields = processed.fields;
         dateRangeConfig = processed.dateRangeConfig;
+        // Merge image fields from raw XML (invisible to getFullText)
+        for (const imgField of extractImagePlaceholderFields(rawXml)) {
+          if (!fields.find(f => f.key === imgField.key)) fields.push(imgField);
+        }
       } catch (e) {}
     } else if (extension === ".xlsx") {
       try {
@@ -613,6 +760,7 @@ ipcMain.handle("reload-template-fields", async (event, templateId) => {
         nullGetter: () => "",
       });
       const fullText = doc.getFullText();
+      const rawXml = zip.file("word/document.xml") ? zip.file("word/document.xml").asText() : "";
       const regex = /\{([^}]+)\}/g;
       const matches = [...fullText.matchAll(regex)];
       const uniqueKeys = new Set();
@@ -620,6 +768,8 @@ ipcMain.handle("reload-template-fields", async (event, templateId) => {
         .filter((m) => {
           const k = m[1].trim();
           if (uniqueKeys.has(k)) return false;
+          if (/^%/.test(k)) return false;           // skip {%key} image module tags
+          if (/^image:[a-zA-Z0-9_]/.test(k)) return false; // skip legacy {image:key} tags
           uniqueKeys.add(k);
           return true;
         })
@@ -640,6 +790,10 @@ ipcMain.handle("reload-template-fields", async (event, templateId) => {
             originalKey: key,
           };
         });
+      // Merge image fields from raw XML
+      for (const imgField of extractImagePlaceholderFields(rawXml)) {
+        if (!newFields.find(f => f.key === imgField.key)) newFields.push(imgField);
+      }
     } else if (extension === ".xlsx") {
       const workbook = new ExcelJS.Workbook();
       await workbook.xlsx.load(fileBuffer);
@@ -684,7 +838,7 @@ ipcMain.handle("reload-template-fields", async (event, templateId) => {
 });
 ipcMain.handle(
   "generate-document",
-  async (event, { templateId, formData, outputFormat = "docx" }) => {
+  async (event, { templateId, formData, outputFormat = "docx", printed = false }) => {
     const template = getTemplateById(templateId);
     if (!template) throw new Error("Template not found");
     await fs.access(template.filePath);
@@ -701,6 +855,7 @@ ipcMain.handle(
       templateId: template.id,
       data: formData,
       outputPath,
+      printed: printed ? true : false,
       createdAt: new Date().toISOString(),
     };
     saveDataRecord(record);
@@ -758,7 +913,7 @@ ipcMain.handle("get-app-info", () => ({
   version: app.getVersion(),
   author: "Mohamed Shamil",
   email: "shaamil.is@gmail.com",
-  phone: "+960 999-0166", // 👈 Add your phone number here
+  phone: "+960 999-0166",
   repo: "https://github.com/MoshRadix/mosh-forms-app",
   quote: "Simplify document generation, one form at a time.",
   electronVersion: process.versions.electron,
@@ -767,132 +922,21 @@ ipcMain.handle("get-app-info", () => ({
   platform: process.platform,
   arch: process.arch,
 }));
-// ipcMain.handle("print-document", async (event, filePath) => {
-//   await fs.access(filePath);
-//   const isPdf = path.extname(filePath).toLowerCase() === ".pdf";
-//   if (process.platform === "win32") {
-//     if (isPdf) {
-//       return new Promise((resolve, reject) => {
-//         let pdfWindow = new BrowserWindow({ show: false, webPreferences: { plugins: true } });
-//         pdfWindow.loadURL(`file://${filePath}`);
-//         pdfWindow.webContents.on("did-finish-load", () => {
-//           pdfWindow.webContents.print({ silent: true, printBackground: true }, (success, reason) => {
-//             pdfWindow.close();
-//             if (success) resolve(true);
-//             else reject(new Error(`Print failed: ${reason}`));
-//           });
-//         });
-//         pdfWindow.webContents.on("did-fail-load", () => {
-//           pdfWindow.close();
-//           reject(new Error("Failed to load PDF"));
-//         });
-//       });
-//     } else {
-//       const { exec } = require("child_process");
-//       const command = `powershell -Command "Start-Process -FilePath '${filePath}' -Verb Print -WindowStyle Hidden"`;
-//       return new Promise((resolve, reject) => {
-//         exec(command, { timeout: 30000 }, (error) => {
-//           if (error) reject(new Error(`Print failed: ${error.message}`));
-//           else resolve(true);
-//         });
-//       });
-//     }
-//   } else if (process.platform === "darwin" || process.platform === "linux") {
-//     const { exec } = require("child_process");
-//     const command = `lp "${filePath}"`;
-//     return new Promise((resolve, reject) => {
-//       exec(command, { timeout: 30000 }, (error) => {
-//         if (error) reject(new Error(`Print failed: ${error.message}`));
-//         else resolve(true);
-//       });
-//     });
-//   } else {
-//     throw new Error("Printing not supported on this platform");
-//   }
-// });
-//const { print } = require("pdf-to-printer"); // add at top of file
-
-// ipcMain.handle("print-document", async (event, filePath) => {
-//   await fs.access(filePath);
-//   const ext = path.extname(filePath).toLowerCase();
-//   const isPdf = ext === ".pdf";
-
-//   if (process.platform === "win32") {
-//     if (isPdf) {
-//       try {
-//         // Direct PDF printing via Windows API – no viewer needed
-//         await print(filePath);
-//         return true;
-//       } catch (err) {
-//         console.error("PDF printing error:", err);
-//         // Fallback: open the file for manual printing
-//         await shell.openPath(filePath);
-//         throw new Error(
-//           `PDF could not be printed automatically: ${err.message}. The file has been opened for manual printing.`,
-//         );
-//       }
-//     } else {
-//       // Word / Excel – use PowerShell
-//       const { exec } = require("child_process");
-//       const escapedPath = filePath.replace(/'/g, "''");
-//       const command = `powershell -Command "Start-Process -FilePath '${escapedPath}' -Verb Print -WindowStyle Hidden"`;
-//       return new Promise((resolve, reject) => {
-//         exec(command, { timeout: 30000 }, (error) => {
-//           if (error) {
-//             shell.openPath(filePath).catch(() => {});
-//             reject(
-//               new Error(
-//                 `Print failed: ${error.message}. File opened for manual printing.`,
-//               ),
-//             );
-//           } else {
-//             resolve(true);
-//           }
-//         });
-//       });
-//     }
-//   } else if (process.platform === "darwin" || process.platform === "linux") {
-//     const { exec } = require("child_process");
-//     const escapedPath = filePath.replace(/(["\s'$`\\])/g, "\\$1");
-//     const command = `lp "${escapedPath}"`;
-//     return new Promise((resolve, reject) => {
-//       exec(command, { timeout: 30000 }, (error) => {
-//         if (error) {
-//           shell.openPath(filePath).catch(() => {});
-//           reject(
-//             new Error(
-//               `Print failed: ${error.message}. File opened for manual printing.`,
-//             ),
-//           );
-//         } else {
-//           resolve(true);
-//         }
-//       });
-//     });
-//   } else {
-//     throw new Error("Printing not supported on this platform");
-//   }
-// });
 ipcMain.handle("print-document", async (event, filePath) => {
   await fs.access(filePath);
   const ext = path.extname(filePath).toLowerCase();
   const isPdf = ext === ".pdf";
 
   if (isPdf) {
-    // Cross-platform native silent PDF printing using a hidden window
     return new Promise((resolve, reject) => {
       let workerWindow = new BrowserWindow({
         show: false,
         webPreferences: {
-          plugins: true, // Allows PDF rendering internally
+          plugins: true,
         },
       });
-
-      // Load the PDF file directly into the hidden window
       workerWindow.loadURL(`file://${filePath}`);
-
       workerWindow.webContents.on("did-finish-load", () => {
-        // Trigger silent printing once loaded
         workerWindow.webContents.print(
           {
             silent: true,
@@ -908,7 +952,6 @@ ipcMain.handle("print-document", async (event, filePath) => {
           },
         );
       });
-
       workerWindow.webContents.on("did-fail-load", (err) => {
         workerWindow.close();
         reject(new Error(`Failed to load PDF into printing engine: ${err}`));
@@ -916,9 +959,7 @@ ipcMain.handle("print-document", async (event, filePath) => {
     });
   }
 
-  // --- Non-PDF fallback handling (Word / Excel) ---
   if (process.platform === "win32") {
-    // Word / Excel – use PowerShell
     const { exec } = require("child_process");
     const escapedPath = filePath.replace(/'/g, "''");
     const command = `powershell -Command "Start-Process -FilePath '${escapedPath}' -Verb Print -WindowStyle Hidden"`;
@@ -1085,7 +1126,6 @@ app.whenReady().then(async () => {
   await migrateFromJSONIfNeeded();
   await fs.mkdir(settings.templatesDir, { recursive: true });
   await fs.mkdir(settings.outputsDir, { recursive: true });
-  //updateElectronApp(); // additional configuration options available
   process.env.ELECTRON_IS_DEV = "false";
   updateElectronApp({
     updateSource: {

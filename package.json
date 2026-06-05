@@ -1,7 +1,7 @@
 {
   "name": "mosh-forms-app",
   "productName": "mosh-forms-app",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "My Electron application description",
   "main": "src/index.js",
   "private": true,
@@ -22,6 +22,7 @@
     "@electron/rebuild": "^4.0.4",
     "@protobi/exceljs": "^4.4.0-protobi.10",
     "docxtemplater": "^3.52.3",
+    "docxtemplater-image-module-free": "^1.1.1",
     "electron-log": "^5.4.4",
     "electron-squirrel-startup": "^1.0.1",
     "pdf-to-printer": "^5.8.0",

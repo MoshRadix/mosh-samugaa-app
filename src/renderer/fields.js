@@ -30,7 +30,7 @@ function renderFieldsModal(template, container) {
                         <div class="form-group">
                             <label>Data Type</label>
                             <select onchange="updateField('${template.id}', ${index}, 'type', this.value)">
-                                ${['string', 'number', 'date', 'boolean', 'email'].map(type => 
+                                ${['string', 'number', 'date', 'boolean', 'email', 'image'].map(type => 
                                     `<option value="${type}" ${field.type === type ? 'selected' : ''}>${type.charAt(0).toUpperCase() + type.slice(1)}</option>`
                                 ).join('')}
                             </select>
@@ -60,7 +60,7 @@ function renderFieldsModal(template, container) {
                 <div class="form-group">
                     <label>Data Type</label>
                     <select id="new-field-type">
-                        ${['string', 'number', 'date', 'boolean', 'email'].map(type => 
+                        ${['string', 'number', 'date', 'boolean', 'email', 'image'].map(type => 
                             `<option value="${type}">${type.charAt(0).toUpperCase() + type.slice(1)}</option>`
                         ).join('')}
                     </select>

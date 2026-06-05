@@ -775,6 +775,34 @@ function getFieldInputWithAutoSwitch(field) {
   const isDivehiField = shouldUseDivehi(field);
   const placeholder = isDivehiField ? divehiPlaceholder : englishPlaceholder;
 
+  // IMAGE TYPE
+  if (field.type === "image") {
+    const defaultWidth = field.widthPx || 150;
+    return `
+      <div class="image-field-wrapper" id="${fieldId}-wrapper">
+        <input type="file"
+               id="${fieldId}"
+               name="${field.key}"
+               accept="image/png,image/jpeg,image/jpg"
+               class="form-input image-file-input"
+               onchange="handleImageFieldChange('${field.key}', this)">
+        <div class="image-preview-container" id="${fieldId}-preview" style="display:none;">
+          <img id="${fieldId}-img" src="" alt="Preview" class="image-field-preview">
+          <button type="button" class="btn btn-danger btn-small image-clear-btn" onclick="clearImageField('${field.key}')">✕ Clear</button>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:6px;">
+          <label style="font-size:0.78rem;color:var(--text-muted,#888);white-space:nowrap;margin:0;">Width (px):</label>
+          <input type="number" id="${fieldId}-width" value="${defaultWidth}" min="10" max="2000"
+                 style="width:80px;padding:3px 6px;font-size:0.82rem;"
+                 class="form-input" oninput="handleImageWidthChange('${field.key}', this.value)">
+        </div>
+        <p style="margin:4px 0 0;font-size:0.78rem;color:var(--text-muted,#888);">
+          PNG or JPG · use <code>{%${field.key}}</code> in your Word template
+        </p>
+      </div>
+    `;
+  }
+
   // DATE TYPE
   if (field.type === "date") {
     const presetDate = getPresetDateFromPlaceholder(field.key);
@@ -824,6 +852,51 @@ function getFieldInputWithAutoSwitch(field) {
                 placeholder="${placeholder}" class="form-input ${isDivehiField ? "divehi-input" : "english-input"}" 
                 dir="${isDivehiField ? "rtl" : "ltr"}">`;
 }
+
+// ========== Image Field Helpers ==========
+
+function handleImageFieldChange(fieldKey, inputEl) {
+  const fieldId = `field-${fieldKey.replace(/[^a-zA-Z0-9]/g, "_")}`;
+  const wrapper = document.getElementById(`${fieldId}-wrapper`);
+  const previewContainer = document.getElementById(`${fieldId}-preview`);
+  const previewImg = document.getElementById(`${fieldId}-img`);
+
+  const file = inputEl.files && inputEl.files[0];
+  if (!file) {
+    if (wrapper) { wrapper.dataset.imageBase64 = ""; wrapper.dataset.imageExt = ""; }
+    if (previewContainer) previewContainer.style.display = "none";
+    return;
+  }
+
+  const ext = file.name.split(".").pop().toLowerCase() || "png";
+  const reader = new FileReader();
+  reader.onload = function (e) {
+    const base64 = (e.target.result || "").split(",")[1] || "";
+    if (wrapper) { wrapper.dataset.imageBase64 = base64; wrapper.dataset.imageExt = ext; }
+    if (previewImg) previewImg.src = e.target.result;
+    if (previewContainer) previewContainer.style.display = "flex";
+  };
+  reader.readAsDataURL(file);
+}
+
+function handleImageWidthChange(fieldKey, value) {
+  const fieldId = `field-${fieldKey.replace(/[^a-zA-Z0-9]/g, "_")}`;
+  const wrapper = document.getElementById(`${fieldId}-wrapper`);
+  if (wrapper) wrapper.dataset.imageWidth = value || "150";
+}
+
+function clearImageField(fieldKey) {
+  const fieldId = `field-${fieldKey.replace(/[^a-zA-Z0-9]/g, "_")}`;
+  const input = document.getElementById(fieldId);
+  const wrapper = document.getElementById(`${fieldId}-wrapper`);
+  const previewContainer = document.getElementById(`${fieldId}-preview`);
+  const previewImg = document.getElementById(`${fieldId}-img`);
+  if (input) input.value = "";
+  if (wrapper) { wrapper.dataset.imageBase64 = ""; wrapper.dataset.imageExt = ""; }
+  if (previewImg) previewImg.src = "";
+  if (previewContainer) previewContainer.style.display = "none";
+}
+
 // Enhanced renderFillForm with two-column layout
 // async function renderFillForm() {
 //   console.log("renderFillForm called");
@@ -1051,7 +1124,8 @@ async function renderFillForm() {
       const isDivehiField = shouldUseDivehi(field);
       const fieldId = `field-${field.key.replace(/[^a-zA-Z0-9]/g, "_")}`;
       const isTextarea = field.type === "textarea";
-      const fullWidthClass = isTextarea ? "full-width-field" : "";
+      const isImage = field.type === "image";
+      const fullWidthClass = (isTextarea || isImage) ? "full-width-field" : "";
       return `
         <div class="field-container ${fullWidthClass}" data-field-key="${field.key}">
           <label>
@@ -1102,10 +1176,10 @@ async function renderFillForm() {
 
     <div class="form-actions-container">
       <div class="form-actions">
-        <button type="button" id="generate-btn" class="btn btn-primary btn-large">
+        <button type="button" id="generate-btn" class="btn btn-primary btn-large" onclick="generateDocument()">
           <span class="btn-icon">📄</span> Generate & Print
         </button>
-        <button type="button" id="generate-only-btn" class="btn btn-outline btn-large">
+        <button type="button" id="generate-only-btn" class="btn btn-outline btn-large" onclick="generateDocumentOnly()">
           <span class="btn-icon">💾</span> Generate Only (Save)
         </button>
         <button type="button" class="btn btn-secondary btn-large" onclick="saveDataRecord()">
@@ -1142,6 +1216,7 @@ async function renderFillForm() {
 
   // Setup language switching for each field
   for (const field of window.selectedTemplate.fields) {
+    if (field.type === "image") continue; // image fields need no language setup
     const fieldId = `field-${field.key.replace(/[^a-zA-Z0-9]/g, "_")}`;
     const fieldElement = document.getElementById(fieldId);
     if (fieldElement) {
@@ -1173,16 +1248,7 @@ async function renderFillForm() {
   }
 
   // Add generate button listener
-  const generateBtn = document.getElementById("generate-btn");
-  if (generateBtn) {
-    generateBtn.removeEventListener("click", handleGenerateClick);
-    generateBtn.addEventListener("click", handleGenerateClick);
-  }
-  const generateOnlyBtn = document.getElementById("generate-only-btn");
-  if (generateOnlyBtn) {
-    generateOnlyBtn.removeEventListener("click", handleGenerateOnlyClick);
-    generateOnlyBtn.addEventListener("click", handleGenerateOnlyClick);
-  }
+  // (buttons use onclick attributes directly — no addEventListener needed)
 
   await loadDataRecords();
   ensureFieldsEditable();
@@ -1195,6 +1261,7 @@ function getFieldTypeIcon(type) {
     email: "📧",
     textarea: "📝",
     boolean: "☑️",
+    image: "🖼️",
   };
   return icons[type] || "";
 }
@@ -1259,6 +1326,19 @@ function validateForm() {
     const fieldId = `field-${field.key.replace(/[^a-zA-Z0-9]/g, "_")}`;
     const input = document.getElementById(fieldId);
     if (!input) continue;
+
+    // Image fields: validate via wrapper dataset, not input.value
+    if (field.type === "image") {
+      if (field.required) {
+        const wrapper = document.getElementById(`${fieldId}-wrapper`);
+        if (!wrapper || !wrapper.dataset.imageBase64) {
+          alert(`❌ ${field.label || field.key} is required — please select an image`);
+          input.focus();
+          return false;
+        }
+      }
+      continue;
+    }
 
     let value = input.value;
     if (input.type === "checkbox") {
@@ -1354,17 +1434,25 @@ function collectFormData() {
     const fieldId = `field-${field.key.replace(/[^a-zA-Z0-9]/g, "_")}`;
     const input = document.getElementById(fieldId);
     if (input) {
-      let value = input.value;
-      if (input.type === "checkbox") {
-        value = input.checked;
-      } else if (input.type === "number") {
-        value = input.value ? parseFloat(input.value) : "";
-      } else if (input.type === "select-one" && field.type === "boolean") {
-        value = value === "true";
+      if (field.type === "image") {
+        const wrapper = document.getElementById(`${fieldId}-wrapper`);
+        const base64 = wrapper ? (wrapper.dataset.imageBase64 || "") : "";
+        const ext = wrapper ? (wrapper.dataset.imageExt || "png") : "png";
+        const widthPx = wrapper ? parseInt(wrapper.dataset.imageWidth || "150", 10) : 150;
+        data[field.key] = base64 ? { base64, ext, widthPx } : null;
       } else {
-        value = input.value?.trim() || "";
+        let value = input.value;
+        if (input.type === "checkbox") {
+          value = input.checked;
+        } else if (input.type === "number") {
+          value = input.value ? parseFloat(input.value) : "";
+        } else if (input.type === "select-one" && field.type === "boolean") {
+          value = value === "true";
+        } else {
+          value = input.value?.trim() || "";
+        }
+        data[field.key] = value;
       }
-      data[field.key] = value;
     }
   }
 
@@ -1424,7 +1512,8 @@ async function generateDocument() {
       if (field.key === "date_range_start") continue;
       if (isAutoComputedField(field.key, window.selectedTemplate.fields)) continue;
       const rawDate = formData[field.key];
-      if (!rawDate || !rawDate.match(/^\d{4}-\d{2}-\d{2}$/)) continue;
+      if (field.type === "image") continue;
+      if (!rawDate || typeof rawDate !== "string" || !rawDate.match(/^\d{4}-\d{2}-\d{2}$/)) continue;
       const short = field.key.toLowerCase().includes("_short");
       formData[field.key] = field.isRTL
         ? formatDivehiDate(rawDate, short)
@@ -1455,6 +1544,7 @@ async function generateDocument() {
       templateId: window.selectedTemplate.id,
       formData: formData,
       outputFormat: outputFormat,
+      printed: true,
     });
 
     // const shouldPrint = confirm(
@@ -1572,7 +1662,8 @@ async function generateDocumentOnly() {
       if (field.key === "date_range_start") continue;
       if (isAutoComputedField(field.key, window.selectedTemplate.fields)) continue;
       const rawDate = formData[field.key];
-      if (!rawDate || !rawDate.match(/^\d{4}-\d{2}-\d{2}$/)) continue;
+      if (field.type === "image") continue;
+      if (!rawDate || typeof rawDate !== "string" || !rawDate.match(/^\d{4}-\d{2}-\d{2}$/)) continue;
       const short = field.key.toLowerCase().includes("_short");
       formData[field.key] = field.isRTL
         ? formatDivehiDate(rawDate, short)
@@ -1621,6 +1712,7 @@ async function generateDocumentOnly() {
       templateId: window.selectedTemplate.id,
       formData: formData,
       outputFormat: outputFormat,
+      printed: false,
     });
 
     showToast(
@@ -1747,6 +1839,13 @@ async function loadRecord(recordId) {
       const input = document.getElementById(fieldId);
 
       if (input) {
+        // File inputs cannot be set programmatically — browser security restriction.
+        // Image fields are skipped; the user must re-select the image if needed.
+        if (input.type === "file") {
+          loadedCount++;
+          continue;
+        }
+
         // Enable the input first
         input.disabled = false;
         input.readOnly = false;
@@ -1985,3 +2084,6 @@ window.toggleAutoLanguageSwitch = toggleAutoLanguageSwitch;
 window.loadDataRecords = loadDataRecords;
 window.handleRecordLoadClick = handleRecordLoadClick;
 window.handleRecordCardClick = handleRecordCardClick;
+window.handleImageFieldChange = handleImageFieldChange;
+window.clearImageField = clearImageField;
+window.handleImageWidthChange = handleImageWidthChange;
