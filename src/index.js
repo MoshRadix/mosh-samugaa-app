@@ -13,7 +13,9 @@ const PizZip = require("pizzip");
 const Docxtemplater = require("docxtemplater");
 // Safe optional require — app works normally even if package not yet installed
 let ImageModule = null;
-try { ImageModule = require("docxtemplater-image-module-free"); } catch (_) {}
+try {
+  ImageModule = require("docxtemplater-image-module-free");
+} catch (_) {}
 // const ExcelJS = require("exceljs");
 const ExcelJS = require("@protobi/exceljs");
 const { v4: uuidv4 } = require("uuid");
@@ -81,11 +83,14 @@ async function initSQLite(filePath) {
   // Schema migrations — add new columns to existing databases safely.
   // PRAGMA table_info returns one row per column; we check if a column exists before adding it.
   const recordCols = db.exec("PRAGMA table_info(data_records)");
-  const recordColNames = recordCols.length > 0
-    ? recordCols[0].values.map((r) => r[1])  // column index 1 = name
-    : [];
+  const recordColNames =
+    recordCols.length > 0
+      ? recordCols[0].values.map((r) => r[1]) // column index 1 = name
+      : [];
   if (!recordColNames.includes("printed")) {
-    db.exec("ALTER TABLE data_records ADD COLUMN printed INTEGER NOT NULL DEFAULT 0");
+    db.exec(
+      "ALTER TABLE data_records ADD COLUMN printed INTEGER NOT NULL DEFAULT 0",
+    );
     console.log("[DB Migration] Added 'printed' column to data_records");
   }
 
@@ -446,7 +451,10 @@ async function generateWordDocument(templatePath, outputPath, data) {
   }
 
   const hasImages = Object.keys(imageDataMap).length > 0;
-  console.log(`[Image] hasImages: ${hasImages}, keys:`, Object.keys(imageDataMap));
+  console.log(
+    `[Image] hasImages: ${hasImages}, keys:`,
+    Object.keys(imageDataMap),
+  );
 
   // Clean legacy {image:key} tags (remove them completely)
   const cleanLegacyImageTags = (xml) => {
@@ -454,14 +462,45 @@ async function generateWordDocument(templatePath, outputPath, data) {
     return xml;
   };
 
+  // Merge split XML runs so {%tag_name} placeholders aren't fragmented across <w:r> elements.
+  // Word sometimes splits a tag like {%image_1} into multiple runs e.g. {%image_ and 1},
+  // which prevents docxtemplater-image-module-free from recognising it.
+  const mergeImageTagRuns = (xml) => {
+    // Repeatedly collapse any <w:t>...</w:t></w:r><w:r ...><w:t ...> seams that are
+    // inside an open { ... } so the full tag lands in a single run.
+    // Strategy: strip all <w:r>/<w:rPr> wrapper tags that sit between an
+    // opening '{' and its matching '}', leaving only the text content.
+    let prev;
+    do {
+      prev = xml;
+      // If a <w:t> ends mid-tag and the very next <w:t> (possibly in a new run) continues it,
+      // pull the continuation text into the current run's <w:t>.
+      xml = xml.replace(
+        /(<w:t(?:\s[^>]*)?>)((?:[^{}]*\{[^{}]*))(<\/w:t>(?:<\/w:r>)?(?:<w:r>|<w:r\s[^>]*>)?(?:<w:rPr>[\s\S]*?<\/w:rPr>)?<w:t(?:\s[^>]*)?>)/g,
+        (match, openTag, text, runSeam) => {
+          // Only merge if the text has an open brace with no closing brace yet
+          if (
+            (text.match(/\{/g) || []).length > (text.match(/\}/g) || []).length
+          ) {
+            return openTag + text; // drop the run seam, continue in same <w:t>
+          }
+          return match;
+        },
+      );
+    } while (xml !== prev);
+    return xml;
+  };
+
   const xmlPartsToClean = ["word/document.xml"];
   for (const fname of Object.keys(zip.files)) {
-    if (/^word\/(header|footer)\d*\.xml$/.test(fname)) xmlPartsToClean.push(fname);
+    if (/^word\/(header|footer)\d*\.xml$/.test(fname))
+      xmlPartsToClean.push(fname);
   }
   for (const fname of xmlPartsToClean) {
     const part = zip.file(fname);
     if (!part) continue;
-    const cleaned = cleanLegacyImageTags(part.asText());
+    let cleaned = cleanLegacyImageTags(part.asText());
+    cleaned = mergeImageTagRuns(cleaned);
     zip.file(fname, cleaned);
   }
 
@@ -469,7 +508,7 @@ async function generateWordDocument(templatePath, outputPath, data) {
   const docXmlFile = zip.file("word/document.xml");
   if (docXmlFile) {
     const rawXml = docXmlFile.asText();
-    const tags = [...rawXml.matchAll(/\{([^}]+)\}/g)].map(m => m[1]);
+    const tags = [...rawXml.matchAll(/\{([^}]+)\}/g)].map((m) => m[1]);
     console.log("[Template] Placeholders found:", [...new Set(tags)]);
   }
 
@@ -478,51 +517,60 @@ async function generateWordDocument(templatePath, outputPath, data) {
   if (ImageModule && hasImages) {
     const DEFAULT_W_PX = 150;
 
-    modules.push(new ImageModule({
-      centered: false,
-      getImage(tagValue, tagName) {
-        console.log(`[ImageModule] getImage called: tagName="${tagName}"`);
-        // The tagName will be e.g. "%photo" (because delimiters are { } and content is %photo)
-        // Strip leading '%' to get the clean key
-        let cleanKey = tagName;
-        if (cleanKey.startsWith('%')) cleanKey = cleanKey.slice(1);
-        const buffer = imageDataMap[cleanKey] || null;
-        console.log(`[ImageModule] Looking for key "${cleanKey}", buffer exists: ${!!buffer}`);
-        return buffer;
-      },
-      getSize(imgBuffer, tagValue, tagName) {
-        // NOTE: docxtemplater-image-module-free multiplies return values by 9525 internally
-        // to convert pixels → EMU. So getSize must return PIXELS, not EMU.
-        let cleanKey = tagName;
-        if (cleanKey.startsWith('%')) cleanKey = cleanKey.slice(1);
-        const wPx = imageWidthMap[cleanKey] || DEFAULT_W_PX;
-        if (!imgBuffer) return [wPx, wPx];
-        try {
-          let nW = 0, nH = 0;
-          if (imgBuffer[0] === 0x89 && imgBuffer[1] === 0x50) { // PNG
-            nW = imgBuffer.readUInt32BE(16);
-            nH = imgBuffer.readUInt32BE(20);
-          } else if (imgBuffer[0] === 0xff && imgBuffer[1] === 0xd8) { // JPEG
-            let i = 2;
-            while (i < imgBuffer.length - 8) {
-              if (imgBuffer[i] !== 0xff) break;
-              const seg = imgBuffer.readUInt16BE(i + 2);
-              if (imgBuffer[i + 1] >= 0xc0 && imgBuffer[i + 1] <= 0xc3) {
-                nH = imgBuffer.readUInt16BE(i + 5);
-                nW = imgBuffer.readUInt16BE(i + 7);
-                break;
+    modules.push(
+      new ImageModule({
+        centered: false,
+        getImage(tagValue, tagName) {
+          console.log(`[ImageModule] getImage called: tagName="${tagName}"`);
+          // The tagName will be e.g. "%photo" (because delimiters are { } and content is %photo)
+          // Strip leading '%' to get the clean key
+          let cleanKey = tagName;
+          if (cleanKey.startsWith("%")) cleanKey = cleanKey.slice(1);
+          const buffer = imageDataMap[cleanKey] || null;
+          console.log(
+            `[ImageModule] Looking for key "${cleanKey}", buffer exists: ${!!buffer}`,
+          );
+          return buffer;
+        },
+        getSize(imgBuffer, tagValue, tagName) {
+          // NOTE: docxtemplater-image-module-free multiplies return values by 9525 internally
+          // to convert pixels → EMU. So getSize must return PIXELS, not EMU.
+          let cleanKey = tagName;
+          if (cleanKey.startsWith("%")) cleanKey = cleanKey.slice(1);
+          const wPx = imageWidthMap[cleanKey] || DEFAULT_W_PX;
+          if (!imgBuffer) return [wPx, wPx];
+          try {
+            let nW = 0,
+              nH = 0;
+            if (imgBuffer[0] === 0x89 && imgBuffer[1] === 0x50) {
+              // PNG
+              nW = imgBuffer.readUInt32BE(16);
+              nH = imgBuffer.readUInt32BE(20);
+            } else if (imgBuffer[0] === 0xff && imgBuffer[1] === 0xd8) {
+              // JPEG
+              let i = 2;
+              while (i < imgBuffer.length - 8) {
+                if (imgBuffer[i] !== 0xff) break;
+                const seg = imgBuffer.readUInt16BE(i + 2);
+                if (imgBuffer[i + 1] >= 0xc0 && imgBuffer[i + 1] <= 0xc3) {
+                  nH = imgBuffer.readUInt16BE(i + 5);
+                  nW = imgBuffer.readUInt16BE(i + 7);
+                  break;
+                }
+                i += 2 + seg;
               }
-              i += 2 + seg;
             }
-          }
-          // Return [width, height] in PIXELS — module converts to EMU automatically
-          if (nW > 0 && nH > 0) return [wPx, Math.round(wPx * (nH / nW))];
-        } catch (_) {}
-        return [wPx, wPx];
-      },
-    }));
+            // Return [width, height] in PIXELS — module converts to EMU automatically
+            if (nW > 0 && nH > 0) return [wPx, Math.round(wPx * (nH / nW))];
+          } catch (_) {}
+          return [wPx, wPx];
+        },
+      }),
+    );
   } else if (hasImages && !ImageModule) {
-    throw new Error("Image module not installed. Run: npm install docxtemplater-image-module-free");
+    throw new Error(
+      "Image module not installed. Run: npm install docxtemplater-image-module-free",
+    );
   }
 
   const doc = new Docxtemplater(zip, {
@@ -539,19 +587,25 @@ async function generateWordDocument(templatePath, outputPath, data) {
     let msg = renderError.message || "Unknown render error";
     if (renderError.properties && renderError.properties.errors) {
       msg = renderError.properties.errors
-        .map(e => e.properties ? (e.properties.explanation || e.message) : e.message)
+        .map((e) =>
+          e.properties ? e.properties.explanation || e.message : e.message,
+        )
         .join("; ");
     }
     throw new Error("Template render error: " + msg);
   }
 
-  const buf = doc.getZip().generate({ type: "nodebuffer", compression: "DEFLATE" });
+  const buf = doc
+    .getZip()
+    .generate({ type: "nodebuffer", compression: "DEFLATE" });
 
   // Validate the output is a valid zip before writing
   try {
     new PizZip(buf);
   } catch (zipErr) {
-    throw new Error("Generated document is corrupt (invalid zip): " + zipErr.message);
+    throw new Error(
+      "Generated document is corrupt (invalid zip): " + zipErr.message,
+    );
   }
 
   await fs.writeFile(outputPath, buf);
@@ -622,7 +676,9 @@ ipcMain.handle("upload-template", async (event, { filePath, metadata }) => {
           nullGetter: () => "",
         });
         const fullText = doc.getFullText();
-        const rawXml = zip.file("word/document.xml") ? zip.file("word/document.xml").asText() : "";
+        const rawXml = zip.file("word/document.xml")
+          ? zip.file("word/document.xml").asText()
+          : "";
         const regex = /\{([^}]+)\}/g;
         const matches = [...fullText.matchAll(regex)];
         const uniqueKeys = new Set();
@@ -630,7 +686,7 @@ ipcMain.handle("upload-template", async (event, { filePath, metadata }) => {
           .filter((m) => {
             const k = m[1].trim();
             if (uniqueKeys.has(k)) return false;
-            if (/^%/.test(k)) return false;           // skip {%key} image module tags
+            if (/^%/.test(k)) return false; // skip {%key} image module tags
             if (/^image:[a-zA-Z0-9_]/.test(k)) return false; // skip legacy {image:key} tags
             uniqueKeys.add(k);
             return true;
@@ -656,8 +712,9 @@ ipcMain.handle("upload-template", async (event, { filePath, metadata }) => {
         fields = processed.fields;
         dateRangeConfig = processed.dateRangeConfig;
         // Merge image fields from raw XML (invisible to getFullText)
-        for (const imgField of extractImagePlaceholderFields(rawXml)) {
-          if (!fields.find(f => f.key === imgField.key)) fields.push(imgField);
+        for (const imgField of extractImagePlaceholderFields(fullText)) {
+          if (!fields.find((f) => f.key === imgField.key))
+            fields.push(imgField);
         }
       } catch (e) {}
     } else if (extension === ".xlsx") {
@@ -760,7 +817,9 @@ ipcMain.handle("reload-template-fields", async (event, templateId) => {
         nullGetter: () => "",
       });
       const fullText = doc.getFullText();
-      const rawXml = zip.file("word/document.xml") ? zip.file("word/document.xml").asText() : "";
+      const rawXml = zip.file("word/document.xml")
+        ? zip.file("word/document.xml").asText()
+        : "";
       const regex = /\{([^}]+)\}/g;
       const matches = [...fullText.matchAll(regex)];
       const uniqueKeys = new Set();
@@ -768,7 +827,7 @@ ipcMain.handle("reload-template-fields", async (event, templateId) => {
         .filter((m) => {
           const k = m[1].trim();
           if (uniqueKeys.has(k)) return false;
-          if (/^%/.test(k)) return false;           // skip {%key} image module tags
+          if (/^%/.test(k)) return false; // skip {%key} image module tags
           if (/^image:[a-zA-Z0-9_]/.test(k)) return false; // skip legacy {image:key} tags
           uniqueKeys.add(k);
           return true;
@@ -791,8 +850,9 @@ ipcMain.handle("reload-template-fields", async (event, templateId) => {
           };
         });
       // Merge image fields from raw XML
-      for (const imgField of extractImagePlaceholderFields(rawXml)) {
-        if (!newFields.find(f => f.key === imgField.key)) newFields.push(imgField);
+      for (const imgField of extractImagePlaceholderFields(fullText)) {
+        if (!newFields.find((f) => f.key === imgField.key))
+          newFields.push(imgField);
       }
     } else if (extension === ".xlsx") {
       const workbook = new ExcelJS.Workbook();
@@ -838,7 +898,10 @@ ipcMain.handle("reload-template-fields", async (event, templateId) => {
 });
 ipcMain.handle(
   "generate-document",
-  async (event, { templateId, formData, outputFormat = "docx", printed = false }) => {
+  async (
+    event,
+    { templateId, formData, outputFormat = "docx", printed = false },
+  ) => {
     const template = getTemplateById(templateId);
     if (!template) throw new Error("Template not found");
     await fs.access(template.filePath);

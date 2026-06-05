@@ -13,10 +13,16 @@ window.initHelp = function () {
     <div class="help-section">
       <h2 class="help-section-title">📄 Overview</h2>
       <p>
-        <strong>MTO Document Generator</strong> lets you upload Word (.docx) or
-        Excel (.xlsx) templates that contain placeholder tags, fill them in
+        <strong>MTO Document Generator</strong> lets you upload Word (<code>.docx</code>) or
+        Excel (<code>.xlsx</code>) templates that contain placeholder tags, fill them in
         through a guided form, and instantly generate and print completed
-        documents. No manual editing of files is ever required.
+        documents — no manual file editing required.
+      </p>
+      <p>
+        Templates can be <strong>fillable</strong> (contain <code>{placeholder}</code> tags that produce
+        a form) or <strong>static</strong> (printed as-is). The app supports Divehi (Thaana) and
+        English text, bilingual date formatting, automatic date-range population, weekday
+        computation, image embedding, saved records, and more.
       </p>
     </div>
 
@@ -27,9 +33,9 @@ window.initHelp = function () {
         <table class="help-table">
           <thead><tr><th>Tab</th><th>Purpose</th></tr></thead>
           <tbody>
-            <tr><td><strong>Search &amp; Print</strong></td><td>Find any template and print or fill it immediately.</td></tr>
-            <tr><td><strong>Fill Form</strong></td><td>Active form view for a selected fillable template.</td></tr>
-            <tr><td><strong>Templates</strong></td><td>Full library — upload, edit, configure fields, preview or delete templates.</td></tr>
+            <tr><td><strong>Search &amp; Print</strong></td><td>Find any template by name, description, or category and print or fill it immediately.</td></tr>
+            <tr><td><strong>Fill Form</strong></td><td>Active form view for the currently selected fillable template. Only accessible after choosing a template.</td></tr>
+            <tr><td><strong>Templates</strong></td><td>Full library — upload, edit, configure fields, preview, or delete templates.</td></tr>
             <tr><td><strong>Settings</strong></td><td>Change storage directories and view app information.</td></tr>
             <tr><td><strong>Help</strong></td><td>This page.</td></tr>
           </tbody>
@@ -46,22 +52,27 @@ window.initHelp = function () {
         <li>Click <strong>+ New Template</strong>.</li>
         <li>Select a <code>.docx</code> or <code>.xlsx</code> file from disk.</li>
         <li>Enter a <strong>Name</strong>, optional <strong>Description</strong>, and <strong>Category</strong>.</li>
-        <li>Click <strong>Upload</strong>. The app parses all <code>{placeholder}</code> tags automatically.</li>
+        <li>Click <strong>Upload</strong>. The app scans the file and extracts all <code>{placeholder}</code> tags automatically.</li>
       </ol>
+      <p class="help-note">
+        💡 Categories include: General, Forms, Attendance Sheets, Invoices, Reports, Letters, Contracts, Other.
+      </p>
 
       <h3 class="help-subsection-title">Template Cards</h3>
-      <p>Each card shows the template name, file type badge, a <strong>print count</strong> (🖨️), and a <em>Fillable / Static</em> badge.</p>
+      <p>Each card shows the template name, file-type badge (<strong>DOCX</strong> / <strong>XLSX</strong>),
+      a <strong>print count</strong> (🖨️), and a <em>Fillable</em> or <em>Static</em> badge.
+      Inactive templates are dimmed and excluded from the Search page.</p>
       <div class="help-table-wrapper">
         <table class="help-table">
           <thead><tr><th>Button</th><th>Action</th></tr></thead>
           <tbody>
-            <tr><td>Fill Form</td><td>Open the form to fill and generate a document.</td></tr>
-            <tr><td>Print</td><td>Send a static (no-form) template directly to the printer.</td></tr>
-            <tr><td>Edit</td><td>Rename, re-describe, re-categorise, or toggle Active/Inactive.</td></tr>
-            <tr><td>⚙️ Fields</td><td>Configure each placeholder — type, label, RTL, required, dropdown choices.</td></tr>
-            <tr><td>Reload Fields</td><td>Re-scan the file for new placeholders after editing the source file.</td></tr>
-            <tr><td>Preview</td><td>Open the raw template file in its default application.</td></tr>
-            <tr><td>Delete</td><td>Permanently remove the template and its file.</td></tr>
+            <tr><td><strong>Fill Form</strong></td><td>Open the fill form for a fillable template (only shown when the template has fields).</td></tr>
+            <tr><td><strong>Print</strong></td><td>Send a static template directly to the default printer without any form.</td></tr>
+            <tr><td><strong>Edit</strong></td><td>Rename, re-describe, re-categorise, or toggle Active / Inactive status.</td></tr>
+            <tr><td><strong>⚙️ Fields</strong></td><td>Open the field configuration editor for each detected placeholder.</td></tr>
+            <tr><td><strong>Reload Fields</strong></td><td>Re-scan the source file for any new or changed placeholders after editing it externally.</td></tr>
+            <tr><td><strong>Preview</strong></td><td>Open the raw template file in its default application (Word / Excel).</td></tr>
+            <tr><td><strong>Delete</strong></td><td>Permanently remove the template record and its file from disk.</td></tr>
           </tbody>
         </table>
       </div>
@@ -72,48 +83,118 @@ window.initHelp = function () {
         <table class="help-table">
           <thead><tr><th>Setting</th><th>Effect</th></tr></thead>
           <tbody>
-            <tr><td>Label</td><td>Friendly name shown in the fill form.</td></tr>
-            <tr><td>Type</td><td>string · number · date · boolean · email · dropdown · textarea</td></tr>
-            <tr><td>RTL (Right-to-Left)</td><td>Enables Divehi / Thaana keyboard input and formats date fields in Divehi.</td></tr>
-            <tr><td>Required</td><td>Prevents generation if the field is left empty.</td></tr>
-            <tr><td>Dropdown choices</td><td>One option per line (visible when Type = dropdown).</td></tr>
+            <tr><td><strong>Label</strong></td><td>Friendly name shown on the fill form.</td></tr>
+            <tr>
+              <td><strong>Type</strong></td>
+              <td>
+                <code>string</code> — plain text input<br>
+                <code>number</code> — numeric input<br>
+                <code>date</code> — calendar date picker (auto-formatted on generation)<br>
+                <code>boolean</code> — Yes / No dropdown<br>
+                <code>email</code> — email address input<br>
+                <code>dropdown</code> — custom choice list (configure choices below)<br>
+                <code>textarea</code> — multi-line text block<br>
+                <code>image</code> — PNG / JPG file upload embedded into the document
+              </td>
+            </tr>
+            <tr><td><strong>RTL (Right-to-Left)</strong></td><td>Enables Divehi / Thaana keyboard and formats date fields in Divehi script.</td></tr>
+            <tr><td><strong>Required</strong></td><td>Prevents document generation if the field is left empty.</td></tr>
+            <tr><td><strong>Dropdown choices</strong></td><td>Enter one option per line (only visible when Type = <code>dropdown</code>).</td></tr>
           </tbody>
         </table>
       </div>
+      <p class="help-note">
+        💡 You can also <strong>add</strong> or <strong>remove</strong> fields manually from the field editor —
+        useful for placeholders that were not auto-detected or for cleanup.
+      </p>
     </div>
 
     <!-- ── SEARCH & PRINT ────────────────────────────────────── -->
     <div class="help-section">
       <h2 class="help-section-title">🔍 Search &amp; Print Page</h2>
       <p>
-        Type in the search bar to filter by name, description, or category.
-        Use the <strong>Type</strong> and <strong>Fillable</strong> dropdowns to narrow results further.
+        Type in the search bar to filter templates by name, description, or category in real time.
+        Use the <strong>Type</strong> dropdown (DOCX / XLSX) and the <strong>Fillable</strong>
+        dropdown (All / Fillable / Static) to narrow results further.
       </p>
-      <ul class="help-list">
-        <li><strong>Fill Form</strong> — opens the form for fillable templates.</li>
-        <li><strong>Print</strong> — sends static templates directly to the default printer.</li>
-        <li><strong>Preview</strong> — opens the source file for a quick look.</li>
-      </ul>
+      <div class="help-table-wrapper">
+        <table class="help-table">
+          <thead><tr><th>Button</th><th>Action</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Fill Form</strong></td><td>Open the fill form for a fillable template.</td></tr>
+            <tr><td><strong>Print</strong></td><td>Send a static template directly to the default printer.</td></tr>
+            <tr><td><strong>Preview</strong></td><td>Open the source file for a quick look without printing.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="help-note">
+        💡 Only <strong>active</strong> templates appear in Search &amp; Print. Mark a template Inactive in the
+        Templates page to hide it here without deleting it.
+      </p>
     </div>
 
     <!-- ── FILL FORM ─────────────────────────────────────────── -->
     <div class="help-section">
       <h2 class="help-section-title">📝 Fill Form Page</h2>
-      <p>After selecting a fillable template, every visible placeholder is shown as a labelled input field.</p>
+      <p>
+        After selecting a fillable template, every visible placeholder is shown as a labelled input field.
+        Hidden and auto-computed fields are never displayed — they are resolved automatically at generation time.
+      </p>
+
+      <h3 class="help-subsection-title">Form Actions</h3>
       <div class="help-table-wrapper">
         <table class="help-table">
           <thead><tr><th>Button</th><th>Action</th></tr></thead>
           <tbody>
-            <tr><td>Generate &amp; Print</td><td>Fill all placeholders, create the document, and send it to the printer.</td></tr>
-            <tr><td>Generate Only (Save)</td><td>Create the document and save it to the Outputs directory without printing.</td></tr>
-            <tr><td>Save Record</td><td>Store the form data in the history log for this template.</td></tr>
-            <tr><td>Clear</td><td>Reset all inputs.</td></tr>
-            <tr><td>← Cancel</td><td>Return to the Templates page.</td></tr>
+            <tr><td><strong>Generate &amp; Print</strong></td><td>Fill all placeholders, create the document, and send it directly to the default printer.</td></tr>
+            <tr><td><strong>Generate Only (Save)</strong></td><td>Create the document and save it to the Outputs directory without printing.</td></tr>
+            <tr><td><strong>Save Record</strong></td><td>Store the current form data as a saved record for this template (visible in the Saved Records panel).</td></tr>
+            <tr><td><strong>Clear</strong></td><td>Reset all form inputs to blank.</td></tr>
+            <tr><td><strong>← Cancel</strong></td><td>Return to the Search page without generating.</td></tr>
           </tbody>
         </table>
       </div>
-      <p class="help-note">
-        💡 Date fields automatically switch the keyboard to Divehi or English depending on the field's RTL setting.
+
+      <h3 class="help-subsection-title">Auto Language Switching</h3>
+      <p>
+        When you move between form fields, the app automatically switches the keyboard language:
+        <strong>Divehi (Thaana)</strong> for RTL fields and <strong>English</strong> for LTR fields.
+        A notification banner appears briefly to confirm each switch.
+      </p>
+      <ul class="help-list">
+        <li>Click <strong>✓ Auto-switch ON / Auto-switch OFF</strong> in the form toolbar to toggle this behaviour.</li>
+        <li>Keyboard shortcut: <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>A</kbd>.</li>
+      </ul>
+
+      <h3 class="help-subsection-title">Image Fields</h3>
+      <p>
+        Fields typed as <code>image</code> accept a <strong>PNG or JPG</strong> file and embed it
+        directly into the generated Word document.
+      </p>
+      <ul class="help-list">
+        <li>Use <code>{%field_key}</code> (with a <code>%</code> prefix) in your <code>.docx</code> template — not plain <code>{field_key}</code>.</li>
+        <li>After choosing a file, a thumbnail preview appears. Click <strong>✕ Clear</strong> to remove it.</li>
+        <li>Set the <strong>Width (px)</strong> field to control how wide the image appears in the document. The default is 150 px.</li>
+      </ul>
+      <p class="help-note">⚠️ Image embedding is only supported in <code>.docx</code> templates.</p>
+
+      <h3 class="help-subsection-title">Saved Records</h3>
+      <p>
+        The <strong>Saved Records</strong> panel (right side of the fill form) lists all previously saved
+        form entries for the current template. Each record shows the save date/time and a preview of
+        the first three field values.
+      </p>
+      <ul class="help-list">
+        <li>Click any record card (or the <strong>Load</strong> button) to restore its values into the form.</li>
+        <li>After loading, the form highlights how many fields were restored.</li>
+        <li>Records are stored per-template and persist between sessions.</li>
+      </ul>
+
+      <h3 class="help-subsection-title">Date Fields — Smart Presets</h3>
+      <p>
+        Date fields whose placeholder key contains common words like <code>today</code>,
+        <code>start</code>, or <code>end</code> open with a sensible default date already set —
+        so you rarely need to manually change them.
       </p>
     </div>
 
@@ -121,36 +202,59 @@ window.initHelp = function () {
     <div class="help-section">
       <h2 class="help-section-title">🏷️ Placeholder Reference</h2>
       <p>
-        Placeholders are written inside curly braces in your Word or Excel template, for example
-        <code>{employee_name}</code>. The app replaces them with the values you enter in the form.
-        Several special naming conventions trigger automatic computation — no user input needed.
+        Placeholders are written inside curly braces in your Word or Excel template, e.g.
+        <code>{employee_name}</code>. The app replaces every placeholder with the value you enter.
+        Several special naming conventions trigger <strong>automatic computation</strong> — no user input needed.
       </p>
+      <p class="help-note">
+        💡 Use <strong>lowercase, underscore-separated</strong> keys, e.g. <code>{employee_name}</code>,
+        <code>{start_date}</code>. Avoid spaces or special characters in placeholder keys.
+      </p>
+
+      <!-- Standard Field Types -->
+      <h3 class="help-subsection-title">Standard Field Types</h3>
+      <div class="help-table-wrapper">
+        <table class="help-table">
+          <thead><tr><th>Type</th><th>Placeholder example</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr><td><code>string</code></td><td><code>{employee_name}</code></td><td>Plain text; RTL flag enables Divehi input.</td></tr>
+            <tr><td><code>number</code></td><td><code>{total_days}</code></td><td>Numeric input.</td></tr>
+            <tr><td><code>date</code></td><td><code>{issue_date}</code></td><td>Calendar picker; output formatted by RTL flag (see below).</td></tr>
+            <tr><td><code>boolean</code></td><td><code>{is_approved}</code></td><td>Renders as Yes / No in the document.</td></tr>
+            <tr><td><code>email</code></td><td><code>{contact_email}</code></td><td>Email address input.</td></tr>
+            <tr><td><code>dropdown</code></td><td><code>{department}</code></td><td>Select from choices defined in the field editor.</td></tr>
+            <tr><td><code>textarea</code></td><td><code>{remarks}</code></td><td>Multi-line text area.</td></tr>
+            <tr><td><code>image</code></td><td><code>{%signature}</code></td><td>PNG/JPG embedded in .docx. Note the <code>%</code> prefix in the template.</td></tr>
+          </tbody>
+        </table>
+      </div>
 
       <!-- Date Formatting -->
       <h3 class="help-subsection-title">Date Formatting</h3>
       <p>
-        For any date field, the output format is controlled by the field's <strong>RTL</strong> flag in the field editor:
+        For any <code>date</code> field, the output format is determined by the field's <strong>RTL</strong> flag
+        in the field editor:
       </p>
       <div class="help-table-wrapper">
         <table class="help-table">
           <thead><tr><th>RTL setting</th><th>Format</th><th>Example</th></tr></thead>
           <tbody>
-            <tr><td>RTL = ON</td><td>Divehi</td><td>12 މެއި 2026</td></tr>
+            <tr><td>RTL = ON</td><td>Divehi (Thaana script)</td><td>12 މެއި 2026</td></tr>
             <tr><td>RTL = OFF</td><td>English</td><td>12 May 2026</td></tr>
           </tbody>
         </table>
       </div>
       <p>
-        Adding <code>_short</code> anywhere in the placeholder key omits the year:
+        Add <code>_short</code> anywhere in the placeholder key to omit the year:
       </p>
       <div class="help-table-wrapper">
         <table class="help-table">
-          <thead><tr><th>Placeholder</th><th>Example output</th></tr></thead>
+          <thead><tr><th>Placeholder</th><th>RTL</th><th>Example output</th></tr></thead>
           <tbody>
-            <tr><td><code>{start_date_divehi}</code> (RTL=ON)</td><td>12 މެއި 2026</td></tr>
-            <tr><td><code>{start_date_short_divehi}</code> (RTL=ON)</td><td>12 މެއި</td></tr>
-            <tr><td><code>{start_date_english}</code> (RTL=OFF)</td><td>12 May 2026</td></tr>
-            <tr><td><code>{start_date_short_english}</code> (RTL=OFF)</td><td>12 May</td></tr>
+            <tr><td><code>{issue_date}</code></td><td>OFF</td><td>12 May 2026</td></tr>
+            <tr><td><code>{issue_date_short}</code></td><td>OFF</td><td>12 May</td></tr>
+            <tr><td><code>{issue_date}</code></td><td>ON</td><td>12 މެއި 2026</td></tr>
+            <tr><td><code>{issue_date_short}</code></td><td>ON</td><td>12 މެއި</td></tr>
           </tbody>
         </table>
       </div>
@@ -158,28 +262,33 @@ window.initHelp = function () {
       <!-- Hidden Date Fields -->
       <h3 class="help-subsection-title">Auto-Computed Hidden Date Fields (<code>_hidden</code>)</h3>
       <p>
-        Any placeholder whose key ends with <code>_hidden</code> is computed automatically and never shown in the form.
-        The app derives its value by stripping <code>_hidden</code> from the key and looking for the corresponding source field.
-        If no direct match is found it falls back to <code>date_range_start</code>.
-        Format follows the field's <strong>RTL</strong> flag.
+        Any placeholder whose key ends with <code>_hidden</code> is <strong>computed automatically</strong>
+        and never shown in the form. The app derives its value by stripping <code>_hidden</code> from the key
+        and looking for the corresponding source field. If no direct match is found it falls back to
+        <code>date_range_start</code>. Format follows the field's <strong>RTL</strong> flag.
       </p>
       <div class="help-table-wrapper">
         <table class="help-table">
-          <thead><tr><th>Placeholder</th><th>Source</th></tr></thead>
+          <thead><tr><th>Placeholder</th><th>Source</th><th>Effect</th></tr></thead>
           <tbody>
-            <tr><td><code>{start_date_hidden}</code></td><td>Value of <code>{start_date}</code>, formatted by RTL flag</td></tr>
-            <tr><td><code>{end_date_hidden}</code></td><td>Value of <code>{end_date}</code>, formatted by RTL flag</td></tr>
+            <tr><td><code>{start_date_hidden}</code></td><td>Value of <code>{start_date}</code></td><td>Formatted copy of start_date, never shown in form.</td></tr>
+            <tr><td><code>{end_date_hidden}</code></td><td>Value of <code>{end_date}</code></td><td>Formatted copy of end_date, never shown in form.</td></tr>
+            <tr><td><code>{any_key_hidden}</code></td><td>Value of <code>{any_key}</code> or <code>{date_range_start}</code></td><td>Formatted by RTL flag.</td></tr>
           </tbody>
         </table>
       </div>
+      <p class="help-note">
+        💡 Use <code>_hidden</code> fields to include a formatted copy of a date without displaying a
+        redundant input to the user — e.g. show a Divehi version alongside the English input.
+      </p>
 
       <!-- Date Range -->
       <h3 class="help-subsection-title">Date Range Placeholders</h3>
       <p>
-        When a template contains sequential date placeholders, the app fills them automatically starting from
-        a seed date. The seed is taken from the first field whose key contains <strong>"start"</strong>
-        (e.g. <code>{date_range_start}</code>, <code>{start_date_divehi}</code>, <code>{start_date}</code>).
-        All date range fields are hidden from the form — they are never shown as inputs.
+        When a template contains sequential date placeholders, the app fills them automatically starting
+        from a <strong>seed date</strong>. The seed is taken from the first field whose key contains
+        <strong>"start"</strong> (e.g. <code>{date_range_start}</code>, <code>{start_date}</code>).
+        All date range fields are <strong>hidden from the form</strong> — they are never shown as inputs.
       </p>
       <div class="help-table-wrapper">
         <table class="help-table">
@@ -196,13 +305,15 @@ window.initHelp = function () {
         </table>
       </div>
       <p class="help-note">
-        💡 N can be any number. The app detects the highest N present in the template automatically — you do not need to configure a count.
+        💡 <strong>N</strong> can be any number. The app detects the highest N present in the template
+        automatically — you do not need to configure a count. N=1 maps to the start date, N=2 to start+1 day, and so on.
       </p>
 
       <!-- Weekday -->
       <h3 class="help-subsection-title">Weekday Placeholders</h3>
       <p>
         Weekday placeholders are always <strong>auto-computed and hidden</strong> from the form.
+        They derive their value from the same start date used by date range placeholders.
         Two patterns are supported:
       </p>
 
@@ -268,31 +379,48 @@ window.initHelp = function () {
     <!-- ── SETTINGS ───────────────────────────────────────────── -->
     <div class="help-section">
       <h2 class="help-section-title">⚙️ Settings Page</h2>
+      <p>
+        The Settings page lets you change where the app stores its data and view information about the
+        installed version. Each path has a <strong>Browse</strong> button so you can pick a folder without typing.
+      </p>
       <div class="help-table-wrapper">
         <table class="help-table">
           <thead><tr><th>Setting</th><th>Description</th></tr></thead>
           <tbody>
-            <tr><td>Templates Directory</td><td>Where uploaded template files are stored on disk.</td></tr>
-            <tr><td>Outputs Directory</td><td>Where generated documents are saved.</td></tr>
-            <tr><td>Database Folder</td><td>Folder containing <code>database.json</code> (template registry and records).</td></tr>
-            <tr><td>Save Settings</td><td>Apply new directory paths immediately.</td></tr>
-            <tr><td>Reset to Defaults</td><td>Restore all paths to their original default locations.</td></tr>
+            <tr><td><strong>Templates Directory</strong></td><td>Where uploaded template files (<code>.docx</code>, <code>.xlsx</code>) are stored on disk.</td></tr>
+            <tr><td><strong>Outputs Directory</strong></td><td>Where generated (filled) documents are saved when using <em>Generate Only</em>.</td></tr>
+            <tr><td><strong>Database Folder</strong></td><td>Folder containing <code>database.json</code> — the registry of all templates and saved records.</td></tr>
+            <tr><td><strong>Save Settings</strong></td><td>Apply new directory paths immediately. All views reload automatically to reflect the change.</td></tr>
+            <tr><td><strong>Reset to Defaults</strong></td><td>Restore all paths to their original default locations.</td></tr>
           </tbody>
         </table>
       </div>
+      <p class="help-note">
+        ⚠️ After changing the Database Folder, the app uses the new location immediately.
+        If you move the <code>database.json</code> file manually, make sure to point this setting to its new folder.
+      </p>
+      <h3 class="help-subsection-title">About</h3>
+      <p>
+        The <strong>About</strong> section at the bottom of Settings displays the app version, developer contact
+        details, and repository link. This information is useful when reporting bugs or requesting support.
+      </p>
     </div>
 
     <!-- ── TIPS ──────────────────────────────────────────────── -->
     <div class="help-section">
       <h2 class="help-section-title">💡 Tips &amp; Best Practices</h2>
       <ul class="help-list">
-        <li>Use <strong>lowercase, underscore-separated</strong> keys in placeholders, e.g. <code>{employee_name}</code>.</li>
-        <li>After editing a template file, use <strong>Reload Fields</strong> on the template card to re-scan for new placeholders.</li>
-        <li>Mark date fields as <strong>RTL</strong> in the field editor for automatic Divehi formatting.</li>
-        <li>Any placeholder key ending in <code>_hidden</code> is never shown to the user — use this for computed or derived values.</li>
-        <li>You can mix date range and weekday placeholders in the same template freely — the app resolves all of them from a single start date.</li>
+        <li>Use <strong>lowercase, underscore-separated</strong> keys in all placeholders, e.g. <code>{employee_name}</code>. Avoid spaces or special characters.</li>
+        <li>After editing a template file externally, click <strong>Reload Fields</strong> on its card to re-scan for new or renamed placeholders.</li>
+        <li>Mark date fields as <strong>RTL</strong> in the field editor for automatic Divehi formatting on generation.</li>
+        <li>Any placeholder key ending in <code>_hidden</code> is never shown to the user — use this for computed or reformatted copies of other fields.</li>
+        <li>You can freely mix date range, weekday, and hidden placeholders in the same template. All are resolved automatically from a single start date.</li>
+        <li>For image placeholders in Word, use the <code>{%field_key}</code> syntax (with a <code>%</code>) — plain <code>{field_key}</code> will not embed the image.</li>
+        <li>Use <strong>Dropdown</strong> type fields to enforce consistent values (e.g. department names, approval statuses) and prevent typos.</li>
+        <li>Click <strong>Save Record</strong> before generating to keep a log of form data — you can reload it later without re-entering everything.</li>
         <li>The <strong>print count</strong> (🖨️) on each card updates every time you open the Templates or Search page.</li>
-        <li>Use <strong>Save Record</strong> to keep a log of generated documents for a template — visible in the Saved Records panel on the fill form.</li>
+        <li>Mark rarely-used templates as <strong>Inactive</strong> to hide them from Search without deleting them.</li>
+        <li>Press <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>A</kbd> inside a fill form to toggle automatic language switching on or off.</li>
       </ul>
     </div>
 
