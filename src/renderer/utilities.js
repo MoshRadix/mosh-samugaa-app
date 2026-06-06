@@ -651,6 +651,8 @@ function switchUtilitiesTab(tab) {
     if (typeof initCalendar === "function") initCalendar();
   } else if (tab === "moon-phase") {
     initMoonPhase();
+  } else if (tab === "tide-chart") {
+    if (typeof initTideChart === "function") initTideChart();
   }
 }
 

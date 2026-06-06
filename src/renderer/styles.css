@@ -3960,3 +3960,459 @@ select:disabled {
   color: #c8c0a0;
   font-style: italic;
 }
+/* ==========================================================================
+   TIDE CHART — Addu City, Maldives
+   ========================================================================== */
+
+.tide-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 4px 0;
+}
+
+/* ── Header ── */
+.tide-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.tide-header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.tide-location-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--text-tertiary);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-light);
+  border-radius: 20px;
+  padding: 3px 10px;
+  width: fit-content;
+}
+
+.tide-chart-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.3;
+}
+
+.tide-moon-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.tide-moon-label {
+  font-weight: 500;
+}
+
+.tide-moon-illum {
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+.tide-header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* View toggle */
+.tide-view-group {
+  display: flex;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.tide-view-btn {
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 500;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: all var(--transition-fast);
+}
+
+.tide-view-btn:hover {
+  background: var(--bg-subtle);
+  color: var(--text-primary);
+}
+
+.tide-view-btn.active {
+  background: var(--accent-primary);
+  color: white;
+}
+
+/* Nav buttons */
+.tide-nav-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.tide-nav-btn {
+  padding: 5px 11px;
+  font-size: 14px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: all var(--transition-fast);
+  line-height: 1;
+}
+
+.tide-nav-btn:hover {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+.tide-today-btn {
+  font-size: 11px !important;
+  font-weight: 600;
+  padding: 5px 12px;
+  background: var(--accent-primary-light);
+  color: var(--accent-primary);
+  border-color: transparent;
+}
+
+.tide-today-btn:hover {
+  background: var(--accent-primary) !important;
+  color: white !important;
+}
+
+/* ── Canvas ── */
+.tide-canvas-wrap {
+  position: relative;
+  background: linear-gradient(180deg,
+    rgba(239,246,255,0.95) 0%,
+    rgba(219,234,254,0.7)  50%,
+    rgba(186,230,253,0.35) 100%
+  );
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-md);
+}
+
+.tide-canvas {
+  display: block;
+  width: 100%;
+  height: 340px;
+  cursor: crosshair;
+}
+
+/* ── Tooltip ── */
+.tide-tooltip {
+  background: rgba(15, 23, 42, 0.93);
+  color: #f8fafc;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 12px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.28);
+  z-index: 9999;
+  min-width: 130px;
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(99,102,241,0.35);
+}
+
+.tide-tooltip-time {
+  font-size: 11px;
+  color: #94a3b8;
+  margin-bottom: 2px;
+}
+
+.tide-tooltip-height {
+  font-size: 16px;
+  font-weight: 700;
+  color: #93c5fd;
+  margin-bottom: 2px;
+}
+
+.tide-tooltip-moon {
+  font-size: 11px;
+  color: #c7d2fe;
+}
+
+/* ── Info Row ── */
+.tide-info-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1.15fr;
+  gap: 14px;
+}
+
+@media (max-width: 900px) {
+  .tide-info-row {
+    grid-template-columns: 1fr 1fr;
+  }
+  .tide-card-legend {
+    grid-column: span 2;
+  }
+}
+
+@media (max-width: 600px) {
+  .tide-info-row {
+    grid-template-columns: 1fr;
+  }
+  .tide-card-legend {
+    grid-column: span 1;
+  }
+  .tide-canvas {
+    height: 240px;
+  }
+}
+
+/* ── Cards ── */
+.tide-card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  padding: 14px 16px;
+  box-shadow: var(--shadow-sm);
+}
+
+.tide-card-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 10px;
+}
+
+/* ── Events list ── */
+.tide-events-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tide-event-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: var(--radius-md);
+  background: var(--bg-subtle);
+}
+
+.tide-event-high {
+  border-left: 3px solid #3b82f6;
+}
+
+.tide-event-low {
+  border-left: 3px solid #7dd3fc;
+}
+
+.tide-event-icon {
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.tide-event-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.tide-event-type {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.tide-event-time {
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+.tide-event-height {
+  font-size: 13px;
+  font-weight: 700;
+  color: #3b82f6;
+  white-space: nowrap;
+}
+
+.tide-no-events {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  font-style: italic;
+}
+
+/* ── Summary grid ── */
+.tide-summary-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.tide-summary-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.tide-summary-item:last-child {
+  border-bottom: none;
+}
+
+.tide-summary-icon {
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.tide-summary-label {
+  flex: 1;
+  color: var(--text-secondary);
+}
+
+.tide-summary-val {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 12px;
+}
+
+/* ── Legend ── */
+.tide-legend-content {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.tide-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.tide-legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.tide-legend-dot--high  { background: #3b82f6; }
+.tide-legend-dot--low   { background: #7dd3fc; }
+.tide-legend-dot--night { background: rgba(15,23,42,0.28); border: 1px solid rgba(15,23,42,0.35); }
+
+.tide-legend-note {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  line-height: 1.55;
+  margin-top: 4px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-light);
+}
+
+/* ==========================================================================
+   TIDE CHART — Live "Now" Marker & Status Bar
+   ========================================================================== */
+
+/* ── Live status bar pinned inside the canvas-wrap ── */
+.tide-live-status {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 14px;
+  background: rgba(15, 23, 42, 0.82);
+  backdrop-filter: blur(10px);
+  font-size: 12px;
+  color: #e2e8f0;
+  flex-wrap: wrap;
+  border-top: 1px solid rgba(239,68,68,0.25);
+}
+
+/* Pulsing live dot */
+.tide-live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ef4444;
+  flex-shrink: 0;
+  animation: tide-live-pulse 1.8s ease-in-out infinite;
+  box-shadow: 0 0 0 0 rgba(239,68,68,0.7);
+}
+
+@keyframes tide-live-pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(239,68,68,0.7); }
+  60%  { box-shadow: 0 0 0 7px rgba(239,68,68,0); }
+  100% { box-shadow: 0 0 0 0 rgba(239,68,68,0); }
+}
+
+.tide-live-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #ef4444;
+  background: rgba(239,68,68,0.15);
+  padding: 1px 6px;
+  border-radius: 4px;
+  border: 1px solid rgba(239,68,68,0.3);
+}
+
+.tide-live-time {
+  font-weight: 600;
+  color: #f8fafc;
+}
+
+.tide-live-sep {
+  color: #475569;
+}
+
+.tide-live-height {
+  font-weight: 600;
+  color: #93c5fd;
+}
+
+.tide-live-trend {
+  font-weight: 700;
+  font-size: 11px;
+  padding: 1px 7px;
+  border-radius: 5px;
+}
+
+.tide-live-trend.rising {
+  color: #34d399;
+  background: rgba(52,211,153,0.12);
+}
+
+.tide-live-trend.falling {
+  color: #60a5fa;
+  background: rgba(96,165,250,0.12);
+}
+
+.tide-live-next {
+  font-size: 11px;
+  color: #94a3b8;
+}

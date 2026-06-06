@@ -507,6 +507,10 @@
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
               Moon Phase
             </button>
+            <button class="util-tab-btn" data-tab="tide-chart">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12c2-4 4-6 6-6s4 4 6 4 4-6 6-6"/><path d="M2 19c2-3 4-5 6-5s4 4 6 4 4-5 6-5"/></svg>
+              Tide Chart
+            </button>
           </div>
 
           <!-- TAB: UNIT CONVERTER -->
@@ -852,6 +856,80 @@
             </div>
           </div><!-- /moon-phase panel -->
 
+          <!-- TAB: TIDE CHART -->
+          <div class="util-tab-panel" data-panel="tide-chart">
+            <div class="tide-layout">
+
+              <!-- Header row: title + controls -->
+              <div class="tide-header">
+                <div class="tide-header-left">
+                  <div class="tide-location-badge">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                    Addu City, Maldives (0.629°N, 73.099°E)
+                  </div>
+                  <h3 class="tide-chart-title" id="tide-chart-title">Loading…</h3>
+                  <div class="tide-moon-badge" id="tide-moon-badge"></div>
+                </div>
+                <div class="tide-header-right">
+                  <div class="tide-view-group">
+                    <button id="tide-view-daily"  class="tide-view-btn active">Daily</button>
+                    <button id="tide-view-weekly" class="tide-view-btn">Weekly</button>
+                  </div>
+                  <div class="tide-nav-group">
+                    <button id="tide-prev-btn"  class="tide-nav-btn" title="Previous">&#8249;</button>
+                    <button id="tide-today-btn" class="tide-nav-btn tide-today-btn">Today</button>
+                    <button id="tide-next-btn"  class="tide-nav-btn" title="Next">&#8250;</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Chart canvas area -->
+              <div class="tide-canvas-wrap">
+                <canvas id="tide-chart-canvas" class="tide-canvas"></canvas>
+                <div id="tide-tooltip" class="tide-tooltip" style="display:none;position:fixed;pointer-events:none;"></div>
+                <!-- Live status bar — shown only when viewing today -->
+                <div id="tide-live-status" class="tide-live-status" style="display:none;"></div>
+              </div>
+
+              <!-- Bottom info row -->
+              <div class="tide-info-row">
+
+                <!-- Next tide events -->
+                <div class="tide-card">
+                  <h4 class="tide-card-title">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    Upcoming Tides
+                  </h4>
+                  <div id="tide-next-events" class="tide-events-list"></div>
+                </div>
+
+                <!-- Daily summary -->
+                <div class="tide-card">
+                  <h4 class="tide-card-title">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                    Today's Summary
+                  </h4>
+                  <div id="tide-daily-summary" class="tide-summary-grid"></div>
+                </div>
+
+                <!-- Tidal legend -->
+                <div class="tide-card tide-card-legend">
+                  <h4 class="tide-card-title">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    About Addu Tides
+                  </h4>
+                  <div class="tide-legend-content">
+                    <div class="tide-legend-item"><span class="tide-legend-dot tide-legend-dot--high"></span><span>High Tide — peak water level</span></div>
+                    <div class="tide-legend-item"><span class="tide-legend-dot tide-legend-dot--low"></span><span>Low Tide — minimum water level</span></div>
+                    <div class="tide-legend-item"><span class="tide-legend-dot tide-legend-dot--night"></span><span>Shaded region — night hours (18:00–06:00)</span></div>
+                    <p class="tide-legend-note">Addu City (Gan) has a mixed, mainly semidiurnal tide pattern — typically 2 highs and 2 lows per day, with a tidal range of ~0.8–1.2 m. Data uses harmonic constituents tuned to the Gan tidal station (IHO/UHSLC).</p>
+                  </div>
+                </div>
+
+              </div><!-- /tide-info-row -->
+            </div><!-- /tide-layout -->
+          </div><!-- /tide-chart panel -->
+
         </div><!-- /#utilities-view -->
 
       </main>
@@ -901,6 +979,7 @@
     <script src="settings.js"></script>
     <script src="help.js"></script>
     <script src="worklogs.js"></script>
+    <script src="tidechart.js"></script>
     <script src="app.js"></script>
   </body>
 </html>
