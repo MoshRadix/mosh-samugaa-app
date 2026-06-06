@@ -17,6 +17,7 @@
             Templates
           </button>
           <button class="nav-btn" data-view="watermark">🖼️ Watermark</button>
+          <button class="nav-btn" data-view="worklogs">📋 Work Logs</button>
           <button class="nav-btn" data-view="settings">⚙️ Settings</button>
           <button class="nav-btn" data-view="help">❓ Help</button>
         </nav>
@@ -336,6 +337,144 @@
           </div>
         </div>
 
+
+        <!-- Work Logs View -->
+        <div id="worklogs-view" class="view">
+
+          <!-- Notification banner -->
+          <div id="wl-notification" class="wl-notification" aria-live="polite"></div>
+
+          <!-- Page header -->
+          <div class="view-header">
+            <div>
+              <h2>📋 Work Logs</h2>
+              <p style="color:var(--text-tertiary);font-size:13px;margin-top:2px;">Record and track your daily work activities</p>
+            </div>
+            <button id="wl-export-btn" class="btn btn-secondary wl-export-btn-header">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+              Export to Excel
+            </button>
+          </div>
+
+          <!-- Summary stats -->
+          <div class="wl-stats-row">
+            <div class="wl-stat-card">
+              <div class="wl-stat-icon wl-stat-icon-total">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+              </div>
+              <div>
+                <div id="wl-stat-total" class="wl-stat-number">0</div>
+                <div class="wl-stat-label">Total Logs</div>
+              </div>
+            </div>
+            <div class="wl-stat-card">
+              <div class="wl-stat-icon wl-stat-icon-year">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              </div>
+              <div>
+                <div id="wl-stat-year" class="wl-stat-number">0</div>
+                <div class="wl-stat-label">This Year</div>
+              </div>
+            </div>
+            <div class="wl-stat-card">
+              <div class="wl-stat-icon wl-stat-icon-month">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              </div>
+              <div>
+                <div id="wl-stat-month" class="wl-stat-number">0</div>
+                <div class="wl-stat-label">This Month</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Two-column layout: form + table -->
+          <div class="wl-layout">
+
+            <!-- LEFT: Add new log form -->
+            <section class="wl-form-panel">
+              <div class="wl-panel-heading">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                New Work Log
+              </div>
+
+              <div class="wl-form-group">
+                <label class="wl-label">Date <span class="wl-readonly-badge">Auto</span></label>
+                <input type="text" id="wl-auto-date" class="wl-input wl-input-readonly" readonly placeholder="DD/MM/YYYY" />
+              </div>
+              <div class="wl-form-group">
+                <label class="wl-label">Time <span class="wl-readonly-badge">Auto · MVT</span></label>
+                <input type="text" id="wl-auto-time" class="wl-input wl-input-readonly" readonly placeholder="HH:MM AM/PM" />
+              </div>
+              <div class="wl-form-group">
+                <label class="wl-label wl-label-required">Task Description</label>
+                <textarea id="wl-task-input" class="wl-textarea" rows="4"
+                  placeholder="Describe what you worked on today…"></textarea>
+              </div>
+              <div class="wl-form-group">
+                <label class="wl-label">Notes <span class="wl-optional-badge">Optional</span></label>
+                <textarea id="wl-notes-input" class="wl-textarea" rows="3"
+                  placeholder="Any additional notes, references, or remarks…"></textarea>
+              </div>
+              <button id="wl-submit-btn" class="btn btn-primary wl-submit-btn">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                Save Log
+              </button>
+            </section>
+
+            <!-- RIGHT: Logs table -->
+            <section class="wl-table-section" id="wl-table-section">
+              <div class="wl-table-header">
+                <div class="wl-panel-heading">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                  Work Log History
+                </div>
+                <span id="wl-results-count" class="wl-results-count"></span>
+              </div>
+
+              <!-- Filters -->
+              <div class="wl-filters">
+                <input type="text" id="wl-search-input" class="wl-search-input"
+                  placeholder="Search task or notes…" />
+                <div class="wl-date-filters">
+                  <input type="date" id="wl-filter-from" class="wl-date-input" title="From date" />
+                  <span class="wl-date-sep">to</span>
+                  <input type="date" id="wl-filter-to" class="wl-date-input" title="To date" />
+                  <button id="wl-filter-clear" class="btn btn-outline wl-clear-btn" title="Clear filters">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    Clear
+                  </button>
+                </div>
+              </div>
+
+              <!-- Table -->
+              <div class="wl-table-wrap">
+                <table class="wl-table">
+                  <thead>
+                    <tr>
+                      <th class="wl-col-num">#</th>
+                      <th class="wl-col-date">Date</th>
+                      <th class="wl-col-time">Time</th>
+                      <th class="wl-col-task">Task Description</th>
+                      <th class="wl-col-notes">Notes</th>
+                      <th class="wl-col-actions"></th>
+                    </tr>
+                  </thead>
+                  <tbody id="wl-table-body"></tbody>
+                </table>
+                <!-- Empty state -->
+                <div id="wl-empty-state" class="wl-empty-state-wrap" style="display:none">
+                  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.3"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  <p>No work logs yet.<br>Add your first log using the form on the left.</p>
+                </div>
+              </div>
+            </section>
+
+          </div><!-- /.wl-layout -->
+
+
+
+        </div><!-- /#worklogs-view -->
+
       </main>
       <!-- Settings View -->
 
@@ -362,6 +501,17 @@
       </div>
     </div>
 
+    <!-- Shared confirmation dialog (used by all pages) -->
+    <div id="app-confirm-overlay" class="wl-confirm-overlay" style="display:none" aria-modal="true" role="dialog">
+      <div class="wl-confirm-box">
+        <p id="app-confirm-msg" class="wl-confirm-msg"></p>
+        <div class="wl-confirm-actions">
+          <button id="app-confirm-cancel" class="btn btn-outline">Cancel</button>
+          <button id="app-confirm-ok" class="btn btn-danger">Confirm</button>
+        </div>
+      </div>
+    </div>
+
     <script src="watermark.js"></script>
     <script src="templates.js"></script>
     <script src="fields.js"></script>
@@ -369,6 +519,7 @@
     <script src="search.js"></script>
     <script src="settings.js"></script>
     <script src="help.js"></script>
+    <script src="worklogs.js"></script>
     <script src="app.js"></script>
   </body>
 </html>

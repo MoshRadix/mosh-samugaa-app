@@ -187,6 +187,38 @@ contextBridge.exposeInMainWorld("electronAPI", {
    */
   chooseOutputDirectory: () =>
     ipcRenderer.invoke("choose-output-directory"),
+
+  // ==========================================
+  // WORK LOGS
+  // ==========================================
+
+  /**
+   * Adds a new work log entry to the dedicated work_logs table.
+   * @param {Object} data - { task, notes, createdAt }
+   * @returns {Promise<Object>} The newly created work log record.
+   */
+  addWorkLog: (data) => ipcRenderer.invoke("add-work-log", data),
+
+  /**
+   * Retrieves all work log entries, newest first.
+   * @returns {Promise<Array>} Array of work log objects.
+   */
+  getWorkLogs: () => ipcRenderer.invoke("get-work-logs"),
+
+  /**
+   * Permanently deletes a work log by its ID.
+   * @param {string} id - UUID of the work log to delete.
+   * @returns {Promise<boolean>} True on success.
+   */
+  deleteWorkLog: (id) => ipcRenderer.invoke("delete-work-log", id),
+
+  /**
+   * Exports an array of work log row objects to an Excel file
+   * via a native save dialog.
+   * @param {Object} data - { rows: Array<{no,date,time,task,notes}> }
+   * @returns {Promise<{success:boolean, path:string}|null>}
+   */
+  exportWorkLogsExcel: (data) => ipcRenderer.invoke("export-work-logs-excel", data),
 });
 
 

@@ -80,7 +80,7 @@ function setupSettings() {
     resetBtn.replaceWith(resetBtn.cloneNode(true));
     const newResetBtn = document.getElementById('reset-settings');
     newResetBtn.addEventListener('click', async () => {
-      if (confirm('Reset all settings to defaults? This will move data directories back to the default location.')) {
+      if (await showConfirm('Reset all settings to defaults? This will move data directories back to the default location.', 'Reset')) {
         await window.electronAPI.resetSettings();
         await loadSettings();
         if (window.showToast) window.showToast('Settings reset to defaults. Please restart the app for full effect.', 'info');

@@ -190,6 +190,12 @@ function switchView(view) {
         initWatermarkTool();
       }
       break;
+
+    case "worklogs":
+      if (typeof initWorkLogs === "function") {
+        initWorkLogs();
+      }
+      break;
   }
 }
 
@@ -397,11 +403,47 @@ function showToast(message, type = "success") {
   }, 2500);
 }
 
+/**
+ * Show a styled in-app confirmation dialog.
+ * @param {string} message - The question to display.
+ * @param {string} [okLabel="Confirm"] - Label for the confirm button.
+ * @returns {Promise<boolean>} Resolves true if confirmed, false if cancelled.
+ */
+function showConfirm(message, okLabel = "Confirm") {
+  return new Promise((resolve) => {
+    const overlay   = document.getElementById("app-confirm-overlay");
+    const msgEl     = document.getElementById("app-confirm-msg");
+    const okBtn     = document.getElementById("app-confirm-ok");
+    const cancelBtn = document.getElementById("app-confirm-cancel");
+    if (!overlay) { resolve(false); return; }
+
+    msgEl.textContent  = message;
+    okBtn.textContent  = okLabel;
+    overlay.style.display = "flex";
+
+    function cleanup(result) {
+      overlay.style.display = "none";
+      okBtn.removeEventListener("click", onOk);
+      cancelBtn.removeEventListener("click", onCancel);
+      overlay.removeEventListener("click", onBackdrop);
+      resolve(result);
+    }
+    function onOk()      { cleanup(true);  }
+    function onCancel()  { cleanup(false); }
+    function onBackdrop(e) { if (e.target === overlay) cleanup(false); }
+
+    okBtn.addEventListener("click", onOk);
+    cancelBtn.addEventListener("click", onCancel);
+    overlay.addEventListener("click", onBackdrop);
+  });
+}
+
 // ============================================================================
 // WINDOW TARGET GLOBAL REGISTRATIONS
 // ============================================================================
 
 window.showToast = showToast;
+window.showConfirm = showConfirm;
 window.switchView = switchView;
 window.closeModal = closeModal;
 window.openModal = openModal;

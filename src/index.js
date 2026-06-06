@@ -32,6 +32,10 @@ let mainWindow;
 let db = null; // SQL.js database instance
 let dbPath = null; // Current database file path
 
+// Work Logs — always stored in a fixed, separate database (not user-configurable)
+let wlDb = null;
+const WL_DB_PATH = path.join(app.getPath("userData"), "worklogs.db");
+
 const CONFIG_PATH = path.join(app.getPath("userData"), "config.json");
 let settings = {
   dataDir: app.getPath("userData"),
@@ -101,6 +105,35 @@ async function saveDatabase() {
   const data = db.export();
   const buffer = Buffer.from(data);
   await fs.writeFile(dbPath, buffer);
+}
+
+// ========== Work Logs DB (separate, fixed-path database) ==========
+
+async function initWorkLogsDB() {
+  const SQL = await initSqlJs();
+  if (wlDb) wlDb.close();
+  let fileData = null;
+  try {
+    fileData = await fs.readFile(WL_DB_PATH);
+  } catch (e) {}
+  wlDb = new SQL.Database(fileData);
+  wlDb.exec(`
+    CREATE TABLE IF NOT EXISTS work_logs (
+      id TEXT PRIMARY KEY,
+      task TEXT NOT NULL,
+      notes TEXT,
+      createdAt TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_work_logs_createdAt ON work_logs(createdAt);
+  `);
+  await saveWorkLogsDB();
+  console.log("[WorkLogs DB] Initialized at:", WL_DB_PATH);
+}
+
+async function saveWorkLogsDB() {
+  const data = wlDb.export();
+  const buffer = Buffer.from(data);
+  await fs.writeFile(WL_DB_PATH, buffer);
 }
 
 async function migrateFromJSONIfNeeded() {
@@ -1181,6 +1214,103 @@ ipcMain.handle("save-watermarked-image", async (event, { outputDirectory, output
   return { success: true, outputPath };
 });
 
+// ========== Work Logs IPC Handlers ==========
+
+ipcMain.handle("add-work-log", async (event, { task, notes, createdAt }) => {
+  const id = uuidv4();
+  wlDb.run(
+    "INSERT INTO work_logs (id, task, notes, createdAt) VALUES (?, ?, ?, ?)",
+    [id, task || "", notes || "", createdAt || new Date().toISOString()]
+  );
+  await saveWorkLogsDB();
+  const rows = wlDb.exec(
+    "SELECT id, task, notes, createdAt FROM work_logs WHERE id = ?",
+    [id]
+  );
+  if (!rows.length || !rows[0].values.length) return { id, task, notes, createdAt };
+  const [rid, rtask, rnotes, rca] = rows[0].values[0];
+  return { id: rid, task: rtask, notes: rnotes, createdAt: rca };
+});
+
+ipcMain.handle("get-work-logs", async () => {
+  const rows = wlDb.exec(
+    "SELECT id, task, notes, createdAt FROM work_logs ORDER BY createdAt DESC"
+  );
+  if (!rows.length) return [];
+  return rows[0].values.map(([id, task, notes, createdAt]) => ({
+    id, task, notes, createdAt,
+  }));
+});
+
+ipcMain.handle("delete-work-log", async (event, id) => {
+  wlDb.run("DELETE FROM work_logs WHERE id = ?", [id]);
+  await saveWorkLogsDB();
+  return true;
+});
+
+ipcMain.handle("export-work-logs-excel", async (event, { rows }) => {
+  const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
+    title: "Export Work Logs to Excel",
+    defaultPath: path.join(
+      app.getPath("documents"),
+      `WorkLogs_${new Date().toISOString().slice(0, 10)}.xlsx`
+    ),
+    filters: [{ name: "Excel Workbook", extensions: ["xlsx"] }],
+  });
+  if (canceled || !filePath) return null;
+
+  const workbook = new ExcelJS.Workbook();
+  workbook.creator = "MTO Document Generator";
+  workbook.created = new Date();
+
+  const sheet = workbook.addWorksheet("Work Logs");
+
+  sheet.columns = [
+    { header: "No.",              key: "no",    width: 6  },
+    { header: "Date",             key: "date",  width: 14 },
+    { header: "Time (MVT)",       key: "time",  width: 14 },
+    { header: "Task Description", key: "task",  width: 50 },
+    { header: "Notes",            key: "notes", width: 40 },
+  ];
+
+  // Style header row
+  const headerRow = sheet.getRow(1);
+  headerRow.eachCell((cell) => {
+    cell.font = { bold: true, color: { argb: "FFFFFFFF" }, size: 11 };
+    cell.fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FF4A6B5A" },
+    };
+    cell.alignment = { vertical: "middle", horizontal: "center" };
+    cell.border = {
+      bottom: { style: "thin", color: { argb: "FFB0C8BC" } },
+    };
+  });
+  headerRow.height = 22;
+
+  // Add data rows
+  rows.forEach((r, idx) => {
+    const row = sheet.addRow(r);
+    row.eachCell((cell) => {
+      cell.alignment = { vertical: "top", wrapText: true };
+      if (idx % 2 === 1) {
+        cell.fill = {
+          type: "pattern",
+          pattern: "solid",
+          fgColor: { argb: "FFF0F4F2" },
+        };
+      }
+    });
+    row.height = 18;
+  });
+
+  sheet.views = [{ state: "frozen", ySplit: 1 }];
+
+  await workbook.xlsx.writeFile(filePath);
+  return { success: true, path: filePath };
+});
+
 // ========== App Lifecycle ==========
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -1207,6 +1337,7 @@ app.whenReady().then(async () => {
   Menu.setApplicationMenu(null);
   await loadConfig();
   await initSQLite(getDbPath());
+  await initWorkLogsDB();
   await migrateFromJSONIfNeeded();
   await fs.mkdir(settings.templatesDir, { recursive: true });
   await fs.mkdir(settings.outputsDir, { recursive: true });
@@ -1228,6 +1359,7 @@ app.whenReady().then(async () => {
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {
     if (db) db.close();
+    if (wlDb) wlDb.close();
     app.quit();
   }
 });

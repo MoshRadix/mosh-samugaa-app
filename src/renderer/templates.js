@@ -320,8 +320,9 @@ async function printStaticDocument(templateId) {
     console.log("Printing static template:", template.name, template.filePath);
 
     // Confirm with user
-    const confirmPrint = confirm(
+    const confirmPrint = await showConfirm(
       `Print "${template.name}" to default printer?`,
+      "Print",
     );
     if (!confirmPrint) return;
 
@@ -697,7 +698,7 @@ async function saveFieldSettings(templateId) {
 
 // Remove a field from template
 async function removeField(templateId, fieldIndex) {
-  if (!confirm("Are you sure you want to remove this field?")) {
+  if (!await showConfirm("Are you sure you want to remove this field?", "Remove")) {
     return;
   }
 
@@ -744,8 +745,9 @@ async function removeField(templateId, fieldIndex) {
 // Delete template function
 async function deleteTemplate(id) {
   if (
-    !confirm(
+    !await showConfirm(
       "Are you sure you want to delete this template? This action cannot be undone.",
+      "Delete",
     )
   ) {
     return;
