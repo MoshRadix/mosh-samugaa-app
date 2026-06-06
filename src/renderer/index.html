@@ -16,6 +16,7 @@
           <button class="nav-btn active" data-view="templates">
             Templates
           </button>
+          <button class="nav-btn" data-view="utilities">🔧 Utilities</button>
           <button class="nav-btn" data-view="watermark">🖼️ Watermark</button>
           <button class="nav-btn" data-view="worklogs">📋 Work Logs</button>
           <button class="nav-btn" data-view="settings">⚙️ Settings</button>
@@ -475,6 +476,256 @@
 
         </div><!-- /#worklogs-view -->
 
+        <!-- ================================================================ -->
+        <!-- Utilities View                                                    -->
+        <!-- ================================================================ -->
+        <div id="utilities-view" class="view">
+          <div class="view-header">
+            <h2>🔧 Utilities</h2>
+            <p class="util-header-subtitle">Unit Converter &amp; Date Calculator</p>
+          </div>
+
+          <!-- Top-level tab switcher -->
+          <div class="util-tabs-bar">
+            <button class="util-tab-btn active" data-tab="unit-converter">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+              Unit Converter
+            </button>
+            <button class="util-tab-btn" data-tab="date-calc">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              Date Calculator
+            </button>
+            <button class="util-tab-btn" data-tab="calculator">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><rect x="8" y="10" width="2" height="2" rx="0.5"/><rect x="11" y="10" width="2" height="2" rx="0.5"/><rect x="14" y="10" width="2" height="2" rx="0.5"/><rect x="8" y="14" width="2" height="2" rx="0.5"/><rect x="11" y="14" width="2" height="2" rx="0.5"/><rect x="14" y="14" width="2" height="2" rx="0.5"/><rect x="8" y="18" width="2" height="2" rx="0.5"/><rect x="11" y="18" width="2" height="2" rx="0.5"/><rect x="14" y="18" width="2" height="2" rx="0.5"/></svg>
+              Calculator
+            </button>
+          </div>
+
+          <!-- TAB: UNIT CONVERTER -->
+          <div class="util-tab-panel active" data-panel="unit-converter">
+            <div class="uc-layout">
+              <div class="uc-main">
+
+                <!-- Category tabs -->
+                <div class="uc-category-bar" id="uc-category-tabs"></div>
+
+                <!-- Converter card -->
+                <div class="uc-converter-card">
+                  <div class="uc-converter-grid">
+                    <div class="uc-field-group">
+                      <label class="uc-label">From</label>
+                      <select id="uc-from-unit" class="uc-select"></select>
+                      <input id="uc-input" type="text" class="uc-input" placeholder="Enter value…" autocomplete="off" spellcheck="false">
+                      <div id="uc-input-hint" class="uc-hint"></div>
+                    </div>
+                    <div class="uc-swap-col">
+                      <button id="uc-swap-btn" class="uc-swap-btn" title="Swap units">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+                      </button>
+                    </div>
+                    <div class="uc-field-group">
+                      <label class="uc-label">To</label>
+                      <select id="uc-to-unit" class="uc-select"></select>
+                      <input id="uc-output" type="text" class="uc-output" readonly placeholder="Result appears here…">
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Conversion History -->
+                <div class="uc-history-card">
+                  <div class="uc-history-header">
+                    <h3 class="uc-history-title">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                      Conversion History
+                    </h3>
+                    <div class="uc-history-actions">
+                      <select id="uc-hist-cat-filter" class="uc-hist-filter-select">
+                        <option value="all">All Categories</option>
+                      </select>
+                      <input id="uc-hist-search" type="text" class="uc-hist-search" placeholder="Search history…">
+                      <button id="uc-export-history" class="btn btn-secondary uc-hist-btn" title="Export CSV">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        Export CSV
+                      </button>
+                      <button id="uc-clear-history" class="btn btn-danger uc-hist-btn" title="Clear history">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+                        Clear
+                      </button>
+                    </div>
+                  </div>
+                  <div class="uc-history-scroll">
+                    <div id="uc-history-empty" class="uc-history-empty">
+                      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.3"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                      <p>No conversions yet. Start typing above.</p>
+                    </div>
+                    <table class="uc-history-table">
+                      <thead>
+                        <tr>
+                          <th>Date / Time</th>
+                          <th>Category</th>
+                          <th>Input</th>
+                          <th></th>
+                          <th>Output</th>
+                        </tr>
+                      </thead>
+                      <tbody id="uc-history-body"></tbody>
+                    </table>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </div><!-- /unit-converter panel -->
+
+          <!-- TAB: DATE CALCULATOR -->
+          <div class="util-tab-panel" data-panel="date-calc">
+            <div class="dc-layout">
+
+              <div class="dc-row">
+                <div class="dc-card">
+                  <div class="dc-card-header">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                    <h3>Date Difference</h3>
+                  </div>
+                  <div class="dc-fields">
+                    <div class="dc-field"><label>Start Date</label><input type="date" id="dc-date1" class="dc-date-input"></div>
+                    <div class="dc-field"><label>End Date</label><input type="date" id="dc-date2" class="dc-date-input"></div>
+                  </div>
+                  <div id="dc-diff-result" class="dc-result-area"><div class="dc-placeholder">Select both dates above to see the difference.</div></div>
+                </div>
+
+                <div class="dc-card">
+                  <div class="dc-card-header">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                    <h3>Age Calculator</h3>
+                  </div>
+                  <div class="dc-fields">
+                    <div class="dc-field"><label>Date of Birth</label><input type="date" id="dc-birthdate" class="dc-date-input"></div>
+                  </div>
+                  <div id="dc-age-result" class="dc-result-area"><div class="dc-placeholder">Enter a birthdate to calculate age.</div></div>
+                </div>
+              </div>
+
+              <div class="dc-row">
+                <div class="dc-card">
+                  <div class="dc-card-header">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    <h3>Time Difference</h3>
+                  </div>
+                  <div class="dc-fields">
+                    <div class="dc-field"><label>Start Time</label><input type="time" id="dc-time1" class="dc-date-input"></div>
+                    <div class="dc-field"><label>End Time</label><input type="time" id="dc-time2" class="dc-date-input"></div>
+                  </div>
+                  <div id="dc-time-result" class="dc-result-area"><div class="dc-placeholder">Enter two times to see the difference.</div></div>
+                </div>
+
+                <div class="dc-card">
+                  <div class="dc-card-header">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    <h3>Add / Subtract Days</h3>
+                  </div>
+                  <div class="dc-fields">
+                    <div class="dc-field"><label>Base Date</label><input type="date" id="dc-adddate" class="dc-date-input"></div>
+                    <div class="dc-field"><label>Days (negative to subtract)</label><input type="number" id="dc-adddays" class="dc-date-input" placeholder="e.g. 30 or -7"></div>
+                  </div>
+                  <div id="dc-add-result" class="dc-result-area"><div class="dc-placeholder">Choose a date and number of days.</div></div>
+                </div>
+              </div>
+
+              <div class="dc-row">
+                <div class="dc-card">
+                  <div class="dc-card-header">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                    <h3>Weekday Finder</h3>
+                  </div>
+                  <div class="dc-fields">
+                    <div class="dc-field"><label>Date</label><input type="date" id="dc-weekday-date" class="dc-date-input"></div>
+                  </div>
+                  <div id="dc-weekday-result" class="dc-result-area"><div class="dc-placeholder">Pick a date to find the weekday.</div></div>
+                </div>
+
+                <div class="dc-card">
+                  <div class="dc-card-header">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+                    <h3>Next / Previous Occurrence</h3>
+                  </div>
+                  <div class="dc-fields">
+                    <div class="dc-field"><label>Recurring Date (year is ignored)</label><input type="date" id="dc-occ-date" class="dc-date-input"></div>
+                  </div>
+                  <div id="dc-occ-result" class="dc-result-area"><div class="dc-placeholder">Select the recurring date (month &amp; day only matter).</div></div>
+                </div>
+              </div>
+
+            </div>
+          </div><!-- /date-calc panel -->
+
+          <!-- TAB: CALCULATOR -->
+          <div class="util-tab-panel" data-panel="calculator">
+            <div class="calc-layout">
+
+              <!-- Left: Calculator -->
+              <div class="calc-main">
+                <div class="calc-card">
+                  <!-- Display -->
+                  <div class="calc-display">
+                    <div id="calc-expression" class="calc-expression"></div>
+                    <div id="calc-screen" class="calc-screen">0</div>
+                  </div>
+                  <!-- Buttons -->
+                  <div class="calc-grid">
+                    <!-- Row 1 -->
+                    <button class="calc-btn calc-btn-fn" data-action="clear-all">AC</button>
+                    <button class="calc-btn calc-btn-fn" data-action="toggle-sign">+/−</button>
+                    <button class="calc-btn calc-btn-fn" data-action="percent">%</button>
+                    <button class="calc-btn calc-btn-op" data-op="÷">÷</button>
+                    <!-- Row 2 -->
+                    <button class="calc-btn calc-btn-num" data-digit="7">7</button>
+                    <button class="calc-btn calc-btn-num" data-digit="8">8</button>
+                    <button class="calc-btn calc-btn-num" data-digit="9">9</button>
+                    <button class="calc-btn calc-btn-op" data-op="×">×</button>
+                    <!-- Row 3 -->
+                    <button class="calc-btn calc-btn-num" data-digit="4">4</button>
+                    <button class="calc-btn calc-btn-num" data-digit="5">5</button>
+                    <button class="calc-btn calc-btn-num" data-digit="6">6</button>
+                    <button class="calc-btn calc-btn-op" data-op="−">−</button>
+                    <!-- Row 4 -->
+                    <button class="calc-btn calc-btn-num" data-digit="1">1</button>
+                    <button class="calc-btn calc-btn-num" data-digit="2">2</button>
+                    <button class="calc-btn calc-btn-num" data-digit="3">3</button>
+                    <button class="calc-btn calc-btn-op" data-op="+">+</button>
+                    <!-- Row 5 -->
+                    <button class="calc-btn calc-btn-num calc-btn-zero" data-digit="0">0</button>
+                    <button class="calc-btn calc-btn-num" data-action="decimal">.</button>
+                    <button class="calc-btn calc-btn-eq" data-action="equals">=</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Right: History -->
+              <div class="calc-history-panel">
+                <div class="calc-history-header">
+                  <h3 class="calc-history-title">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    History
+                  </h3>
+                  <button id="calc-clear-history" class="btn btn-danger uc-hist-btn" title="Clear history">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+                    Clear
+                  </button>
+                </div>
+                <div class="calc-history-scroll" id="calc-history-list">
+                  <div class="calc-history-empty" id="calc-history-empty">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.3"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    <p>No calculations yet.</p>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div><!-- /calculator panel -->
+
+        </div><!-- /#utilities-view -->
+
       </main>
       <!-- Settings View -->
 
@@ -512,6 +763,7 @@
       </div>
     </div>
 
+    <script src="utilities.js"></script>
     <script src="watermark.js"></script>
     <script src="templates.js"></script>
     <script src="fields.js"></script>

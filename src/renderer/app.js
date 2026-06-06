@@ -185,6 +185,12 @@ function switchView(view) {
       }
       break;
 
+    case "utilities":
+      if (typeof initUtilities === "function") {
+        initUtilities();
+      }
+      break;
+
     case "watermark":
       if (typeof initWatermarkTool === "function") {
         initWatermarkTool();
