@@ -647,6 +647,8 @@ function switchUtilitiesTab(tab) {
     renderDateResults();
   } else if (tab === "calculator") {
     calcRenderHistory();
+  } else if (tab === "calendar") {
+    if (typeof initCalendar === "function") initCalendar();
   }
 }
 
