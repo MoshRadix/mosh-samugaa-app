@@ -37,6 +37,7 @@ window.initHelp = function () {
             <tr><td><strong>Fill Form</strong></td><td>Active form view for the currently selected fillable template. Only accessible after choosing a template.</td></tr>
             <tr><td><strong>Templates</strong></td><td>Full library — upload, edit, configure fields, preview, or delete templates.</td></tr>
             <tr><td><strong>🖼️ Watermark</strong></td><td>Batch-apply a watermark image to multiple photos or images — corner placement or full-width overlay.</td></tr>
+            <tr><td><strong>📋 Work Logs</strong></td><td>Record, search, filter, and export a timestamped log of tasks and work activities for your team.</td></tr>
             <tr><td><strong>Settings</strong></td><td>Change storage directories and view app information.</td></tr>
             <tr><td><strong>Help</strong></td><td>This page.</td></tr>
           </tbody>
@@ -377,7 +378,82 @@ window.initHelp = function () {
       </div>
     </div>
 
-    <!-- ── WATERMARK TOOL ────────────────────────────────────── -->\n    <div class=\"help-section\">\n      <h2 class=\"help-section-title\">🖼️ Watermark Tool</h2>\n      <p>\n        The Watermark page lets you select any number of images, choose a watermark graphic,\n        configure how it is placed, and save all the processed images to a folder in one go.\n        No image editing software required.\n      </p>\n\n      <h3 class=\"help-subsection-title\">Selecting Source Images</h3>\n      <ul class=\"help-list\">\n        <li>Click <strong>Add Images</strong> or drag and drop image files onto the drop zone.</li>\n        <li>Supported formats: <strong>PNG, JPG, WEBP, GIF</strong>.</li>\n        <li>Multiple images can be added at once — they appear as thumbnails in the grid.</li>\n        <li>Hover over any thumbnail and click the <strong>✕</strong> button to remove that image from the batch.</li>\n        <li>Click <strong>Clear All</strong> to remove every image and start fresh.</li>\n      </ul>\n\n      <h3 class=\"help-subsection-title\">Choosing a Watermark Image</h3>\n      <ul class=\"help-list\">\n        <li>Click <strong>Choose File</strong> in the Watermark Image card and pick any PNG or JPG.</li>\n        <li>A preview thumbnail appears immediately. An <strong>✓ Active</strong> badge confirms it is loaded.</li>\n        <li>The last few watermarks you used appear in the <strong>Recent</strong> strip below — click any to reload it instantly without browsing again.</li>\n        <li>Click the small <strong>✕</strong> on a recent entry to remove it from the list.</li>\n      </ul>\n\n      <h3 class=\"help-subsection-title\">Placement Mode</h3>\n      <div class=\"help-table-wrapper\">\n        <table class=\"help-table\">\n          <thead><tr><th>Mode</th><th>Behaviour</th></tr></thead>\n          <tbody>\n            <tr>\n              <td><strong>Corner</strong></td>\n              <td>\n                The watermark is scaled so its height equals <strong>15% of the source image height</strong>,\n                with width proportional to the watermark's own aspect ratio.\n                It is placed in the <strong>bottom-right corner</strong> with a small padding margin.\n                The output image is the same dimensions as the original.\n              </td>\n            </tr>\n            <tr>\n              <td><strong>Full Width</strong></td>\n              <td>\n                The watermark is scaled so its <strong>width exactly matches the source image width</strong>,\n                with height scaled proportionally.\n                It is overlaid flush against the <strong>bottom edge</strong> of the image.\n                The output image is the same dimensions as the original — the watermark overlaps the bottom portion of the photo.\n              </td>\n            </tr>\n          </tbody>\n        </table>\n      </div>\n\n      <h3 class=\"help-subsection-title\">Applying the Watermark</h3>\n      <ol class=\"help-list\">\n        <li>With images and a watermark selected, click <strong>Apply Watermark</strong>.</li>\n        <li>A native <strong>folder picker</strong> dialog opens — choose where the processed images should be saved.</li>\n        <li>The app creates a <code>watermarked\\</code> subfolder inside the chosen location and saves each image there.</li>\n        <li>Output filenames match the originals with <code>_wm</code> appended before the extension (e.g. <code>photo_wm.png</code>).</li>\n        <li>A progress bar tracks each file. A success notification confirms how many images were saved and where.</li>\n      </ol>\n      <p class=\"help-note\">\n        💡 The output folder is remembered for the current session. To save to a different location, click\n        <strong>Clear All</strong> first — this resets the folder so the picker appears again on the next run.\n      </p>\n\n      <h3 class=\"help-subsection-title\">Recent Watermarks</h3>\n      <p>\n        The app persists your last <strong>6 watermark images</strong> in browser storage so you\n        can quickly re-apply a logo or stamp without browsing for the file each time.\n        The most recently used watermark always appears first. Entries survive app restarts.\n      </p>\n    </div>\n\n    <!-- ── SETTINGS ───────────────────────────────────────────── -->
+    <!-- ── WATERMARK TOOL ────────────────────────────────────── -->\n    <div class=\"help-section\">\n      <h2 class=\"help-section-title\">🖼️ Watermark Tool</h2>\n      <p>\n        The Watermark page lets you select any number of images, choose a watermark graphic,\n        configure how it is placed, and save all the processed images to a folder in one go.\n        No image editing software required.\n      </p>\n\n      <h3 class=\"help-subsection-title\">Selecting Source Images</h3>\n      <ul class=\"help-list\">\n        <li>Click <strong>Add Images</strong> or drag and drop image files onto the drop zone.</li>\n        <li>Supported formats: <strong>PNG, JPG, WEBP, GIF</strong>.</li>\n        <li>Multiple images can be added at once — they appear as thumbnails in the grid.</li>\n        <li>Hover over any thumbnail and click the <strong>✕</strong> button to remove that image from the batch.</li>\n        <li>Click <strong>Clear All</strong> to remove every image and start fresh.</li>\n      </ul>\n\n      <h3 class=\"help-subsection-title\">Choosing a Watermark Image</h3>\n      <ul class=\"help-list\">\n        <li>Click <strong>Choose File</strong> in the Watermark Image card and pick any PNG or JPG.</li>\n        <li>A preview thumbnail appears immediately. An <strong>✓ Active</strong> badge confirms it is loaded.</li>\n        <li>The last few watermarks you used appear in the <strong>Recent</strong> strip below — click any to reload it instantly without browsing again.</li>\n        <li>Click the small <strong>✕</strong> on a recent entry to remove it from the list.</li>\n      </ul>\n\n      <h3 class=\"help-subsection-title\">Placement Mode</h3>\n      <div class=\"help-table-wrapper\">\n        <table class=\"help-table\">\n          <thead><tr><th>Mode</th><th>Behaviour</th></tr></thead>\n          <tbody>\n            <tr>\n              <td><strong>Corner</strong></td>\n              <td>\n                The watermark is scaled so its height equals <strong>15% of the source image height</strong>,\n                with width proportional to the watermark's own aspect ratio.\n                It is placed in the <strong>bottom-right corner</strong> with a small padding margin.\n                The output image is the same dimensions as the original.\n              </td>\n            </tr>\n            <tr>\n              <td><strong>Full Width</strong></td>\n              <td>\n                The watermark is scaled so its <strong>width exactly matches the source image width</strong>,\n                with height scaled proportionally.\n                It is overlaid flush against the <strong>bottom edge</strong> of the image.\n                The output image is the same dimensions as the original — the watermark overlaps the bottom portion of the photo.\n              </td>\n            </tr>\n          </tbody>\n        </table>\n      </div>\n\n      <h3 class=\"help-subsection-title\">Applying the Watermark</h3>\n      <ol class=\"help-list\">\n        <li>With images and a watermark selected, click <strong>Apply Watermark</strong>.</li>\n        <li>A native <strong>folder picker</strong> dialog opens — choose where the processed images should be saved.</li>\n        <li>The app creates a <code>watermarked\\</code> subfolder inside the chosen location and saves each image there.</li>\n        <li>Output filenames match the originals with <code>_wm</code> appended before the extension (e.g. <code>photo_wm.png</code>).</li>\n        <li>A progress bar tracks each file. A success notification confirms how many images were saved and where.</li>\n      </ol>\n      <p class=\"help-note\">\n        💡 The output folder is remembered for the current session. To save to a different location, click\n        <strong>Clear All</strong> first — this resets the folder so the picker appears again on the next run.\n      </p>\n\n      <h3 class=\"help-subsection-title\">Recent Watermarks</h3>\n      <p>\n        The app persists your last <strong>6 watermark images</strong> in browser storage so you\n        can quickly re-apply a logo or stamp without browsing for the file each time.\n        The most recently used watermark always appears first. Entries survive app restarts.\n      </p>\n    </div>\n\n    <!-- ── WORK LOGS ────────────────────────────────────────────── -->
+    <div class="help-section">
+      <h2 class="help-section-title">📋 Work Logs</h2>
+      <p>
+        The <strong>Work Logs</strong> page provides a timestamped activity journal for staff.
+        Each entry records a task description, optional notes, and an automatic date and time
+        captured in <strong>Maldives Time (MVT, UTC+5)</strong>. Logs can be searched, filtered
+        by date range, and exported to Excel for reporting.
+      </p>
+
+      <h3 class="help-subsection-title">Summary Stats</h3>
+      <p>
+        Three counters at the top of the page give a quick overview at a glance:
+      </p>
+      <div class="help-table-wrapper">
+        <table class="help-table">
+          <thead><tr><th>Counter</th><th>Meaning</th></tr></thead>
+          <tbody>
+            <tr><td><strong>This Month</strong></td><td>Number of logs recorded in the current calendar month.</td></tr>
+            <tr><td><strong>This Year</strong></td><td>Number of logs recorded in the current calendar year.</td></tr>
+            <tr><td><strong>Total</strong></td><td>Grand total of all logs ever saved.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 class="help-subsection-title">Adding a Log Entry</h3>
+      <ol class="help-list">
+        <li>The <strong>Date</strong> and <strong>Time</strong> fields are filled automatically using the live MVT clock — no manual entry needed.</li>
+        <li>Type a <strong>Task</strong> description (required). This is the main activity or work item being recorded.</li>
+        <li>Optionally add <strong>Notes</strong> for additional context, instructions, or remarks.</li>
+        <li>Click <strong>Save Log</strong> (or press <kbd>Enter</kbd> in the Task field) to save the entry immediately.</li>
+      </ol>
+      <p class="help-note">
+        💡 The Task field is required — a log cannot be saved without it. The date and time are stamped
+        automatically at the moment you press Save; you cannot back-date an entry.
+      </p>
+
+      <h3 class="help-subsection-title">Searching and Filtering Logs</h3>
+      <p>
+        The log table supports live keyword search and a date-range filter simultaneously:
+      </p>
+      <div class="help-table-wrapper">
+        <table class="help-table">
+          <thead><tr><th>Control</th><th>Behaviour</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Search box</strong></td><td>Filters rows in real time by any text in the Task or Notes columns.</td></tr>
+            <tr><td><strong>From date</strong></td><td>Shows only logs on or after the selected date.</td></tr>
+            <tr><td><strong>To date</strong></td><td>Shows only logs on or before the selected date.</td></tr>
+            <tr><td><strong>Clear Filters</strong></td><td>Resets both the keyword search and date range, restoring the full list.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>
+        The results count beneath the filters updates automatically to show how many logs match.
+      </p>
+
+      <h3 class="help-subsection-title">Deleting a Log</h3>
+      <p>
+        Each row in the table has a <strong>🗑 delete</strong> button on the right. Click it and
+        confirm the prompt to permanently remove that entry. Deletion cannot be undone.
+      </p>
+
+      <h3 class="help-subsection-title">Exporting to Excel</h3>
+      <p>
+        Click <strong>Export to Excel</strong> to save the currently visible logs (respecting any
+        active search or date filter) as an <code>.xlsx</code> spreadsheet. The exported file
+        includes columns for: <em>No., Date, Time, Task,</em> and <em>Notes</em>.
+        A native save dialog lets you choose where the file is written.
+      </p>
+      <p class="help-note">
+        💡 If a search or date filter is active when you export, only the filtered results are
+        included. Clear all filters first to export every log.
+      </p>
+    </div>
+
+    <!-- ── SETTINGS ───────────────────────────────────────────── -->
     <div class="help-section">
       <h2 class="help-section-title">⚙️ Settings Page</h2>
       <p>
@@ -426,6 +502,9 @@ window.initHelp = function () {
         <li>In <strong>Corner</strong> mode the watermark scales to 15% of the image height — use a <strong>horizontally wider</strong> watermark graphic for the best proportions in this mode.</li>
         <li>In <strong>Full Width</strong> mode the watermark spans the entire image width — a <strong>wide, short banner</strong> graphic (high aspect ratio) works best to avoid covering too much of the photo.</li>
         <li>The <strong>output folder</strong> for watermarked images is chosen once per session. Click <strong>Clear All</strong> to reset it so you can choose a different folder on the next batch.</li>
+        <li>In <strong>Work Logs</strong>, press <kbd>Enter</kbd> in the Task field to save quickly without reaching for the mouse.</li>
+        <li>Use the <strong>From / To</strong> date filters in Work Logs to scope the view before exporting — only filtered rows are written to the Excel file.</li>
+        <li>Work log timestamps are fixed to <strong>Maldives Time (MVT)</strong> and cannot be manually edited, ensuring an accurate audit trail.</li>
       </ul>
     </div>
 
