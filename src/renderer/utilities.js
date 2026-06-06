@@ -649,6 +649,8 @@ function switchUtilitiesTab(tab) {
     calcRenderHistory();
   } else if (tab === "calendar") {
     if (typeof initCalendar === "function") initCalendar();
+  } else if (tab === "moon-phase") {
+    initMoonPhase();
   }
 }
 
@@ -1008,4 +1010,370 @@ function initCalculator() {
 
   calcUpdateDisplay();
   calcRenderHistory();
+}
+
+// ============================================================================
+// MOON PHASE MODULE — Addu City, Maldives (0.629°N, 73.099°E)
+// ============================================================================
+
+const MOON_LAT  =  0.629;
+const MOON_LON  = 73.099;
+const MOON_TZ   =  5;      // UTC+5
+
+let _moonInitialized = false;
+let _moonAnimFrame   = null;
+
+/* ─── Astronomical helpers ─── */
+function moonToRad(d) { return d * Math.PI / 180; }
+function moonToDeg(r) { return r * 180 / Math.PI; }
+
+/**
+ * Compute moon phase data for a given JS Date.
+ * Returns: { phase [0–1], illumination [0–1], age [days], phaseName, emoji,
+ *            distance [km], nextPhases [{name, emoji, date}] }
+ */
+function computeMoonData(date) {
+  // Julian Day Number
+  function jdn(d) {
+    const y = d.getUTCFullYear(), m = d.getUTCMonth()+1, day = d.getUTCDate();
+    const h = d.getUTCHours() + d.getUTCMinutes()/60 + d.getUTCSeconds()/3600;
+    const A = Math.floor((14 - m) / 12);
+    const Y = y + 4800 - A;
+    const M = m + 12*A - 3;
+    return day + Math.floor((153*M+2)/5) + 365*Y + Math.floor(Y/4)
+         - Math.floor(Y/100) + Math.floor(Y/400) - 32045 + h/24 - 0.5;
+  }
+
+  const JD = jdn(date);
+  // Days since known new moon: 2000-01-06 18:14 UT (JD 2451549.755)
+  const KNOWN_NEW = 2451549.755;
+  const SYNODIC   = 29.53058867;
+
+  const daysSinceNew = ((JD - KNOWN_NEW) % SYNODIC + SYNODIC) % SYNODIC;
+  const phase = daysSinceNew / SYNODIC; // 0=new, 0.5=full
+
+  // Illumination fraction (0→1)
+  const illum = (1 - Math.cos(2 * Math.PI * phase)) / 2;
+
+  // Phase name & emoji
+  const phases = [
+    { min: 0,    max: 0.0334, name: "New Moon",        emoji: "🌑" },
+    { min: 0.0334,max: 0.2166,name: "Waxing Crescent", emoji: "🌒" },
+    { min: 0.2166,max: 0.2834,name: "First Quarter",   emoji: "🌓" },
+    { min: 0.2834,max: 0.4666,name: "Waxing Gibbous",  emoji: "🌔" },
+    { min: 0.4666,max: 0.5334,name: "Full Moon",        emoji: "🌕" },
+    { min: 0.5334,max: 0.7166,name: "Waning Gibbous",  emoji: "🌖" },
+    { min: 0.7166,max: 0.7834,name: "Last Quarter",    emoji: "🌗" },
+    { min: 0.7834,max: 1,     name: "Waning Crescent", emoji: "🌘" },
+  ];
+  const p = phases.find(p => phase >= p.min && phase < p.max) || phases[0];
+
+  // Approximate distance (km) using simple model
+  const anomaly = moonToRad((daysSinceNew / SYNODIC) * 360 - 2.5);
+  const dist = 385001 - 20905 * Math.cos(anomaly);
+
+  // Next 4 principal phases
+  const nextPhases = [];
+  const principals = [
+    { frac: 0,   name: "New Moon",     emoji: "🌑" },
+    { frac: 0.25,name: "First Quarter",emoji: "🌓" },
+    { frac: 0.5, name: "Full Moon",    emoji: "🌕" },
+    { frac: 0.75,name: "Last Quarter", emoji: "🌗" },
+  ];
+  principals.forEach(pp => {
+    let daysAhead = ((pp.frac - phase + 1) % 1) * SYNODIC;
+    if (daysAhead < 0.5) daysAhead += SYNODIC;
+    const dt = new Date(date.getTime() + daysAhead * 86400000);
+    nextPhases.push({ name: pp.name, emoji: pp.emoji, date: dt });
+  });
+  nextPhases.sort((a, b) => a.date - b.date);
+
+  return {
+    phase, illumination: illum,
+    age: daysSinceNew, cycleDay: Math.round(daysSinceNew) + 1,
+    phaseName: p.name, emoji: p.emoji,
+    distance: Math.round(dist),
+    nextPhases
+  };
+}
+
+/**
+ * Approximate moonrise / moonset times for Addu City.
+ * Uses a simplified algorithm (±15 min accuracy).
+ */
+function computeMoonRiseSet(date, moon) {
+  // Simple approximation: moonrise/set offset from solar transit
+  // Moon transits ~50 min later each day; rise/set ≈ transit ± ~6h
+  const phaseAngle = moon.phase * 360; // degrees
+  // Moon rises roughly at: noon + phaseAngle/15 hours (offset from noon)
+  const riseHourUTC = 6 + (phaseAngle / 15) % 24;
+  const setHourUTC  = riseHourUTC + 12.4;
+
+  function fmtHour(h) {
+    h = ((h % 24) + 24) % 24;
+    const hh = Math.floor(h);
+    const mm = Math.round((h - hh) * 60);
+    const ampm = hh < 12 ? "AM" : "PM";
+    const h12  = hh % 12 || 12;
+    return `${h12}:${String(mm).padStart(2,"0")} ${ampm}`;
+  }
+
+  return {
+    rise: fmtHour(riseHourUTC + MOON_TZ),
+    set:  fmtHour(setHourUTC  + MOON_TZ),
+  };
+}
+
+/* ─── Canvas moon illustration ─── */
+function drawMoonCanvas(canvas, phase, illumination) {
+  const ctx = canvas.getContext("2d");
+  const W = canvas.width, H = canvas.height;
+  const cx = W/2, cy = H/2, R = W/2 - 12;
+  ctx.clearRect(0, 0, W, H);
+
+  // Outer glow
+  const glow = ctx.createRadialGradient(cx, cy, R*0.6, cx, cy, R*1.4);
+  glow.addColorStop(0, "rgba(255,240,180,0.18)");
+  glow.addColorStop(1, "rgba(255,240,180,0)");
+  ctx.fillStyle = glow;
+  ctx.beginPath(); ctx.arc(cx, cy, R*1.4, 0, Math.PI*2); ctx.fill();
+
+  // Dark side of the moon
+  ctx.save();
+  ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI*2);
+  ctx.fillStyle = "#1a1f2e"; ctx.fill();
+
+  // Lit crescent/gibbous using clip
+  ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI*2); ctx.clip();
+
+  // The lit part is drawn as the union/intersection of two circles:
+  // We use the standard approach: draw the lit ellipse
+  const p = phase; // 0..1
+  // Determine limb direction (waxing: right side lit, waning: left side lit)
+  const waxing = p < 0.5;
+  const pNorm  = waxing ? p * 2 : (p - 0.5) * 2; // 0..1 within half cycle
+
+  // Half-ellipse width: 0 at new/full → R at quarter
+  // For crescent: lit half-circle on one side + dark ellipse overlay
+  // For gibbous: full circle lit − dark ellipse on one side
+
+  // Compute ellipse x-radius (negative = gibbous, positive = crescent)
+  // At phase 0 (new): pNorm=0, ellipseX = R (crescent, width 0)
+  // At phase 0.25 (quarter): pNorm=0.5, ellipseX = 0
+  // At phase 0.5 (full): pNorm=1, ellipseX = -R (gibbous full)
+  const ellipseX = R * Math.cos(pNorm * Math.PI);
+
+  if (waxing) {
+    // Lit on right half
+    // Draw right semicircle
+    const litGrad = ctx.createRadialGradient(cx + R*0.2, cy - R*0.1, R*0.1, cx, cy, R);
+    litGrad.addColorStop(0, "#fff8e0");
+    litGrad.addColorStop(0.5, "#f5d97a");
+    litGrad.addColorStop(1, "#c8a84b");
+    ctx.fillStyle = litGrad;
+    ctx.beginPath();
+    ctx.arc(cx, cy, R, -Math.PI/2, Math.PI/2); // right semi
+    ctx.closePath(); ctx.fill();
+
+    // Overlay dark ellipse to carve crescent or reveal gibbous
+    ctx.fillStyle = ellipseX >= 0 ? "#1a1f2e" : litGrad;
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.scale(Math.abs(ellipseX)/R || 0.001, 1);
+    ctx.beginPath();
+    if (ellipseX >= 0) {
+      ctx.arc(0, 0, R, -Math.PI/2, Math.PI/2); ctx.closePath(); ctx.fill();
+    } else {
+      ctx.arc(0, 0, R, Math.PI/2, -Math.PI/2); ctx.closePath();
+      const litG2 = ctx.createRadialGradient(R*0.2, -R*0.1, R*0.1, 0, 0, R);
+      litG2.addColorStop(0, "#fff8e0"); litG2.addColorStop(0.5, "#f5d97a"); litG2.addColorStop(1, "#c8a84b");
+      ctx.fillStyle = litG2; ctx.fill();
+    }
+    ctx.restore();
+  } else {
+    // Waning — lit on left
+    const litGrad = ctx.createRadialGradient(cx - R*0.2, cy - R*0.1, R*0.1, cx, cy, R);
+    litGrad.addColorStop(0, "#fff8e0");
+    litGrad.addColorStop(0.5, "#f5d97a");
+    litGrad.addColorStop(1, "#c8a84b");
+    ctx.fillStyle = litGrad;
+    ctx.beginPath();
+    ctx.arc(cx, cy, R, Math.PI/2, -Math.PI/2); // left semi
+    ctx.closePath(); ctx.fill();
+
+    const pn2 = (p - 0.5) * 2;
+    const eX2 = R * Math.cos(pn2 * Math.PI);
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.scale(Math.abs(eX2)/R || 0.001, 1);
+    ctx.beginPath();
+    if (eX2 >= 0) {
+      ctx.arc(0, 0, R, Math.PI/2, -Math.PI/2); ctx.closePath();
+      ctx.fillStyle = "#1a1f2e"; ctx.fill();
+    } else {
+      ctx.arc(0, 0, R, -Math.PI/2, Math.PI/2); ctx.closePath();
+      const litG2 = ctx.createRadialGradient(-R*0.2, -R*0.1, R*0.1, 0, 0, R);
+      litG2.addColorStop(0, "#fff8e0"); litG2.addColorStop(0.5, "#f5d97a"); litG2.addColorStop(1, "#c8a84b");
+      ctx.fillStyle = litG2; ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  // Subtle craters
+  const craters = [
+    {x:0.15, y:-0.2, r:0.07}, {x:-0.3, y:0.1, r:0.09},
+    {x:0.2,  y:0.3,  r:0.06}, {x:-0.1, y:-0.35,r:0.05},
+    {x:0.38, y:-0.1, r:0.055},{x:-0.25,y:0.38, r:0.07},
+  ];
+  craters.forEach(c => {
+    ctx.save();
+    ctx.globalAlpha = 0.12;
+    ctx.beginPath();
+    ctx.arc(cx + c.x*R, cy + c.y*R, c.r*R, 0, Math.PI*2);
+    ctx.fillStyle = "#000"; ctx.fill();
+    ctx.restore();
+  });
+
+  ctx.restore();
+
+  // Rim highlight
+  ctx.save();
+  ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI*2);
+  ctx.strokeStyle = "rgba(255,240,160,0.25)";
+  ctx.lineWidth = 2; ctx.stroke();
+  ctx.restore();
+}
+
+/* ─── Stars background ─── */
+function renderStars(container) {
+  if (container.children.length > 0) return; // already rendered
+  for (let i = 0; i < 55; i++) {
+    const s = document.createElement("div");
+    s.className = "moon-star";
+    const sz = Math.random() * 2.5 + 0.5;
+    s.style.cssText = `
+      width:${sz}px;height:${sz}px;
+      left:${Math.random()*100}%;top:${Math.random()*100}%;
+      opacity:${Math.random()*0.6+0.2};
+      animation-delay:${Math.random()*4}s;
+      animation-duration:${Math.random()*3+2}s;
+    `;
+    container.appendChild(s);
+  }
+}
+
+/* ─── Cycle strip ─── */
+function renderMoonCycleStrip(today) {
+  const strip = document.getElementById("moon-cycle-strip");
+  if (!strip) return;
+  const SYNODIC = 29.53058867;
+  const KNOWN_NEW = 2451549.755;
+  function jdn(d) {
+    const y=d.getUTCFullYear(),m=d.getUTCMonth()+1,day=d.getUTCDate();
+    const h=d.getUTCHours()+d.getUTCMinutes()/60+d.getUTCSeconds()/3600;
+    const A=Math.floor((14-m)/12),Y=y+4800-A,M=m+12*A-3;
+    return day+Math.floor((153*M+2)/5)+365*Y+Math.floor(Y/4)-Math.floor(Y/100)+Math.floor(Y/400)-32045+h/24-0.5;
+  }
+  const JD0 = jdn(today);
+  const daysSinceNew0 = ((JD0 - KNOWN_NEW) % SYNODIC + SYNODIC) % SYNODIC;
+  const cycleStart = new Date(today.getTime() - daysSinceNew0 * 86400000);
+
+  strip.innerHTML = "";
+  const emojis = ["🌑","🌒","🌓","🌔","🌕","🌖","🌗","🌘","🌑"];
+  for (let i = 0; i < 30; i++) {
+    const d = new Date(cycleStart.getTime() + i * 86400000);
+    const phase = i / SYNODIC;
+    const idx = Math.round(phase * 8) % 8;
+    const isToday = d.toDateString() === today.toDateString();
+    const div = document.createElement("div");
+    div.className = "moon-cycle-day" + (isToday ? " moon-cycle-today" : "");
+    div.title = `Day ${i+1} — ${d.toLocaleDateString("en-US",{month:"short",day:"numeric"})}`;
+    div.innerHTML = `<span class="moon-cycle-emoji">${emojis[idx]}</span><span class="moon-cycle-num">${i+1}</span>`;
+    strip.appendChild(div);
+  }
+}
+
+/* ─── Upcoming phases list ─── */
+function renderUpcomingPhases(nextPhases) {
+  const el = document.getElementById("moon-upcoming");
+  if (!el) return;
+  el.innerHTML = nextPhases.slice(0,4).map(p => `
+    <div class="moon-upcoming-item">
+      <span class="moon-upcoming-emoji">${p.emoji}</span>
+      <div class="moon-upcoming-info">
+        <span class="moon-upcoming-name">${p.name}</span>
+        <span class="moon-upcoming-date">${p.date.toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"})}</span>
+      </div>
+      <span class="moon-upcoming-in">${daysUntil(p.date)}</span>
+    </div>
+  `).join("");
+}
+
+function daysUntil(date) {
+  const diff = Math.round((date - new Date()) / 86400000);
+  if (diff === 0) return "Today";
+  if (diff === 1) return "Tomorrow";
+  return `in ${diff} days`;
+}
+
+/* ─── Moon fact ─── */
+const MOON_FACTS = [
+  "The Moon is slowly drifting away from Earth at about 3.8 cm per year.",
+  "A full lunar cycle (synodic month) takes 29 days, 12 hours, 44 minutes.",
+  "The same side of the Moon always faces Earth — this is called tidal locking.",
+  "The Moon has no atmosphere, so temperatures swing from −173°C to +127°C.",
+  "Moonquakes do occur — caused by tidal forces from Earth's gravity.",
+  "The Moon's gravity is about 1/6th of Earth's — you'd weigh much less there!",
+  "The Moon was likely formed from debris after a Mars-sized body hit early Earth.",
+  "Lunar eclipses occur when Earth's shadow falls across a full Moon.",
+  "The Moon's surface is covered in regolith — fine powdery rock from meteorite impacts.",
+  "From Addu City, the Moon rises above the Indian Ocean with a clear tropical horizon.",
+  "Near the equator like Addu City, the Moon travels nearly straight up at moonrise.",
+  "The Southern Hemisphere sees the Moon 'upside-down' compared to the North.",
+];
+
+function renderMoonFact(phase) {
+  const el = document.getElementById("moon-fact");
+  if (!el) return;
+  const idx = Math.floor(phase * MOON_FACTS.length) % MOON_FACTS.length;
+  el.innerHTML = `<p class="moon-fact-text">"${MOON_FACTS[idx]}"</p>`;
+}
+
+/* ─── Main init / refresh ─── */
+function initMoonPhase() {
+  const now = new Date();
+  const moon = computeMoonData(now);
+  const riseSet = computeMoonRiseSet(now, moon);
+
+  // Canvas
+  const canvas = document.getElementById("moon-canvas");
+  if (canvas) drawMoonCanvas(canvas, moon.phase, moon.illumination);
+
+  // Stars
+  const stars = document.getElementById("moon-stars");
+  if (stars) renderStars(stars);
+
+  // Hero info
+  const setEl = (id, val) => { const e = document.getElementById(id); if(e) e.textContent = val; };
+  setEl("moon-phase-name",  moon.phaseName);
+  setEl("moon-phase-emoji", moon.emoji);
+  setEl("moon-phase-date",  now.toLocaleDateString("en-US",{weekday:"long",year:"numeric",month:"long",day:"numeric"}));
+  setEl("moon-illumination", Math.round(moon.illumination * 100) + "%");
+  setEl("moon-age",          moon.age.toFixed(1) + " days");
+  setEl("moon-cycle-day",    moon.cycleDay + " / 30");
+  setEl("moon-distance",     moon.distance.toLocaleString() + " km");
+  setEl("moon-rise",         riseSet.rise);
+  setEl("moon-set",          riseSet.set);
+
+  renderMoonCycleStrip(now);
+  renderUpcomingPhases(moon.nextPhases);
+  renderMoonFact(moon.phase);
+
+  // Auto-refresh every minute (redraw canvas + stats)
+  if (_moonAnimFrame) clearInterval(_moonAnimFrame);
+  _moonAnimFrame = setInterval(() => {
+    const n = new Date();
+    const m = computeMoonData(n);
+    if (canvas) drawMoonCanvas(canvas, m.phase, m.illumination);
+  }, 60000);
 }

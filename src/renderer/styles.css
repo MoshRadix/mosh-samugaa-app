@@ -3717,3 +3717,246 @@ select:disabled {
 .cal-lang--dv .cal-legend              { font-size: 14px; }
 .cal-lang--dv .cal-title               { font-size: 17px; }
 .cal-lang--dv .cal-btn                 { font-size: 14px; }
+
+/* ==========================================================================
+   Moon Phase Tab
+   ========================================================================== */
+
+.moon-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 4px 0 16px;
+}
+
+/* ── Hero ── */
+.moon-hero {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+  background: linear-gradient(135deg, #0d1421 0%, #1a2540 50%, #111827 100%);
+  border-radius: var(--radius-lg);
+  padding: 28px 28px 24px;
+  box-shadow: var(--shadow-lg), 0 0 40px rgba(180,150,60,0.08);
+  overflow: hidden;
+  position: relative;
+}
+.moon-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 30% 50%, rgba(255,220,100,0.05) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+.moon-sky {
+  position: relative;
+  flex-shrink: 0;
+  width: 220px;
+  height: 220px;
+}
+.moon-canvas {
+  position: relative;
+  z-index: 2;
+  filter: drop-shadow(0 0 20px rgba(255,220,100,0.35));
+}
+.moon-stars {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+.moon-star {
+  position: absolute;
+  border-radius: 50%;
+  background: #fff;
+  animation: moon-twinkle linear infinite;
+}
+@keyframes moon-twinkle {
+  0%,100% { opacity: var(--base-op, 0.4); transform: scale(1); }
+  50%      { opacity: 0.1; transform: scale(0.6); }
+}
+
+.moon-hero-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+.moon-phase-badge {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.moon-phase-emoji {
+  font-size: 48px;
+  line-height: 1;
+  filter: drop-shadow(0 0 12px rgba(255,220,100,0.5));
+}
+.moon-phase-name {
+  font-size: 22px;
+  font-weight: 700;
+  color: #f5e89a;
+  letter-spacing: 0.02em;
+}
+.moon-phase-subtext {
+  font-size: 12px;
+  color: #8898aa;
+  margin-top: 3px;
+}
+
+.moon-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.moon-stat {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.moon-stat-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #6b7fa0;
+  font-weight: 600;
+}
+.moon-stat-val {
+  font-size: 15px;
+  font-weight: 700;
+  color: #e2d5a0;
+}
+
+.moon-location-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: #6b7fa0;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 20px;
+  padding: 5px 12px;
+  width: fit-content;
+}
+.moon-location-badge svg { flex-shrink: 0; color: #8898aa; }
+
+/* ── Cycle strip ── */
+.moon-cycle-section {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  padding: 18px 20px;
+  box-shadow: var(--shadow-sm);
+}
+.moon-section-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 14px;
+}
+.moon-cycle-strip {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.moon-cycle-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 5px 5px;
+  border-radius: var(--radius-sm);
+  cursor: default;
+  transition: background var(--transition-fast);
+  min-width: 36px;
+}
+.moon-cycle-day:hover { background: var(--bg-subtle); }
+.moon-cycle-day.moon-cycle-today {
+  background: linear-gradient(135deg, #1a2540 0%, #0d1421 100%);
+  box-shadow: 0 0 0 2px rgba(180,150,60,0.5), 0 0 12px rgba(180,150,60,0.15);
+}
+.moon-cycle-today .moon-cycle-num { color: #f5e89a; font-weight: 700; }
+.moon-cycle-emoji { font-size: 18px; line-height: 1; }
+.moon-cycle-num {
+  font-size: 9px;
+  color: var(--text-tertiary);
+  font-weight: 500;
+}
+
+/* ── Bottom row ── */
+.moon-bottom-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.moon-card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  padding: 18px 20px;
+  box-shadow: var(--shadow-sm);
+}
+.moon-card-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 14px;
+}
+.moon-card-title svg { color: var(--accent-primary); }
+
+/* Upcoming phases */
+.moon-upcoming-list { display: flex; flex-direction: column; gap: 10px; }
+.moon-upcoming-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: var(--bg-subtle);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-light);
+}
+.moon-upcoming-emoji { font-size: 24px; flex-shrink: 0; }
+.moon-upcoming-info { flex: 1; min-width: 0; }
+.moon-upcoming-name { display: block; font-size: 13px; font-weight: 600; color: var(--text-primary); }
+.moon-upcoming-date { display: block; font-size: 11px; color: var(--text-tertiary); margin-top: 2px; }
+.moon-upcoming-in {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent-primary);
+  white-space: nowrap;
+  background: var(--accent-primary-light);
+  padding: 3px 8px;
+  border-radius: 10px;
+}
+
+/* Fact box */
+.moon-fact-box {
+  background: linear-gradient(135deg, #0d1421 0%, #1a2540 100%);
+  border-radius: var(--radius-md);
+  padding: 18px 16px;
+  border: 1px solid rgba(255,220,100,0.12);
+  height: calc(100% - 40px);
+  display: flex;
+  align-items: center;
+}
+.moon-fact-text {
+  font-size: 13.5px;
+  line-height: 1.65;
+  color: #c8c0a0;
+  font-style: italic;
+}
