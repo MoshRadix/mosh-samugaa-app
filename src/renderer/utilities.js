@@ -23,7 +23,8 @@ const UNIT_CATEGORIES = {
       ft:  { label: "Feet (ft)",          factor: 0.3048 },
       yd:  { label: "Yards (yd)",         factor: 0.9144 },
       mi:  { label: "Miles (mi)",         factor: 1609.344 },
-      nmi: { label: "Nautical Miles",     factor: 1852  },
+      nmi:  { label: "Nautical Miles",       factor: 1852  },
+      ftin: { label: "Feet & Inches (5' 6\")", factor: null  },
     }
   },
   weight: {
@@ -158,6 +159,18 @@ function parseFeetInches(str) {
   const feet = parseFloat(match[1]) || 0;
   const inches = parseFloat(match[2]) || 0;
   return feet * 12 + inches; // total inches
+}
+
+/**
+ * Format a meter value as feet and inches: 5' 6"
+ */
+function formatFeetInches(meters) {
+  const totalInches = meters / 0.0254;
+  const feet = Math.floor(totalInches / 12);
+  const inches = totalInches % 12;
+  // 1 decimal place, strip trailing .0
+  const inchesStr = (inches % 1 === 0) ? inches.toFixed(0) : inches.toFixed(1);
+  return `${feet}' ${inchesStr}"`;
 }
 
 /**
@@ -372,13 +385,25 @@ function renderUnitSelects() {
   fromSel.value = _fromUnit;
   toSel.value   = _toUnit;
 
-  // Update hint for length
-  const hint = document.getElementById("uc-input-hint");
+  // Update hint and placeholder based on selected units
+  const hint    = document.getElementById("uc-input-hint");
+  const inputEl2 = document.getElementById("uc-input");
   if (hint) {
-    hint.textContent = _currentCategory === "length"
-      ? "Tip: Enter feet/inches as 5' 11\" or 12' 9\""
-      : "";
+    if (_fromUnit === "ftin") {
+      hint.textContent = "Enter as: 5' 6\" or 12' 9\"";
+    } else if (_toUnit === "ftin") {
+      hint.textContent = "Result will be shown as feet and inches";
+    } else if (_currentCategory === "length") {
+      hint.textContent = "Tip: select \"Feet & Inches\" from a dropdown to use that format";
+    } else {
+      hint.textContent = "";
+    }
   }
+  if (inputEl2) {
+    inputEl2.placeholder = _fromUnit === "ftin" ? "e.g. 5' 6\"" : "Enter value…";
+  }
+  // Re-trigger conversion if there's already a value
+  if (inputEl2 && inputEl2.value.trim()) performConversion({ saveHistory: false });
 }
 
 let _convDebounceTimer = null;
@@ -397,41 +422,56 @@ function performConversion({ saveHistory: doSave = false } = {}) {
   _toUnit   = toSel.value;
   _lastInputRaw = rawInput;
 
-  let numericValue;
-  let inputDisplay = rawInput;
+  const isFtInFrom = _fromUnit === "ftin";
+  const isFtInTo   = _toUnit   === "ftin";
+  let inputDisplay  = rawInput;
 
-  // Check for feet/inches format in length category
-  if (_currentCategory === "length") {
-    const feetIn = parseFeetInches(rawInput);
-    if (feetIn !== null) {
-      numericValue = feetIn * 0.0254; // to meters (base)
-      inputDisplay = rawInput;
-      // Bypass normal conversion: value is already in meters, convert to target
-      const result = convertValue(numericValue / UNIT_CATEGORIES.length.units["m"].factor, "m", _toUnit, "length");
-      if (result === null || isNaN(result)) { outputEl.value = "Invalid"; return; }
-      const formatted = formatNumber(result);
-      outputEl.value = formatted;
-      if (doSave) {
-        const toLabel = UNIT_CATEGORIES[_currentCategory].units[_toUnit]?.label || _toUnit;
-        const fromLabel = "feet/inches";
-        saveAndRefreshHistory({ inputDisplay, fromUnit: fromLabel, outputDisplay: formatted, toUnit: toLabel, category: _currentCategory });
-      }
-      return;
+  if (isFtInFrom) {
+    // Input must be in feet/inches format like 5' 6"
+    const totalInches = parseFeetInches(rawInput);
+    if (totalInches === null) { outputEl.value = "Use format: 5' 6\""; return; }
+    const numericMeters = totalInches * 0.0254;
+
+    let formatted;
+    if (isFtInTo) {
+      formatted = rawInput; // same unit, echo back
+    } else {
+      const result = convertValue(numericMeters, "m", _toUnit, "length");
+      if (result === null || isNaN(result)) { outputEl.value = "Error"; return; }
+      formatted = formatNumber(result);
     }
+    outputEl.value = formatted;
+    if (doSave) {
+      const fromLabel = UNIT_CATEGORIES[_currentCategory].units["ftin"].label;
+      const toLabel   = isFtInTo ? fromLabel : (UNIT_CATEGORIES[_currentCategory].units[_toUnit]?.label || _toUnit);
+      saveAndRefreshHistory({ inputDisplay, fromUnit: fromLabel, outputDisplay: formatted, toUnit: toLabel, category: _currentCategory });
+    }
+    return;
   }
 
-  numericValue = parseFloat(rawInput);
+  // Standard numeric input
+  const numericValue = parseFloat(rawInput);
   if (isNaN(numericValue)) { outputEl.value = "Invalid input"; return; }
 
-  const result = convertValue(numericValue, _fromUnit, _toUnit, _currentCategory);
-  if (result === null || isNaN(result)) { outputEl.value = "Error"; return; }
+  let formatted;
+  if (isFtInTo) {
+    // Convert to meters first, then format as feet/inches
+    const inMeters = convertValue(numericValue, _fromUnit, "m", "length");
+    if (inMeters === null || isNaN(inMeters)) { outputEl.value = "Error"; return; }
+    formatted = formatFeetInches(inMeters);
+  } else {
+    const result = convertValue(numericValue, _fromUnit, _toUnit, _currentCategory);
+    if (result === null || isNaN(result)) { outputEl.value = "Error"; return; }
+    formatted = formatNumber(result);
+  }
 
-  const formatted = formatNumber(result);
   outputEl.value = formatted;
 
   if (doSave) {
     const fromLabel = UNIT_CATEGORIES[_currentCategory].units[_fromUnit]?.label || _fromUnit;
-    const toLabel   = UNIT_CATEGORIES[_currentCategory].units[_toUnit]?.label   || _toUnit;
+    const toLabel   = isFtInTo
+      ? UNIT_CATEGORIES[_currentCategory].units["ftin"].label
+      : (UNIT_CATEGORIES[_currentCategory].units[_toUnit]?.label || _toUnit);
     saveAndRefreshHistory({ inputDisplay: rawInput, fromUnit: fromLabel, outputDisplay: formatted, toUnit: toLabel, category: _currentCategory });
   }
 }
@@ -472,10 +512,15 @@ function swapUnits() {
   _toUnit   = toSel.value;
 
   // Use output as new input if available
-  if (outputEl.value && !isNaN(parseFloat(outputEl.value))) {
-    inputEl.value = outputEl.value;
+  // When swapping with ftin, the output may be like "5' 6"" — use it if ftin is now the from-unit
+  const newFromIsFtin = fromSel.value === "ftin";
+  if (outputEl.value) {
+    if (newFromIsFtin || !isNaN(parseFloat(outputEl.value))) {
+      inputEl.value = outputEl.value;
+    }
   }
-  performConversion({ saveHistory: true });
+  // Refresh hint/placeholder
+  renderUnitSelects();
 }
 
 // ============================================================================
@@ -690,8 +735,8 @@ function initUtilities() {
   const histSearch    = document.getElementById("uc-hist-search");
 
   inputEl?.addEventListener("input", performConversionDebounced);
-  fromSel?.addEventListener("change", () => { _fromUnit = fromSel.value; performConversion({ saveHistory: true }); });
-  toSel?.addEventListener("change",   () => { _toUnit   = toSel.value;   performConversion({ saveHistory: true }); });
+  fromSel?.addEventListener("change", () => { _fromUnit = fromSel.value; renderUnitSelects(); });
+  toSel?.addEventListener("change",   () => { _toUnit   = toSel.value;   renderUnitSelects(); });
   swapBtn?.addEventListener("click", swapUnits);
 
   clearHistBtn?.addEventListener("click", async () => {
