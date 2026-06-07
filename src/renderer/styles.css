@@ -852,6 +852,10 @@ select:disabled {
   margin: 0 auto;
 }
 
+#help-view .settings-container {
+  max-width: 980px;
+}
+
 .settings-group {
   background: var(--bg-surface);
   border-radius: var(--radius-lg);
@@ -1105,6 +1109,137 @@ select:disabled {
   color: var(--text-secondary);
   line-height: 1.55;
   margin: 0.75rem 0 0.25rem 0;
+}
+
+/* ========== Help Page — Modern Redesign ========== */
+
+/* Hero banner */
+.help-hero {
+  display: flex;
+  align-items: center;
+  gap: 1.1rem;
+  background: var(--gradient-primary);
+  border-radius: var(--radius-lg);
+  padding: 1.4rem 1.75rem;
+  margin-bottom: 1.1rem;
+  box-shadow: var(--shadow-md);
+}
+.help-hero-icon {
+  font-size: 2.2rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.help-hero-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #fff;
+  margin: 0 0 0.2rem 0;
+  letter-spacing: -0.01em;
+}
+.help-hero-sub {
+  font-size: 0.82rem;
+  color: rgba(255,255,255,0.8);
+  margin: 0;
+}
+
+/* Quick-nav pill strip */
+.help-quicknav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 1.1rem;
+  padding: 0.65rem 0.85rem;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+}
+.help-pill {
+  display: inline-block;
+  padding: 0.28rem 0.75rem;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  text-decoration: none;
+  border: 1px solid var(--border-light);
+  transition: background var(--transition-fast), color var(--transition-fast),
+              border-color var(--transition-fast);
+  cursor: pointer;
+}
+.help-pill:hover {
+  background: var(--accent-primary);
+  color: #fff;
+  border-color: var(--accent-primary);
+}
+
+/* Section anchor scroll offset */
+.help-section[id] {
+  scroll-margin-top: 1rem;
+}
+
+/* Section title — stronger accent bar */
+.help-section-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 1rem 0;
+  padding-bottom: 0.6rem;
+  border-bottom: 2px solid var(--accent-primary);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+/* Feature grid */
+.help-feature-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 0.65rem;
+  margin-top: 1rem;
+}
+.help-feature-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.85rem 0.9rem;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  transition: box-shadow var(--transition-fast);
+}
+.help-feature-card:hover {
+  box-shadow: var(--shadow-md);
+}
+.help-feature-icon {
+  font-size: 1.4rem;
+  line-height: 1;
+  margin-bottom: 0.15rem;
+}
+.help-feature-card strong {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.help-feature-card span {
+  font-size: 0.76rem;
+  color: var(--text-tertiary);
+  line-height: 1.4;
+}
+
+/* kbd styling */
+kbd {
+  display: inline-block;
+  padding: 0.1rem 0.45rem;
+  font-size: 0.76rem;
+  font-family: 'Courier New', monospace;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-medium);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  color: var(--text-primary);
+  white-space: nowrap;
 }
 /* ========== Image Field Styles ========== */
 .image-field-wrapper {
