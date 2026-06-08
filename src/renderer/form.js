@@ -51,31 +51,47 @@ function populateDateRangePlaceholders(formData, startDateStr, count) {
     (window.selectedTemplate?.fields || []).map((f) => f.key)
   );
 
-  // Find the highest index across all families — both short-before and short-after lang
+  // Find the highest index across all families — legacy and new taxonomy
   let maxIndex = count || 0;
   for (const key of templateKeys) {
-    const m = key.match(/^date_range_(?:short_)?(?:divehi_|english_)?(?:short_)?(\d+)$/);
-    if (m) maxIndex = Math.max(maxIndex, parseInt(m[1], 10));
+    // Legacy patterns
+    const mLeg = key.match(/^date_range_(?:short_)?(?:divehi_|english_)?(?:short_)?(\d+)$/);
+    if (mLeg) maxIndex = Math.max(maxIndex, parseInt(mLeg[1], 10));
+    // New taxonomy: range_english_N, range_divehi_N, range_*_short_N, range_weekday_*_N
+    const mNew = key.match(/^range_(?:english|divehi)(?:_short)?_(\d+)$/);
+    if (mNew) maxIndex = Math.max(maxIndex, parseInt(mNew[1], 10));
+    const mWd = key.match(/^range_weekday_(?:english|divehi)(?:_short)?(?:_[a-z]{3})?_(\d+)$/);
+    if (mWd) maxIndex = Math.max(maxIndex, parseInt(mWd[1], 10));
   }
 
   for (let i = 1; i <= maxIndex; i++) {
     const dateStr = addDaysToLocalDate(startDateStr, i - 1);
+
+    // ── Legacy patterns ────────────────────────────────────────────────────
     if (templateKeys.has(`date_range_${i}`))
       formData[`date_range_${i}`] = formatDivehiDate(dateStr);
     if (templateKeys.has(`date_range_divehi_${i}`))
       formData[`date_range_divehi_${i}`] = formatDivehiDate(dateStr);
     if (templateKeys.has(`date_range_english_${i}`))
       formData[`date_range_english_${i}`] = formatEnglishDate(dateStr);
-    // Short after lang: date_range_divehi_short_N, date_range_english_short_N
     if (templateKeys.has(`date_range_divehi_short_${i}`))
       formData[`date_range_divehi_short_${i}`] = formatDivehiDate(dateStr, true);
     if (templateKeys.has(`date_range_english_short_${i}`))
       formData[`date_range_english_short_${i}`] = formatEnglishDate(dateStr, true);
-    // Short before lang: date_range_short_divehi_N, date_range_short_english_N
     if (templateKeys.has(`date_range_short_divehi_${i}`))
       formData[`date_range_short_divehi_${i}`] = formatDivehiDate(dateStr, true);
     if (templateKeys.has(`date_range_short_english_${i}`))
       formData[`date_range_short_english_${i}`] = formatEnglishDate(dateStr, true);
+
+    // ── New taxonomy ───────────────────────────────────────────────────────
+    if (templateKeys.has(`range_english_${i}`))
+      formData[`range_english_${i}`] = formatEnglishDate(dateStr);
+    if (templateKeys.has(`range_divehi_${i}`))
+      formData[`range_divehi_${i}`] = formatDivehiDate(dateStr);
+    if (templateKeys.has(`range_english_short_${i}`))
+      formData[`range_english_short_${i}`] = formatEnglishDate(dateStr, true);
+    if (templateKeys.has(`range_divehi_short_${i}`))
+      formData[`range_divehi_short_${i}`] = formatDivehiDate(dateStr, true);
   }
 }
 
@@ -88,7 +104,7 @@ function populateDateRangePlaceholders(formData, startDateStr, count) {
 function hasVisibleStartDateField(fields) {
   return (fields || []).some((f) =>
     !f.key.endsWith("_hidden") &&
-    /^start_date(_divehi|_english)?$/.test(f.key)
+    /^(start_date(_divehi|_english)?|range_start_date|date_range_start)$/.test(f.key)
   );
 }
 
@@ -96,24 +112,34 @@ function hasVisibleStartDateField(fields) {
  * Returns true for fields that are auto-computed at generation time and must
  * never appear as user-facing inputs in the form.
  *
- * Covers:
- *   - _hidden suffix fields
- *   - weekday_divehi/english_(short_)?hidden_* patterns
- *   - date_range_N (N >= 2), date_range_divehi_N, date_range_english_N
- *   - date_range_divehi_short_N, date_range_english_short_N
- *   - date_range_divehi_N / english_N / short variants when a visible start_date
- *     field exists (fields context required)
+ * Handles both the legacy naming patterns and the new taxonomy:
+ *   New taxonomy:  meta_*, range_* (except range_start_date)
+ *   Legacy:        _hidden suffix, weekday_*_hidden_*, date_range_divehi/english_N, etc.
  */
 function isAutoComputedField(key, fields) {
+  // ── New taxonomy ─────────────────────────────────────────────────────────
+  // meta_ category is always auto-populated at generation time
+  if (key.startsWith("meta_")) return true;
+
+  // range_ series fields (not the user-visible seed date)
+  if (key.startsWith("range_") && key !== "range_start_date") return true;
+
+  // ── Legacy patterns (kept for backward compatibility) ────────────────────
   if (key.endsWith("_hidden")) return true;
+
   // Any weekday field that contains "hidden" is always auto-computed
   if (/^weekday_(divehi|english)_/.test(key) && key.includes("hidden")) return true;
+
   // date_range with short after lang:  date_range_divehi_short_N, date_range_english_short_N
   if (/^date_range_(divehi|english)_(?:short_)?\d+$/.test(key)) return true;
+
   // date_range with short before lang: date_range_short_divehi_N, date_range_short_english_N
   if (/^date_range_short_(divehi|english)_\d+$/.test(key)) return true;
+
+  // Legacy date_range_N (N >= 2)
   const legacyMatch = key.match(/^date_range_(\d+)$/);
   if (legacyMatch && parseInt(legacyMatch[1], 10) >= 2) return true;
+
   return false;
 }
 
@@ -201,7 +227,12 @@ const DIVEHI_MONTHS = [
  *      — covers cases where field type was not explicitly set to "date"
  */
 function resolveStartDateStr(formData, fields) {
-  // 1. Dedicated field
+  // 1a. New taxonomy seed field
+  if (formData["range_start_date"] &&
+      formData["range_start_date"].match(/^\d{4}-\d{2}-\d{2}$/)) {
+    return formData["range_start_date"];
+  }
+  // 1b. Legacy dedicated field
   if (formData["date_range_start"] &&
       formData["date_range_start"].match(/^\d{4}-\d{2}-\d{2}$/)) {
     return formData["date_range_start"];
@@ -290,41 +321,50 @@ function populateWeekdayHiddenFields(formData, fields) {
   for (const key of templateKeys) {
     let lang, isShort, n, jsDay;
 
-    // Pattern A: explicit start-day token
-    // Supports short before or after hidden:
-    //   weekday_divehi_short_hidden_sun_4
-    //   weekday_divehi_hidden_short_sun_4  (short after hidden)
-    //   weekday_divehi_hidden_sun_4        (no short)
-    const mA = key.match(/^weekday_(divehi|english)_(?:short_)?hidden_(?:short_)?([a-z]{3})_(\d+)$/);
-    // Pattern B: no start-day token
-    // Supports short before or after hidden:
-    //   weekday_divehi_short_hidden_4
-    //   weekday_divehi_hidden_short_4      (short after hidden)
-    //   weekday_divehi_hidden_4            (no short)
-    const mB = key.match(/^weekday_(divehi|english)_(?:short_)?hidden_(?:short_)?(\d+)$/);
+    // ── New taxonomy: range_weekday_<lang>[_short][_<startday>]_N ──────────
+    const mNewA = key.match(/^range_weekday_(divehi|english)(?:_short)?_([a-z]{3})_(\d+)$/);
+    const mNewB = key.match(/^range_weekday_(divehi|english)(?:_short)?_(\d+)$/);
 
-    if (mA) {
-      lang      = mA[1];
-      isShort   = key.includes("_short_");
-      const startCode = mA[2];
-      n         = parseInt(mA[3], 10);
-
+    if (mNewA) {
+      lang      = mNewA[1];
+      isShort   = key.includes("_short_") || key.includes("_short");
+      const startCode = mNewA[2];
+      n         = parseInt(mNewA[3], 10);
       const startDayIndex = WEEKDAY_START_MAP[startCode];
       if (startDayIndex === undefined) continue;
-
       jsDay = (startDayIndex + (n - 1)) % 7;
-
-    } else if (mB) {
-      lang    = mB[1];
-      isShort = key.includes("_short_");
-      n       = parseInt(mB[2], 10);
-
+    } else if (mNewB) {
+      lang    = mNewB[1];
+      isShort = key.includes("_short_") || /^range_weekday_(?:divehi|english)_short_\d+$/.test(key);
+      n       = parseInt(mNewB[2], 10);
       const slotDate = new Date(startJsDate);
       slotDate.setDate(slotDate.getDate() + (n - 1));
       jsDay = slotDate.getDay();
-
     } else {
-      continue;
+      // ── Legacy patterns ────────────────────────────────────────────────
+      // Pattern A: explicit start-day token
+      const mA = key.match(/^weekday_(divehi|english)_(?:short_)?hidden_(?:short_)?([a-z]{3})_(\d+)$/);
+      // Pattern B: no start-day token
+      const mB = key.match(/^weekday_(divehi|english)_(?:short_)?hidden_(?:short_)?(\d+)$/);
+
+      if (mA) {
+        lang      = mA[1];
+        isShort   = key.includes("_short_");
+        const startCode = mA[2];
+        n         = parseInt(mA[3], 10);
+        const startDayIndex = WEEKDAY_START_MAP[startCode];
+        if (startDayIndex === undefined) continue;
+        jsDay = (startDayIndex + (n - 1)) % 7;
+      } else if (mB) {
+        lang    = mB[1];
+        isShort = key.includes("_short_");
+        n       = parseInt(mB[2], 10);
+        const slotDate = new Date(startJsDate);
+        slotDate.setDate(slotDate.getDate() + (n - 1));
+        jsDay = slotDate.getDay();
+      } else {
+        continue;
+      }
     }
 
     if (lang === "divehi") {
@@ -832,7 +872,8 @@ function getFieldInputWithAutoSwitch(field) {
 
   // TEXTAREA TYPE
   if (field.type === "textarea") {
-    return `<textarea id="${fieldId}" name="${field.key}" ${field.required ? "required" : ""} placeholder="${placeholder}" rows="3" class="form-input ${isDivehiField ? "divehi-input" : "english-input"}" dir="${isDivehiField ? "rtl" : "ltr"}"></textarea>`;
+    const rows = field.paragraphMode ? (field.rows || 8) : (field.rows || 3);
+    return `<textarea id="${fieldId}" name="${field.key}" ${field.required ? "required" : ""} placeholder="${placeholder}" rows="${rows}" class="form-input ${isDivehiField ? "divehi-input" : "english-input"}" dir="${isDivehiField ? "rtl" : "ltr"}"></textarea>`;
   }
 
   // BOOLEAN TYPE (Yes/No)
@@ -1268,24 +1309,19 @@ function getFieldTypeIcon(type) {
 
 // Helper function to get field hint text
 function getFieldHint(field) {
-  // If the field is marked as RTL (Divehi), return Divehi hints
-  // if (field.isRTL) {
-  //   const divehiHints = {
-  //     number: "ޢަދަދެއް ލިޔޭށެވެ",
-  //     email: "example@domain.com ފަދަ އީމެއިލް އެއް ލިޔޭ",
-  //     date: "ތާރީޚެއް އިޚްތިޔާރު ކުރޭ",
-  //     textarea: "އާ ލައިއަކަށް Enter ބިންދޭ",
-  //     boolean: "އިޚްތިޔާރު ކުރޭ",
-  //     dropdown: "ތިރީގައިވާ އޮޕްޝަންތަކުން އެއްޗެއް އިޚްތިޔާރު ކުރޭ",
-  //   };
-  //   return divehiHints[field.type] || "Press Enter to go to next field";
-  // }
+  if (field.hint) return escapeHtml(field.hint);
+  if (field.type === "textarea" && field.paragraphMode) {
+    return field.isRTL
+      ? "ހުސް ލައިނަކުން ޕެރެގްރާފް ވަކިކުރޭ"
+      : "Separate paragraphs with a blank line";
+  }
   const hints = {
     number: "Enter a numeric value",
     email: "e.g., name@example.com",
     date: "Select a date from the picker",
-    textarea: "Press Enter to add line breaks",
+    textarea: "Press Shift+Enter for new lines",
     boolean: "Select Yes or No from dropdown",
+    dropdown: "Select an option from the list",
   };
   return hints[field.type] || "Press Enter to go to next field";
 }
@@ -1388,6 +1424,13 @@ function validateForm() {
             return false;
           }
           break;
+        case "textarea":
+          if (value.length > 5000) {
+            alert(`${field.label || field.key} is too long (maximum 5000 characters).`);
+            input.focus();
+            return false;
+          }
+          break;
       }
     }
   }
@@ -1467,6 +1510,76 @@ function collectFormData() {
   return data;
 }
 
+/**
+ * Shared data-preparation pipeline run by both generateDocument() and
+ * generateDocumentOnly() after collectFormData().
+ *
+ * Steps (in order):
+ *   1. Date-range series population (date_range_N / range_english_N / etc.)
+ *   2. Derived hidden date fields
+ *   3. Weekday hidden / computed fields
+ *   4. Date value formatting (YYYY-MM-DD → localised display string)
+ *   5. Paragraph-mode splitting (text_ fields with paragraphMode: true)
+ *
+ * Returns the enriched formData object (may be a new reference).
+ * Throws with a user-visible message if a required date is missing.
+ */
+async function prepareFormData(rawFormData, template) {
+  let formData = { ...rawFormData };
+  const fields = template.fields || [];
+
+  // ── 1. Date range series ─────────────────────────────────────────────────
+  const hasDateRange = fields.some((f) =>
+    /^date_range_(?:short_)?(?:divehi_|english_)?(?:short_)?\d+$/.test(f.key) ||
+    /^range_(?:english|divehi)(?:_short)?_\d+$/.test(f.key) ||
+    /^range_weekday_(?:english|divehi)(?:_short)?(?:_[a-z]{3})?_\d+$/.test(f.key)
+  );
+  if (hasDateRange) {
+    const startDateStr = resolveStartDateStr(formData, fields);
+    if (!startDateStr) {
+      throw new Error("Please select a valid Start Date for the date range.");
+    }
+    populateDateRangePlaceholders(formData, startDateStr, 0);
+  }
+
+  // ── 2. Derived hidden date fields ─────────────────────────────────────────
+  formData = populateDerivedHiddenDateFields(formData, fields);
+
+  // ── 3. Weekday computed fields ────────────────────────────────────────────
+  populateWeekdayHiddenFields(formData, fields);
+
+  // ── 4. Format raw YYYY-MM-DD date values to localised strings ─────────────
+  for (const field of fields) {
+    if (field.key === "date_range_start") continue;
+    if (field.key === "range_start_date") continue;
+    if (isAutoComputedField(field.key, fields)) continue;
+    if (field.type === "image") continue;
+    const rawDate = formData[field.key];
+    if (!rawDate || typeof rawDate !== "string" || !rawDate.match(/^\d{4}-\d{2}-\d{2}$/)) continue;
+    const short = field.key.toLowerCase().includes("_short");
+    formData[field.key] = field.isRTL
+      ? formatDivehiDate(rawDate, short)
+      : formatEnglishDate(rawDate, short);
+  }
+
+  // ── 5. Paragraph mode: split text_ textarea values into paragraph arrays ──
+  // For fields with paragraphMode: true the main process also does this, but
+  // we pre-process here so saveDataRecord() stores the correct flat text
+  // while the paragraph arrays are added as extra keys for generation only.
+  for (const field of fields) {
+    if (field.type !== "textarea" || !field.paragraphMode) continue;
+    const raw = formData[field.key];
+    if (typeof raw !== "string" || !raw.trim()) continue;
+    // The main process will also compute this; the renderer version is a preview
+    formData[`${field.key}_paragraphs`] = raw
+      .split(/\n{2,}/)
+      .map((p) => ({ paragraph: p.replace(/\n/g, " ").trim() }))
+      .filter((p) => p.paragraph.length > 0);
+  }
+
+  return formData;
+}
+
 async function generateDocument() {
   console.log("generateDocument function called");
 
@@ -1481,49 +1594,17 @@ async function generateDocument() {
     return;
   }
 
-  let formData = collectFormData();
-
-  if (window.selectedTemplate && window.selectedTemplate.fields) {
-    // 1. Populate date_range_* first (hidden fields may source from these)
-    const hasDateRange = window.selectedTemplate.fields.some((f) =>
-      /^date_range_(?:short_)?(?:divehi_|english_)?(?:short_)?\d+$/.test(f.key)
-    );
-    if (hasDateRange) {
-      const startDateStr = resolveStartDateStr(formData, window.selectedTemplate.fields);
-      if (startDateStr) {
-        populateDateRangePlaceholders(formData, startDateStr, 0);
-      } else {
-        showToast("Please select a valid Start Date for the date range.", "warning");
-        return;
-      }
-    }
-
-    // 2. Now populate derived hidden date fields (can reference date_range_divehi_1 etc.)
-    formData = populateDerivedHiddenDateFields(formData, window.selectedTemplate.fields);
-
-    // 3. Populate weekday hidden fields
-    populateWeekdayHiddenFields(formData, window.selectedTemplate.fields);
-  }
-  // Format date values at render time: Divehi if isRTL, English otherwise.
-  // Applies to any field whose value is still a raw YYYY-MM-DD string.
-  // Skips date_range_start (range seed) and _hidden fields (handled separately).
-  if (window.selectedTemplate.fields) {
-    for (const field of window.selectedTemplate.fields) {
-      if (field.key === "date_range_start") continue;
-      if (isAutoComputedField(field.key, window.selectedTemplate.fields)) continue;
-      const rawDate = formData[field.key];
-      if (field.type === "image") continue;
-      if (!rawDate || typeof rawDate !== "string" || !rawDate.match(/^\d{4}-\d{2}-\d{2}$/)) continue;
-      const short = field.key.toLowerCase().includes("_short");
-      formData[field.key] = field.isRTL
-        ? formatDivehiDate(rawDate, short)
-        : formatEnglishDate(rawDate, short);
-    }
-  }
-
   if (!window.electronAPI) {
     console.error("electronAPI not available");
     alert("Application API not available. Please restart the app.");
+    return;
+  }
+
+  let formData;
+  try {
+    formData = await prepareFormData(collectFormData(), window.selectedTemplate);
+  } catch (prepareError) {
+    showToast(prepareError.message, "warning");
     return;
   }
 
@@ -1531,9 +1612,7 @@ async function generateDocument() {
     window.selectedTemplate.type === "excel" ? "xlsx" : "docx";
 
   const generateBtn = document.getElementById("generate-btn");
-  const originalBtnHTML = generateBtn
-    ? generateBtn.innerHTML
-    : "Generate Document";
+  const originalBtnHTML = generateBtn ? generateBtn.innerHTML : "Generate Document";
   if (generateBtn) {
     generateBtn.innerHTML = '<span class="btn-icon">⏳</span> Generating...';
     generateBtn.disabled = true;
@@ -1547,54 +1626,28 @@ async function generateDocument() {
       printed: true,
     });
 
-    // const shouldPrint = confirm(
-    //   "✅ Document generated successfully!\n\nDo you want to send it to the printer?",
-    // );
     const shouldPrint = true; // Always attempt to print, handle errors gracefully
     if (shouldPrint) {
       if (generateBtn) {
         generateBtn.innerHTML = '<span class="btn-icon">🖨️</span> Printing...';
       }
-
       try {
         if (typeof window.electronAPI.openAndPrint !== "function") {
           throw new Error("Print function not available");
         }
-
         await window.electronAPI.openAndPrint(result.outputPath);
-        // alert("✅ Document has been sent to the printer successfully!");
-        showToast(
-          "✅ Document has been sent to the printer successfully!",
-          "success",
-        );
+        showToast("✅ Document has been sent to the printer successfully!", "success");
       } catch (printError) {
         console.error("Print error:", printError);
-        // alert(
-        //   `⚠️ Document generated but failed to print.\n\nFile saved at: ${result.outputPath}\n\nYou can manually open and print the file.`,
-        // );
         showToast(
           `⚠️ Document generated but failed to print.\n\nFile saved at: ${result.outputPath}\n\nYou can manually open and print the file.`,
           "warning",
         );
       }
     } else {
-      // alert(
-      //   `✅ Document saved successfully!\n\nFile location: ${result.outputPath}`,
-      // );
-      showToast(
-        `✅ Document saved successfully!\n\nFile location: ${result.outputPath}`,
-        "success",
-      );
+      showToast(`✅ Document saved successfully!\n\nFile location: ${result.outputPath}`, "success");
     }
 
-    // const another = confirm("Do you want to fill another form?");
-    // if (!another) {
-    //   if (typeof switchView === "function") {
-    //     switchView("templates");
-    //   }
-    // } else {
-    //   clearForm();
-    // }
     clearForm();
   } catch (error) {
     console.error("Error generating document:", error);
@@ -1631,66 +1684,17 @@ async function generateDocumentOnly() {
     return;
   }
 
-  let formData = collectFormData();
-
-  if (window.selectedTemplate && window.selectedTemplate.fields) {
-    // 1. Populate date_range_* first (hidden fields may source from these)
-    const hasDateRange = window.selectedTemplate.fields.some((f) =>
-      /^date_range_(?:short_)?(?:divehi_|english_)?(?:short_)?\d+$/.test(f.key)
-    );
-    if (hasDateRange) {
-      const startDateStr = resolveStartDateStr(formData, window.selectedTemplate.fields);
-      if (startDateStr) {
-        populateDateRangePlaceholders(formData, startDateStr, 0);
-      } else {
-        showToast("Please select a valid Start Date for the date range.", "warning");
-        return;
-      }
-    }
-
-    // 2. Now populate derived hidden date fields (can reference date_range_divehi_1 etc.)
-    formData = populateDerivedHiddenDateFields(formData, window.selectedTemplate.fields);
-
-    // 3. Populate weekday hidden fields
-    populateWeekdayHiddenFields(formData, window.selectedTemplate.fields);
-  }
-  // Format date values at render time: Divehi if isRTL, English otherwise.
-  // Applies to any field whose value is still a raw YYYY-MM-DD string.
-  // Skips date_range_start (range seed) and _hidden fields (handled separately).
-  if (window.selectedTemplate.fields) {
-    for (const field of window.selectedTemplate.fields) {
-      if (field.key === "date_range_start") continue;
-      if (isAutoComputedField(field.key, window.selectedTemplate.fields)) continue;
-      const rawDate = formData[field.key];
-      if (field.type === "image") continue;
-      if (!rawDate || typeof rawDate !== "string" || !rawDate.match(/^\d{4}-\d{2}-\d{2}$/)) continue;
-      const short = field.key.toLowerCase().includes("_short");
-      formData[field.key] = field.isRTL
-        ? formatDivehiDate(rawDate, short)
-        : formatEnglishDate(rawDate, short);
-    }
-  }
-  
-
-  // Populate hidden fields
-  // if (
-  //   window.selectedTemplate.hiddenFields &&
-  //   window.selectedTemplate.hiddenFields.length > 0
-  // ) {
-  //   for (const hiddenField of window.selectedTemplate.hiddenFields) {
-  //     if (
-  //       hiddenField.key === "start_date_divehi_hidden" &&
-  //       formData["date_range_start"]
-  //     ) {
-  //       formData[hiddenField.key] = formData["date_range_start"];
-  //     }
-  //     // Add more rules as needed
-  //   }
-  // }
-
   if (!window.electronAPI) {
     console.error("electronAPI not available");
     alert("Application API not available. Please restart the app.");
+    return;
+  }
+
+  let formData;
+  try {
+    formData = await prepareFormData(collectFormData(), window.selectedTemplate);
+  } catch (prepareError) {
+    showToast(prepareError.message, "warning");
     return;
   }
 
@@ -1698,12 +1702,9 @@ async function generateDocumentOnly() {
     window.selectedTemplate.type === "excel" ? "xlsx" : "docx";
 
   const generateOnlyBtn = document.getElementById("generate-only-btn");
-  const originalBtnHTML = generateOnlyBtn
-    ? generateOnlyBtn.innerHTML
-    : "Generate Only";
+  const originalBtnHTML = generateOnlyBtn ? generateOnlyBtn.innerHTML : "Generate Only";
   if (generateOnlyBtn) {
-    generateOnlyBtn.innerHTML =
-      '<span class="btn-icon">⏳</span> Generating...';
+    generateOnlyBtn.innerHTML = '<span class="btn-icon">⏳</span> Generating...';
     generateOnlyBtn.disabled = true;
   }
 

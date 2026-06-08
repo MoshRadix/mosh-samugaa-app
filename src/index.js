@@ -427,36 +427,201 @@ function extractImagePlaceholderFields(text) {
   return fields;
 }
 
+// ========== Helper: field type / locale inference ==========
+/**
+ * Infer field type, RTL flag, autoComputed flag, and paragraphMode from a
+ * placeholder key using the taxonomy defined in the placeholder guide.
+ *
+ * Category-prefix rules take priority. Legacy heuristics apply as fallback so
+ * that templates created before the taxonomy was introduced continue to work.
+ *
+ * @param {string} key  The raw placeholder key as found in the template.
+ * @returns {{ type: string, isRTL: boolean, autoComputed: boolean, paragraphMode: boolean }}
+ */
+function inferFieldFromKey(key) {
+  const k = key.toLowerCase();
+
+  // ── Images: img_ prefix ──────────────────────────────────────────────────
+  if (k.startsWith("img_")) {
+    return { type: "image", isRTL: false, autoComputed: false, paragraphMode: false };
+  }
+
+  // ── Paragraph text: text_ prefix ─────────────────────────────────────────
+  if (k.startsWith("text_")) {
+    return {
+      type: "textarea",
+      isRTL: k.endsWith("_divehi"),
+      autoComputed: false,
+      paragraphMode: false,
+    };
+  }
+
+  // ── Numbers: num_ prefix (serial stays string) ───────────────────────────
+  if (k.startsWith("num_") && !k.includes("serial")) {
+    return { type: "number", isRTL: false, autoComputed: false, paragraphMode: false };
+  }
+
+  // ── Boolean: bool_ prefix ────────────────────────────────────────────────
+  if (k.startsWith("bool_")) {
+    return { type: "boolean", isRTL: false, autoComputed: false, paragraphMode: false };
+  }
+
+  // ── Dates: date_ prefix exactly ──────────────────────────────────────────
+  if (k.startsWith("date_")) {
+    const isRTL = k.endsWith("_divehi") || k.includes("_divehi_");
+    return { type: "date", isRTL, autoComputed: false, paragraphMode: false };
+  }
+
+  // ── Ranges: range_ prefix ────────────────────────────────────────────────
+  if (k === "range_start_date") {
+    return { type: "date", isRTL: false, autoComputed: false, paragraphMode: false };
+  }
+  if (k.startsWith("range_")) {
+    return { type: "string", isRTL: false, autoComputed: true, paragraphMode: false };
+  }
+
+  // ── Metadata: meta_ prefix — always auto-computed ────────────────────────
+  if (k.startsWith("meta_")) {
+    return { type: "string", isRTL: false, autoComputed: true, paragraphMode: false };
+  }
+
+  // ── Person: person_ prefix ───────────────────────────────────────────────
+  if (k.startsWith("person_")) {
+    return {
+      type: "string",
+      isRTL: k.endsWith("_divehi"),
+      autoComputed: false,
+      paragraphMode: false,
+    };
+  }
+
+  // ── Organisation: org_ prefix ────────────────────────────────────────────
+  if (k.startsWith("org_")) {
+    return {
+      type: "string",
+      isRTL: k.endsWith("_divehi"),
+      autoComputed: false,
+      paragraphMode: false,
+    };
+  }
+
+  // ── Legacy fallback: detect by embedded keyword ───────────────────────────
+  const isLegacyDivehi = /divehi/i.test(key);
+  // Only flag as date if the key starts with date_ or ends with _date — not if
+  // "date" appears in the middle (e.g. "update_notes").
+  const isLegacyDate = /^date[_.]/.test(k) || /[_.]date$/.test(k) || /[_.]date[_.]/.test(k);
+  return {
+    type: isLegacyDate ? "date" : "string",
+    isRTL: isLegacyDivehi,
+    autoComputed: false,
+    paragraphMode: false,
+  };
+}
+
+/**
+ * Build a canonical field object from a raw placeholder key.
+ * Merges inferred properties with any existing saved field properties so that
+ * hand-edited labels / required flags are preserved on reload.
+ */
+function buildFieldFromKey(key, existingField = {}) {
+  const inferred = inferFieldFromKey(key);
+  const k = key.toLowerCase();
+
+  // Generate a human-readable label from the key, stripping category prefix
+  const CATEGORY_PREFIXES = [
+    "person_", "org_", "date_", "range_", "text_", "num_", "bool_", "img_", "meta_",
+  ];
+  let cleanKey = key;
+  for (const prefix of CATEGORY_PREFIXES) {
+    if (k.startsWith(prefix)) {
+      cleanKey = key.slice(prefix.length);
+      break;
+    }
+  }
+  // Also strip legacy prefixes that used to be stripped
+  cleanKey = cleanKey.replace(/^(divehi[._]|date[._])/, "");
+
+  const label = cleanKey
+    .replace(/[._]/g, " ")
+    .replace(/\b\w/g, (l) => l.toUpperCase());
+
+  return {
+    key,
+    label: existingField.label || label,
+    label_divehi: existingField.label_divehi || "",
+    type: existingField.type || inferred.type,
+    required: existingField.required || false,
+    isRTL: existingField.isRTL !== undefined ? existingField.isRTL : inferred.isRTL,
+    autoComputed: inferred.autoComputed, // always re-infer — not user-editable
+    paragraphMode: existingField.paragraphMode || false,
+    rows: existingField.rows || (inferred.type === "textarea" ? 4 : undefined),
+    widthPx: existingField.widthPx || null,
+    choices: existingField.choices || [],
+    placeholder: existingField.placeholder || "",
+    hint: existingField.hint || "",
+    value: existingField.value || "",
+    originalKey: key,
+  };
+}
+
 // ========== Helper: date_range placeholders ==========
 function processDateRangePlaceholders(fields) {
-  const dateRangePattern = /^date_range_(\d+)$/i;
-  const dateRangeFields = [];
+  // Match both legacy (date_range_N) and new taxonomy (range_english_N / range_divehi_N etc.)
+  const legacyPattern = /^date_range_(\d+)$/i;
+  const newRangeSeriesPattern = /^range_(?:english|divehi)(?:_short)?_(\d+)$/i;
+  const newRangeWeekdayPattern = /^range_weekday_(?:english|divehi)(?:_short)?(?:_[a-z]{3})?_(\d+)$/i;
+
+  const rangeSeriesFields = [];
   const otherFields = [];
+
   for (const field of fields) {
-    if (dateRangePattern.test(field.key)) dateRangeFields.push(field);
-    else otherFields.push(field);
+    const k = field.key;
+    if (
+      legacyPattern.test(k) ||
+      newRangeSeriesPattern.test(k) ||
+      newRangeWeekdayPattern.test(k)
+    ) {
+      rangeSeriesFields.push(field);
+    } else {
+      otherFields.push(field);
+    }
   }
-  if (dateRangeFields.length === 0) return { fields, dateRangeConfig: null };
+
+  if (rangeSeriesFields.length === 0) return { fields, dateRangeConfig: null };
+
   let maxIndex = 0;
-  for (const field of dateRangeFields) {
-    const match = field.key.match(dateRangePattern);
-    if (match) maxIndex = Math.max(maxIndex, parseInt(match[1], 10));
+  for (const field of rangeSeriesFields) {
+    const m =
+      field.key.match(legacyPattern) ||
+      field.key.match(newRangeSeriesPattern) ||
+      field.key.match(newRangeWeekdayPattern);
+    if (m) maxIndex = Math.max(maxIndex, parseInt(m[1], 10));
   }
-  const startDateField = {
-    key: "date_range_start",
-    label: "Start Date",
-    type: "date",
-    required: true,
-    value: "",
-    isRTL: false,
-    originalKey: "date_range_start",
-  };
-  otherFields.push(startDateField);
+
+  // Determine which start-date key the template uses
+  const hasNewStartKey = fields.some((f) => f.key === "range_start_date");
+  const startKey = hasNewStartKey ? "range_start_date" : "date_range_start";
+
+  // Only inject the start-date field if it isn't already present
+  if (!otherFields.some((f) => f.key === startKey)) {
+    otherFields.push({
+      key: startKey,
+      label: "Start Date",
+      type: "date",
+      required: true,
+      value: "",
+      isRTL: false,
+      autoComputed: false,
+      paragraphMode: false,
+      originalKey: startKey,
+    });
+  }
+
   const dateRangeConfig = {
     enabled: true,
-    startKey: "date_range_start",
+    startKey,
     count: maxIndex,
-    keys: dateRangeFields.map((f) => f.key),
+    keys: rangeSeriesFields.map((f) => f.key),
   };
   return { fields: otherFields, dateRangeConfig };
 }
@@ -724,23 +889,7 @@ ipcMain.handle("upload-template", async (event, { filePath, metadata }) => {
             uniqueKeys.add(k);
             return true;
           })
-          .map((m) => {
-            const key = m[1].trim();
-            const isDivehi = /divehi/i.test(key);
-            const isDate = /date/i.test(key);
-            const cleanKey = key.replace(/^(divehi[._]|date[._])/, "");
-            return {
-              key,
-              label: cleanKey
-                .replace(/[._]/g, " ")
-                .replace(/\b\w/g, (l) => l.toUpperCase()),
-              type: isDate ? "date" : "string",
-              required: false,
-              value: "",
-              isRTL: isDivehi,
-              originalKey: key,
-            };
-          });
+          .map((m) => buildFieldFromKey(m[1].trim()));
         const processed = processDateRangePlaceholders(fields);
         fields = processed.fields;
         dateRangeConfig = processed.dateRangeConfig;
@@ -766,20 +915,7 @@ ipcMain.handle("upload-template", async (event, { filePath, metadata }) => {
                   const key = m[1].trim();
                   if (!uniqueKeys.has(key)) {
                     uniqueKeys.add(key);
-                    const isDivehi = /divehi/i.test(key);
-                    const isDate = /date/i.test(key);
-                    const cleanKey = key.replace(/^(divehi[._]|date[._])/, "");
-                    placeholders.push({
-                      key,
-                      label: cleanKey
-                        .replace(/[._]/g, " ")
-                        .replace(/\b\w/g, (l) => l.toUpperCase()),
-                      type: isDate ? "date" : "string",
-                      required: false,
-                      value: "",
-                      isRTL: isDivehi,
-                      originalKey: key,
-                    });
+                    placeholders.push(buildFieldFromKey(key));
                   }
                 });
               }
@@ -865,23 +1001,7 @@ ipcMain.handle("reload-template-fields", async (event, templateId) => {
           uniqueKeys.add(k);
           return true;
         })
-        .map((m) => {
-          const key = m[1].trim();
-          const isDivehi = /divehi/i.test(key);
-          const isDate = /date/i.test(key);
-          const cleanKey = key.replace(/^(divehi[._]|date[._])/, "");
-          return {
-            key,
-            label: cleanKey
-              .replace(/[._]/g, " ")
-              .replace(/\b\w/g, (l) => l.toUpperCase()),
-            type: isDate ? "date" : "string",
-            required: false,
-            value: "",
-            isRTL: isDivehi,
-            originalKey: key,
-          };
-        });
+        .map((m) => buildFieldFromKey(m[1].trim()));
       // Merge image fields from raw XML
       for (const imgField of extractImagePlaceholderFields(fullText)) {
         if (!newFields.find((f) => f.key === imgField.key))
@@ -901,20 +1021,7 @@ ipcMain.handle("reload-template-fields", async (event, templateId) => {
                 const key = m[1].trim();
                 if (!uniqueKeys.has(key)) {
                   uniqueKeys.add(key);
-                  const isDivehi = /divehi/i.test(key);
-                  const isDate = /date/i.test(key);
-                  const cleanKey = key.replace(/^(divehi[._]|date[._])/, "");
-                  newFields.push({
-                    key,
-                    label: cleanKey
-                      .replace(/[._]/g, " ")
-                      .replace(/\b\w/g, (l) => l.toUpperCase()),
-                    type: isDate ? "date" : "string",
-                    required: false,
-                    value: "",
-                    isRTL: isDivehi,
-                    originalKey: key,
-                  });
+                  newFields.push(buildFieldFromKey(key));
                 }
               });
             }
@@ -941,6 +1048,58 @@ ipcMain.handle(
     const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
     const outputFileName = `${template.name}_${timestamp}.${outputFormat}`;
     const outputPath = path.join(getOutputsDir(), outputFileName);
+
+    // ── Paragraph mode: split textarea values into paragraph arrays ──────────
+    // For fields with paragraphMode: true, split on blank lines and produce:
+    //   formData[`${key}_paragraphs`] = [{ paragraph: "..." }, ...]
+    // Template usage: {#text_body_paragraphs}{paragraph}{/text_body_paragraphs}
+    if (template.fields && Array.isArray(template.fields)) {
+      for (const field of template.fields) {
+        if (field.type !== "textarea") continue;
+        const raw = formData[field.key];
+        if (typeof raw !== "string" || !raw.trim()) continue;
+
+        if (field.paragraphMode) {
+          // Paragraph loop mode — split on blank lines, each becomes a <w:p>
+          formData[`${field.key}_paragraphs`] = raw
+            .split(/\n{2,}/)
+            .map((p) => ({ paragraph: p.replace(/\n/g, " ").trim() }))
+            .filter((p) => p.paragraph.length > 0);
+        }
+        // linebreaks mode is handled automatically by Docxtemplater's linebreaks:true option
+      }
+    }
+
+    // ── Auto-populate meta_ fields (Maldives Time, UTC+5) ───────────────────
+    try {
+      const mvtNow = new Date(
+        new Date().toLocaleString("en-US", { timeZone: "Indian/Maldives" }),
+      );
+      const pad = (n) => String(n).padStart(2, "0");
+      const mvtDateStr = `${mvtNow.getFullYear()}-${pad(mvtNow.getMonth() + 1)}-${pad(mvtNow.getDate())}`;
+
+      // Use the same formatters from form.js (duplicated here since index.js runs in main process)
+      const DIVEHI_MONTHS_META = [
+        "ޖެނުއަރީ","ފެބްރުއަރީ","މާރޗް","އެޕްރީލް","މެއި","ޖޫން",
+        "ޖުލައި","އޯގަސްޓް","ސެޕްޓެމްބަރ","އޮކްޓޯބަރ","ނޮވެމްބަރ","ޑިސެމްބަރ",
+      ];
+      const ENGLISH_MONTHS_META = [
+        "January","February","March","April","May","June",
+        "July","August","September","October","November","December",
+      ];
+      const [yr, mo, dy] = mvtDateStr.split("-").map(Number);
+      const metaEn = `${dy} ${ENGLISH_MONTHS_META[mo - 1]} ${yr}`;
+      const metaDv = `${dy} ${DIVEHI_MONTHS_META[mo - 1]} ${yr}`;
+
+      formData["meta_generated_date"]        = formData["meta_generated_date"]        || metaEn;
+      formData["meta_generated_date_divehi"] = formData["meta_generated_date_divehi"] || metaDv;
+      formData["meta_generated_time"]        = formData["meta_generated_time"]        || `${pad(mvtNow.getHours())}:${pad(mvtNow.getMinutes())}`;
+      formData["meta_template_name"]         = formData["meta_template_name"]         || template.name || "";
+    } catch (_metaErr) {
+      // Non-critical — generation continues without meta fields
+      console.warn("[meta] Failed to populate meta_ fields:", _metaErr.message);
+    }
+
     if (template.type === "word")
       await generateWordDocument(template.filePath, outputPath, formData);
     else if (template.type === "excel")
