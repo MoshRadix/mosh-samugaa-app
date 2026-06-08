@@ -152,19 +152,24 @@ window.initHelp = function () {
                 <code>boolean</code> — Yes / No dropdown<br>
                 <code>email</code> — email address input<br>
                 <code>dropdown</code> — custom choice list<br>
-                <code>textarea</code> — multi-line text block<br>
+                <code>textarea</code> — multi-line text block (line-break or paragraph mode)<br>
                 <code>image</code> — PNG / JPG file embedded into the document
               </td>
             </tr>
+            <tr><td><strong>Hint / Helper Text</strong></td><td>Short instructional text shown under the field in the form. Overrides the default type hint.</td></tr>
+            <tr><td><strong>Paragraph mode</strong></td><td>(<code>textarea</code> only) When enabled, blank lines in the textarea create separate Word paragraphs via the loop syntax. See §&nbsp;Paragraph &amp; Multi-line Text.</td></tr>
+            <tr><td><strong>Rows</strong></td><td>(<code>textarea</code> only) Controls the visible height of the textarea in the form. Defaults to 8 rows in paragraph mode, 3 otherwise.</td></tr>
+            <tr><td><strong>Dropdown choices</strong></td><td>(<code>dropdown</code> only) Enter one option per line.</td></tr>
             <tr><td><strong>RTL (Right-to-Left)</strong></td><td>Enables Divehi / Thaana keyboard and formats date fields in Divehi script.</td></tr>
             <tr><td><strong>Required</strong></td><td>Prevents document generation if the field is left empty.</td></tr>
-            <tr><td><strong>Dropdown choices</strong></td><td>Enter one option per line (only visible when Type = <code>dropdown</code>).</td></tr>
           </tbody>
         </table>
       </div>
       <p class="help-note">
         💡 You can also <strong>add</strong> or <strong>remove</strong> fields manually from the field editor —
         useful for placeholders that were not auto-detected or for cleanup.
+        The field key badge (<code>{key}</code>) is shown next to each field header so you can
+        confirm it matches the placeholder in your template exactly.
       </p>
     </div>
 
@@ -232,11 +237,23 @@ window.initHelp = function () {
         it directly into the generated Word document.
       </p>
       <ul class="help-list">
-        <li>Use <code>{%field_key}</code> (with a <code>%</code> prefix) in your <code>.docx</code> template — not plain <code>{field_key}</code>.</li>
+        <li>Use <code>{%img_photo}</code> (with a <code>%</code> prefix) in your <code>.docx</code> template — not plain <code>{img_photo}</code>.</li>
         <li>After choosing a file, a thumbnail preview appears. Click <strong>✕ Clear</strong> to remove it.</li>
         <li>Set the <strong>Width (px)</strong> field to control how wide the image appears in the document. Default is 150 px.</li>
       </ul>
       <p class="help-note">⚠️ Image embedding is only supported in <code>.docx</code> templates.</p>
+
+      <h3 class="help-subsection-title">Text &amp; Paragraph Fields</h3>
+      <p>
+        Fields typed as <code>textarea</code> — including all <code>text_*</code> prefix fields —
+        appear as a multi-line text area in the form.
+      </p>
+      <ul class="help-list">
+        <li>In <strong>line-break mode</strong> (default): press <kbd>Shift</kbd>+<kbd>Enter</kbd> to add a new line. Each line break becomes a <code>&lt;w:br/&gt;</code> in the document — all text stays in one paragraph.</li>
+        <li>In <strong>paragraph mode</strong>: separate blocks of text with a <strong>blank line</strong>. Each block becomes its own Word paragraph when the template uses the loop syntax <code>{#text_body_paragraphs}{paragraph}{/text_body_paragraphs}</code>.</li>
+        <li>A hint below the textarea tells you which mode is active.</li>
+        <li>Maximum 5 000 characters per textarea field.</li>
+      </ul>
 
       <h3 class="help-subsection-title">Saved Records</h3>
       <p>
@@ -262,126 +279,326 @@ window.initHelp = function () {
     <div class="help-section" id="hn-placeholders">
       <h2 class="help-section-title">🏷️ Placeholder Reference</h2>
       <p>
-        Placeholders are written inside curly braces in your Word or Excel template, e.g.
-        <code>{employee_name}</code>. The app replaces every placeholder with the value you enter.
-        Several special naming conventions trigger <strong>automatic computation</strong> — no user input needed.
-      </p>
-      <p class="help-note">
-        💡 Use <strong>lowercase, underscore-separated</strong> keys, e.g. <code>{employee_name}</code>,
-        <code>{start_date}</code>. Avoid spaces or special characters in placeholder keys.
+        Placeholders are written inside curly braces in your Word or Excel template —
+        e.g. <code>{person_name}</code>. The app replaces every placeholder with the value you enter
+        in the form. Several special naming patterns trigger <strong>automatic computation</strong>,
+        so no user input is needed at all for those fields.
       </p>
 
-      <h3 class="help-subsection-title">Standard Field Types</h3>
-      <div class="help-table-wrapper">
-        <table class="help-table">
-          <thead><tr><th>Type</th><th>Example placeholder</th><th>Notes</th></tr></thead>
-          <tbody>
-            <tr><td><code>string</code></td><td><code>{employee_name}</code></td><td>Plain text; RTL flag enables Divehi input.</td></tr>
-            <tr><td><code>number</code></td><td><code>{total_days}</code></td><td>Numeric input.</td></tr>
-            <tr><td><code>date</code></td><td><code>{issue_date}</code></td><td>Calendar picker; formatted automatically on generation.</td></tr>
-            <tr><td><code>boolean</code></td><td><code>{is_approved}</code></td><td>Renders as Yes / No dropdown.</td></tr>
-            <tr><td><code>email</code></td><td><code>{contact_email}</code></td><td>Email address input with basic validation.</td></tr>
-            <tr><td><code>dropdown</code></td><td><code>{department}</code></td><td>Custom choice list configured per-template.</td></tr>
-            <tr><td><code>textarea</code></td><td><code>{remarks}</code></td><td>Multi-line text block.</td></tr>
-            <tr><td><code>image</code></td><td><code>{%signature}</code></td><td>PNG/JPG file embedded in the document. Must use <code>%</code> prefix in the template tag.</td></tr>
-          </tbody>
-        </table>
+      <div class="help-note" style="margin-bottom:1.25rem;">
+        <strong>Naming rules</strong> — All placeholder keys must be:
+        <ul class="help-list" style="margin-top:0.4rem;margin-bottom:0;">
+          <li>Fully <strong>lowercase</strong> with <strong>underscores</strong> as separators (snake_case).</li>
+          <li>Starting with a <strong>category prefix</strong> (see table below) — this is how the app infers the field type automatically on upload.</li>
+          <li>No spaces, dots, dashes, or special characters. Maximum 64 characters.</li>
+          <li>Append <code>_divehi</code> to any key to make it a <strong>Thaana / RTL field</strong>.</li>
+        </ul>
       </div>
 
-      <h3 class="help-subsection-title">Date Formatting Variants</h3>
-      <div class="help-table-wrapper">
-        <table class="help-table">
-          <thead><tr><th>Placeholder suffix</th><th>Output format</th><th>Language</th></tr></thead>
-          <tbody>
-            <tr><td>(none)</td><td>Full formatted date</td><td>Based on RTL setting</td></tr>
-            <tr><td><code>_divehi</code></td><td>Full Divehi date</td><td>Divehi</td></tr>
-            <tr><td><code>_english</code></td><td>Full English date</td><td>English</td></tr>
-            <tr><td><code>_divehi_short</code></td><td>Divehi date without year</td><td>Divehi</td></tr>
-            <tr><td><code>_english_short</code></td><td>English date without year</td><td>English</td></tr>
-          </tbody>
-        </table>
-      </div>
-      <p>Example: <code>{issue_date_divehi_short}</code> outputs the date in Divehi without the year.</p>
-
-      <h3 class="help-subsection-title">Hidden / Computed Fields</h3>
+      <!-- ── Category Prefix Overview ─────────────────────────── -->
+      <h3 class="help-subsection-title">Category Prefixes — Auto-Detection</h3>
       <p>
-        Any placeholder key ending in <code>_hidden</code> is <strong>never shown to the user</strong>
-        — it is resolved automatically. Use this for reformatted copies of other fields or computed values.
+        When a template is uploaded the app reads every <code>{placeholder}</code> key and
+        automatically sets the correct <strong>field type</strong> based on its prefix.
+        You can override this in the <strong>⚙️ Fields</strong> editor.
+      </p>
+      <div class="help-table-wrapper">
+        <table class="help-table">
+          <thead><tr><th>Prefix</th><th>Auto-detected type</th><th>Example key</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr><td><code>person_</code></td><td>string</td><td><code>{person_name}</code></td><td>Names, IDs, designations. Append <code>_divehi</code> for Thaana.</td></tr>
+            <tr><td><code>org_</code></td><td>string</td><td><code>{org_office}</code></td><td>Office, department, reference number, address.</td></tr>
+            <tr><td><code>date_</code></td><td>date</td><td><code>{date_issue}</code></td><td>Calendar picker. Formatted at generation time.</td></tr>
+            <tr><td><code>range_</code></td><td>auto-computed</td><td><code>{range_divehi_1}</code></td><td>Date-range series — filled automatically. See §&nbsp;Date Range.</td></tr>
+            <tr><td><code>text_</code></td><td>textarea</td><td><code>{text_notes}</code></td><td>Multi-line / paragraph content. Append <code>_divehi</code> for Thaana.</td></tr>
+            <tr><td><code>num_</code></td><td>number</td><td><code>{num_days}</code></td><td>Numeric input. <code>num_serial</code> stays as string.</td></tr>
+            <tr><td><code>bool_</code></td><td>boolean</td><td><code>{bool_approved}</code></td><td>Yes / No dropdown.</td></tr>
+            <tr><td><code>img_</code></td><td>image</td><td><code>{%img_photo}</code></td><td>PNG/JPG embed. Use <code>%</code> prefix in the template tag (see §&nbsp;Images).</td></tr>
+            <tr><td><code>meta_</code></td><td>auto-computed</td><td><code>{meta_generated_date}</code></td><td>Filled automatically at generation time. Never shown in the form.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="help-note">
+        💡 Keys without a recognised prefix still work — they are inferred as <code>string</code>
+        fields and marked Divehi only if the word <em>divehi</em> appears in the key.
+        This keeps all older templates fully compatible.
       </p>
 
+      <!-- ── Field Types ──────────────────────────────────────── -->
+      <h3 class="help-subsection-title">Field Types</h3>
+      <div class="help-table-wrapper">
+        <table class="help-table">
+          <thead><tr><th>Type</th><th>Form control</th><th>Validation</th></tr></thead>
+          <tbody>
+            <tr><td><code>string</code></td><td>Text input</td><td>—</td></tr>
+            <tr><td><code>number</code></td><td>Numeric input</td><td>Must be a valid number</td></tr>
+            <tr><td><code>date</code></td><td>Calendar date picker</td><td>Must be a valid date</td></tr>
+            <tr><td><code>boolean</code></td><td>Yes / No dropdown</td><td>—</td></tr>
+            <tr><td><code>email</code></td><td>Email input</td><td>Must match name@domain.ext</td></tr>
+            <tr><td><code>dropdown</code></td><td>Choice list (per-template)</td><td>—</td></tr>
+            <tr><td><code>textarea</code></td><td>Multi-line text area</td><td>Max 5 000 characters</td></tr>
+            <tr><td><code>image</code></td><td>File picker (PNG / JPG)</td><td>Must use <code>{%key}</code> syntax in template</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- ── Date Formatting ─────────────────────────────────── -->
+      <h3 class="help-subsection-title">Date Fields — Formatting &amp; Locale</h3>
+      <p>
+        Date fields are stored as <code>YYYY-MM-DD</code> internally and automatically
+        formatted when the document is generated. The locale is determined by suffixes on the key:
+      </p>
+      <div class="help-table-wrapper">
+        <table class="help-table">
+          <thead><tr><th>Key pattern</th><th>Output example</th></tr></thead>
+          <tbody>
+            <tr><td><code>{date_issue}</code></td><td>15 June 2026 <em>(English; RTL flag controls locale)</em></td></tr>
+            <tr><td><code>{date_issue_divehi}</code></td><td>15 ޖޫން 2026</td></tr>
+            <tr><td><code>{date_issue_english}</code></td><td>15 June 2026</td></tr>
+            <tr><td><code>{date_issue_short}</code></td><td>15 June <em>(year omitted)</em></td></tr>
+            <tr><td><code>{date_issue_divehi_short}</code></td><td>15 ޖޫން</td></tr>
+            <tr><td><code>{date_issue_english_short}</code></td><td>15 June</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h4 class="help-subsubsection-title">Preset date placeholders</h4>
+      <p>
+        Keys with <code>_current_N</code> or <code>_next_N</code> open the date picker
+        <strong>pre-filled</strong> to the N-th day of the current or next month —
+        handy for monthly recurring documents.
+      </p>
+      <div class="help-table-wrapper">
+        <table class="help-table">
+          <thead><tr><th>Placeholder</th><th>Pre-filled to</th></tr></thead>
+          <tbody>
+            <tr><td><code>{date_issue_current_25}</code></td><td>25th of the current month</td></tr>
+            <tr><td><code>{date_issue_next_1}</code></td><td>1st of next month</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- ── Paragraph / Text_ Fields ───────────────────────── -->
+      <h3 class="help-subsection-title">Paragraph &amp; Multi-line Text (<code>text_</code>)</h3>
+      <p>
+        Placeholders starting with <code>text_</code> render as a multi-line <strong>textarea</strong>
+        in the form. They support two output modes that you set in the <strong>⚙️ Fields</strong> editor:
+      </p>
+
+      <h4 class="help-subsubsection-title">Line-break mode <em>(default)</em></h4>
+      <p>
+        Pressing <kbd>Shift</kbd>+<kbd>Enter</kbd> in the textarea inserts a soft line break.
+        Each newline becomes a <code>&lt;w:br/&gt;</code> break inside a <strong>single paragraph</strong>
+        in the generated Word document. Use for short notes, addresses, or remarks.
+      </p>
+      <div class="help-table-wrapper">
+        <table class="help-table">
+          <thead><tr><th>Placeholder in template</th><th>Form control</th></tr></thead>
+          <tbody>
+            <tr><td><code>{text_remarks}</code></td><td>Textarea (3 rows default)</td></tr>
+            <tr><td><code>{text_notes_divehi}</code></td><td>Textarea with Thaana input</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h4 class="help-subsubsection-title">Paragraph-loop mode</h4>
+      <p>
+        Enable <strong>Paragraph mode</strong> in the Fields editor. Each block of text separated
+        by a <strong>blank line</strong> in the textarea becomes its own proper
+        <code>&lt;w:p&gt;</code> Word paragraph — ideal for multi-paragraph letters, policies,
+        or legal clauses.
+      </p>
+      <p>In your <code>.docx</code> template, use the loop syntax instead of a plain tag:</p>
+      <div class="help-table-wrapper">
+        <table class="help-table">
+          <thead><tr><th>Template syntax</th><th>What it produces</th></tr></thead>
+          <tbody>
+            <tr>
+              <td style="font-family:monospace;white-space:pre;">{#text_body_paragraphs}
+{paragraph}
+{/text_body_paragraphs}</td>
+              <td>One properly-formatted Word paragraph per block in the textarea</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="help-note">
+        💡 The textarea grows to <strong>8 rows</strong> in paragraph mode (instead of the default 3)
+        and the hint below the field changes to remind you to separate paragraphs with a blank line.
+      </p>
+
+      <!-- ── Image Fields ────────────────────────────────────── -->
+      <h3 class="help-subsection-title">Image Placeholders (<code>img_</code>)</h3>
+      <p>
+        Image fields accept a <strong>PNG or JPG</strong> file and embed it directly into the
+        generated Word document at the position of the placeholder tag.
+      </p>
+      <div class="help-table-wrapper">
+        <table class="help-table">
+          <thead><tr><th>Field key</th><th>Template tag</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr><td><code>img_photo</code></td><td><code>{%img_photo}</code></td><td>Portrait / ID photo</td></tr>
+            <tr><td><code>img_signature</code></td><td><code>{%img_signature}</code></td><td>Signature</td></tr>
+            <tr><td><code>img_stamp</code></td><td><code>{%img_stamp}</code></td><td>Official stamp</td></tr>
+            <tr><td><code>img_logo</code></td><td><code>{%img_logo}</code></td><td>Organisation logo</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <ul class="help-list">
+        <li>Always write the template tag with a <code>%</code> prefix: <code>{%img_photo}</code>. A plain <code>{img_photo}</code> will <em>not</em> embed the image.</li>
+        <li>After choosing a file, a thumbnail preview appears in the form. Click <strong>✕ Clear</strong> to remove it.</li>
+        <li>Set the <strong>Width (px)</strong> input to control the rendered width in the document. The height is scaled proportionally.</li>
+        <li>Image embedding is only supported in <code>.docx</code> templates, not <code>.xlsx</code>.</li>
+      </ul>
+
+      <!-- ── Auto-computed / Hidden ──────────────────────────── -->
+      <h3 class="help-subsection-title">Auto-computed &amp; Hidden Fields</h3>
+      <p>
+        The following field categories are <strong>never shown in the form</strong> — they are
+        filled automatically at document generation time:
+      </p>
+      <div class="help-table-wrapper">
+        <table class="help-table">
+          <thead><tr><th>Category / Pattern</th><th>Filled from</th><th>Example</th></tr></thead>
+          <tbody>
+            <tr><td><code>meta_*</code></td><td>System clock (MVT) &amp; template metadata</td><td><code>{meta_generated_date}</code></td></tr>
+            <tr><td><code>range_*</code> (except seed)</td><td>Seed date + offset</td><td><code>{range_divehi_3}</code></td></tr>
+            <tr><td>Any key ending in <code>_hidden</code></td><td>Sibling date field, reformatted</td><td><code>{start_date_hidden}</code></td></tr>
+            <tr><td>Weekday fields (legacy)</td><td>Seed date weekday calculation</td><td><code>{weekday_divehi_hidden_1}</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h4 class="help-subsubsection-title">Metadata placeholders (<code>meta_</code>)</h4>
+      <p>These are populated automatically the moment you click <strong>Generate</strong>:</p>
+      <div class="help-table-wrapper">
+        <table class="help-table">
+          <thead><tr><th>Placeholder</th><th>Value inserted</th></tr></thead>
+          <tbody>
+            <tr><td><code>{meta_generated_date}</code></td><td>Today's date in English — e.g. <em>8 June 2026</em></td></tr>
+            <tr><td><code>{meta_generated_date_divehi}</code></td><td>Today's date in Divehi — e.g. <em>8 ޖޫން 2026</em></td></tr>
+            <tr><td><code>{meta_generated_time}</code></td><td>Current time in MVT — e.g. <em>14:35</em></td></tr>
+            <tr><td><code>{meta_template_name}</code></td><td>The name of the template as shown in the app</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="help-note">
+        💡 All <code>meta_</code> times use <strong>Maldives Time (MVT, UTC+5)</strong>.
+        No user input is needed — just include the tag in your template.
+      </p>
+
+      <!-- ── Date Range ──────────────────────────────────────── -->
       <h3 class="help-subsection-title">Date Range Placeholders</h3>
       <p>
-        When a template contains sequential date placeholders, the app fills them automatically
-        starting from a <strong>seed date</strong> taken from the first field whose key contains
-        <strong>"start"</strong>. All date range fields are <strong>hidden from the form</strong>.
+        Date-range templates let you print a date on every row of a multi-day schedule.
+        Add a <strong>single seed date field</strong> in your template (<code>{range_start_date}</code>),
+        then add as many numbered series tags as you need. All series tags are auto-computed
+        and <strong>hidden from the form</strong>.
       </p>
+
+      <h4 class="help-subsubsection-title">New-style keys (recommended)</h4>
       <div class="help-table-wrapper">
         <table class="help-table">
-          <thead><tr><th>Placeholder pattern</th><th>Output</th></tr></thead>
+          <thead><tr><th>Seed field (user enters)</th><th>Series placeholders (auto-computed)</th><th>Output</th></tr></thead>
           <tbody>
-            <tr><td><code>{date_range_divehi_1}</code> … <code>{date_range_divehi_N}</code></td><td>Divehi date, day N</td></tr>
-            <tr><td><code>{date_range_english_1}</code> … <code>{date_range_english_N}</code></td><td>English date, day N</td></tr>
-            <tr><td><code>{date_range_divehi_short_1}</code> … <code>{date_range_divehi_short_N}</code></td><td>Divehi date without year, day N</td></tr>
-            <tr><td><code>{date_range_english_short_1}</code> … <code>{date_range_english_short_N}</code></td><td>English date without year, day N</td></tr>
-            <tr><td><code>{date_range_1}</code> … <code>{date_range_N}</code></td><td>Divehi date, day N (legacy)</td></tr>
+            <tr><td rowspan="4"><code>{range_start_date}</code></td><td><code>{range_english_1}</code> … <code>{range_english_N}</code></td><td>Day N, English full date</td></tr>
+            <tr><td><code>{range_divehi_1}</code> … <code>{range_divehi_N}</code></td><td>Day N, Divehi full date</td></tr>
+            <tr><td><code>{range_english_short_1}</code> … <code>{range_english_short_N}</code></td><td>Day N, English, no year</td></tr>
+            <tr><td><code>{range_divehi_short_1}</code> … <code>{range_divehi_short_N}</code></td><td>Day N, Divehi, no year</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h4 class="help-subsubsection-title">Legacy keys (still fully supported)</h4>
+      <div class="help-table-wrapper">
+        <table class="help-table">
+          <thead><tr><th>Seed field</th><th>Series placeholders</th><th>Output</th></tr></thead>
+          <tbody>
+            <tr><td rowspan="5"><code>{date_range_start}</code></td><td><code>{date_range_divehi_1}</code> … <code>{date_range_divehi_N}</code></td><td>Day N, Divehi full date</td></tr>
+            <tr><td><code>{date_range_english_1}</code> … <code>{date_range_english_N}</code></td><td>Day N, English full date</td></tr>
+            <tr><td><code>{date_range_divehi_short_1}</code> … <code>{date_range_divehi_short_N}</code></td><td>Day N, Divehi, no year</td></tr>
+            <tr><td><code>{date_range_english_short_1}</code> … <code>{date_range_english_short_N}</code></td><td>Day N, English, no year</td></tr>
+            <tr><td><code>{date_range_1}</code> … <code>{date_range_N}</code></td><td>Day N, Divehi (oldest format)</td></tr>
           </tbody>
         </table>
       </div>
       <p class="help-note">
-        💡 <strong>N</strong> can be any number — the app detects the highest N automatically.
-        N=1 maps to the start date, N=2 to start+1 day, and so on.
+        💡 <strong>N</strong> is detected automatically — the app finds the highest N in the template.
+        N=1 is always the start date, N=2 is start+1 day, and so on.
       </p>
 
+      <!-- ── Weekday ─────────────────────────────────────────── -->
       <h3 class="help-subsection-title">Weekday Placeholders</h3>
       <p>
-        Weekday placeholders are always <strong>auto-computed and hidden</strong> from the form.
-        They derive their value from the same start date used by date range placeholders.
+        Weekday placeholders are always <strong>auto-computed and hidden</strong>. They derive
+        their value from the same seed date used by date-range placeholders.
+        Two styles are supported — new-style and legacy — and both work simultaneously.
       </p>
 
-      <h4 class="help-subsubsection-title">Pattern A — Fixed day sequence (day token in key)</h4>
-      <p>The sequence always starts on the named day regardless of the chosen date.
-      <code>_sun_</code> → N=1 is always Sunday, N=2 Monday, etc.</p>
+      <h4 class="help-subsubsection-title">New-style: <code>range_weekday_</code></h4>
       <div class="help-table-wrapper">
         <table class="help-table">
-          <thead><tr><th>Placeholder</th><th>Output</th></tr></thead>
+          <thead><tr><th>Placeholder pattern</th><th>Output (start = Wednesday)</th></tr></thead>
           <tbody>
-            <tr><td><code>{weekday_divehi_hidden_sun_1}</code></td><td>ފުރަތަމަ ދުވަހަކީ: އާދިއްތަ</td></tr>
-            <tr><td><code>{weekday_divehi_hidden_sun_2}</code></td><td>ހޯމަ</td></tr>
-            <tr><td><code>{weekday_english_hidden_mon_3}</code></td><td>Wednesday</td></tr>
+            <tr><td><code>{range_weekday_english_1}</code></td><td>Wednesday</td></tr>
+            <tr><td><code>{range_weekday_divehi_1}</code></td><td>ބުދަ</td></tr>
+            <tr><td><code>{range_weekday_english_short_1}</code></td><td>Wed</td></tr>
+            <tr><td><code>{range_weekday_divehi_short_1}</code></td><td>ބުދަ <em>(short)</em></td></tr>
+            <tr><td><code>{range_weekday_english_mon_1}</code></td><td>Monday <em>(fixed start: Mon)</em></td></tr>
+            <tr><td><code>{range_weekday_divehi_sun_1}</code></td><td>އާދިއްތަ <em>(fixed start: Sun)</em></td></tr>
           </tbody>
         </table>
       </div>
-      <p>Supported day tokens: <code>sun</code> · <code>mon</code> · <code>tue</code> · <code>wed</code> · <code>thu</code> · <code>fri</code> · <code>sat</code></p>
+      <p>
+        Append a three-letter day token (<code>sun</code> · <code>mon</code> · <code>tue</code> ·
+        <code>wed</code> · <code>thu</code> · <code>fri</code> · <code>sat</code>) before the index
+        to fix the sequence to that start day regardless of the chosen date.
+      </p>
 
-      <h4 class="help-subsubsection-title">Pattern B — Calendar sequence (no day token)</h4>
-      <p>N=1 is the weekday of the chosen start date, N=2 is start+1 day, etc.</p>
+      <h4 class="help-subsubsection-title">Legacy-style: <code>weekday_*_hidden_</code></h4>
       <div class="help-table-wrapper">
         <table class="help-table">
           <thead><tr><th>Placeholder</th><th>Output (start = Wednesday)</th></tr></thead>
           <tbody>
             <tr><td><code>{weekday_divehi_hidden_1}</code></td><td>ބުދަ</td></tr>
             <tr><td><code>{weekday_english_hidden_1}</code></td><td>Wednesday</td></tr>
-            <tr><td><code>{weekday_english_hidden_2}</code></td><td>Thursday</td></tr>
-          </tbody>
-        </table>
-      </div>
-
-      <h4 class="help-subsubsection-title">Short weekday names (<code>_short</code>)</h4>
-      <p>Insert <code>_short</code> anywhere in the key to use abbreviated names.</p>
-      <div class="help-table-wrapper">
-        <table class="help-table">
-          <thead><tr><th>Placeholder</th><th>Output</th></tr></thead>
-          <tbody>
             <tr><td><code>{weekday_english_hidden_short_1}</code></td><td>Wed</td></tr>
-            <tr><td><code>{weekday_divehi_hidden_short_1}</code></td><td>ބުދަ (short)</td></tr>
-            <tr><td><code>{weekday_english_short_hidden_sun_1}</code></td><td>Sun</td></tr>
+            <tr><td><code>{weekday_divehi_hidden_sun_1}</code></td><td>އާދިއްތަ <em>(fixed Sun start)</em></td></tr>
+            <tr><td><code>{weekday_english_hidden_mon_3}</code></td><td>Wednesday <em>(Mon+2)</em></td></tr>
           </tbody>
         </table>
       </div>
       <div class="help-note">
-        <strong>Full short name reference:</strong><br>
+        <strong>Short weekday name reference</strong><br>
         English: Sun · Mon · Tue · Wed · Thu · Fri · Sat<br>
-        Divehi: އާދި · ހޯމަ · އަން · ބުދަ · ބުރާ · ހުކު · ހޮނި
+        Divehi:  އާދި · ހޯމަ · އަން · ބުދަ · ބުރާ · ހުކު · ހޮނި
+      </div>
+
+      <!-- ── Full quick-ref ──────────────────────────────────── -->
+      <h3 class="help-subsection-title">Complete Placeholder Quick Reference</h3>
+      <div class="help-table-wrapper">
+        <table class="help-table">
+          <thead><tr><th>Category</th><th>Example placeholder</th><th>User enters?</th><th>Output</th></tr></thead>
+          <tbody>
+            <tr><td>Person</td><td><code>{person_name}</code></td><td>✅ Yes</td><td>Plain text</td></tr>
+            <tr><td>Person (Divehi)</td><td><code>{person_name_divehi}</code></td><td>✅ Yes</td><td>Thaana text</td></tr>
+            <tr><td>Organisation</td><td><code>{org_office}</code></td><td>✅ Yes</td><td>Plain text</td></tr>
+            <tr><td>Date (English)</td><td><code>{date_issue}</code></td><td>✅ Date picker</td><td>15 June 2026</td></tr>
+            <tr><td>Date (Divehi)</td><td><code>{date_issue_divehi}</code></td><td>✅ Date picker</td><td>15 ޖޫން 2026</td></tr>
+            <tr><td>Date short</td><td><code>{date_issue_short}</code></td><td>✅ Date picker</td><td>15 June</td></tr>
+            <tr><td>Date preset</td><td><code>{date_current_25}</code></td><td>✅ Pre-filled</td><td>25th this month</td></tr>
+            <tr><td>Text / notes</td><td><code>{text_remarks}</code></td><td>✅ Textarea</td><td>Multi-line text</td></tr>
+            <tr><td>Paragraph</td><td><code>{#text_body_paragraphs}…</code></td><td>✅ Textarea</td><td>Separate Word paragraphs</td></tr>
+            <tr><td>Number</td><td><code>{num_days}</code></td><td>✅ Number</td><td>Numeric value</td></tr>
+            <tr><td>Boolean</td><td><code>{bool_approved}</code></td><td>✅ Dropdown</td><td>Yes / No</td></tr>
+            <tr><td>Image</td><td><code>{%img_photo}</code></td><td>✅ File picker</td><td>Embedded PNG/JPG</td></tr>
+            <tr><td>Range seed</td><td><code>{range_start_date}</code></td><td>✅ Date picker</td><td>Seed for series</td></tr>
+            <tr><td>Range series</td><td><code>{range_divehi_1}</code></td><td>❌ Auto</td><td>Day 1 Divehi date</td></tr>
+            <tr><td>Weekday</td><td><code>{range_weekday_english_1}</code></td><td>❌ Auto</td><td>Monday…</td></tr>
+            <tr><td>Metadata</td><td><code>{meta_generated_date}</code></td><td>❌ Auto</td><td>Today's date (MVT)</td></tr>
+            <tr><td>Hidden</td><td><code>{start_date_hidden}</code></td><td>❌ Auto</td><td>Reformatted sibling</td></tr>
+          </tbody>
+        </table>
       </div>
     </div>
 
@@ -653,23 +870,58 @@ window.initHelp = function () {
     <div class="help-section" id="hn-tips">
       <h2 class="help-section-title">💡 Tips &amp; Best Practices</h2>
 
-      <h3 class="help-subsection-title">Templates &amp; Forms</h3>
+      <h3 class="help-subsection-title">Naming Placeholders</h3>
       <ul class="help-list">
-        <li>Use <strong>lowercase, underscore-separated</strong> keys in all placeholders, e.g. <code>{employee_name}</code>. Avoid spaces or special characters.</li>
-        <li>After editing a template file externally, click <strong>Reload Fields</strong> on its card to re-scan for new or renamed placeholders.</li>
-        <li>Mark rarely-used templates as <strong>Inactive</strong> to hide them from Search without deleting them.</li>
-        <li>Use <strong>Dropdown</strong> type fields to enforce consistent values (e.g. department names) and prevent typos.</li>
-        <li>Click <strong>Save Record</strong> before generating to keep a log of form data you can reload later.</li>
-        <li>The <strong>print count</strong> (🖨️) on each template card updates every time you open the Templates or Search page.</li>
+        <li>Always start with a <strong>category prefix</strong> — <code>person_</code>, <code>org_</code>, <code>date_</code>, <code>text_</code>, <code>num_</code>, <code>bool_</code>, <code>img_</code>, or <code>meta_</code>. This lets the app set the correct field type automatically when you upload the template.</li>
+        <li>Use <strong>lowercase snake_case</strong> throughout. No spaces, dots, or mixed case — e.g. <code>{person_name}</code>, not <code>{Person Name}</code> or <code>{PersonName}</code>.</li>
+        <li>Append <code>_divehi</code> to any key to make it a Thaana / RTL field — e.g. <code>{person_name_divehi}</code>, <code>{text_remarks_divehi}</code>.</li>
+        <li>Older templates that use keys like <code>{Name}</code> or <code>{issue_date}</code> continue to work — backward compatibility is fully preserved.</li>
+      </ul>
+
+      <h3 class="help-subsection-title">Paragraph &amp; Multi-line Fields</h3>
+      <ul class="help-list">
+        <li>Use <code>text_</code> prefix for any free-text field — e.g. <code>{text_intro}</code>, <code>{text_notes}</code>. The app auto-detects them as <code>textarea</code> type.</li>
+        <li>For <strong>short notes or addresses</strong> leave <em>Paragraph mode</em> off — newlines become soft line breaks inside one paragraph.</li>
+        <li>For <strong>multi-paragraph letters or policy text</strong> enable <em>Paragraph mode</em> in the Fields editor. Then in your template use the loop syntax:<br>
+          <code style="display:inline-block;margin-top:4px;">{#text_body_paragraphs}{paragraph}{/text_body_paragraphs}</code><br>
+          Each block of text separated by a blank line in the form becomes its own Word paragraph.
+        </li>
+        <li>Paragraph-mode textareas show 8 rows by default — adjust the <strong>Rows</strong> setting in the field editor if you need more or less space.</li>
       </ul>
 
       <h3 class="help-subsection-title">Dates &amp; Bilingual Fields</h3>
       <ul class="help-list">
         <li>Mark date fields as <strong>RTL</strong> in the field editor for automatic Divehi formatting on generation.</li>
-        <li>Any placeholder key ending in <code>_hidden</code> is never shown — use it for computed or reformatted copies of other fields.</li>
-        <li>You can freely mix date range, weekday, and hidden placeholders in the same template. All are resolved automatically from a single start date.</li>
-        <li>For image placeholders in Word, use <code>{%field_key}</code> with the <code>%</code> prefix — plain <code>{field_key}</code> will not embed the image.</li>
+        <li>For a date that appears in both languages in the same document, use two placeholders: <code>{date_issue}</code> and <code>{date_issue_divehi}</code>.</li>
+        <li>Use <code>_short</code> to omit the year — e.g. <code>{date_issue_divehi_short}</code> outputs <em>15 ޖޫން</em>.</li>
+        <li>Use <code>_current_N</code> or <code>_next_N</code> presets for monthly documents that always reference a specific day number — the date picker opens pre-filled.</li>
+        <li>You can freely mix date-range, weekday, and hidden placeholders in the same template. All are resolved automatically from a single start date.</li>
         <li>Press <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>A</kbd> inside a fill form to toggle automatic language switching.</li>
+      </ul>
+
+      <h3 class="help-subsection-title">Auto-computed Fields</h3>
+      <ul class="help-list">
+        <li><strong>Metadata fields</strong> (<code>meta_*</code>) are filled automatically at generation time — just add them to your template and they appear without any user input. No configuration needed.</li>
+        <li><strong>Date-range series</strong> (<code>range_english_N</code>, <code>range_divehi_N</code>, etc.) only need a single user-visible seed date field (<code>{range_start_date}</code>). All numbered fields are hidden automatically.</li>
+        <li>Any key ending in <code>_hidden</code> is never shown — use it for computed or reformatted copies of other date fields.</li>
+      </ul>
+
+      <h3 class="help-subsection-title">Image Fields</h3>
+      <ul class="help-list">
+        <li>For image placeholders in Word, use <code>{%img_photo}</code> (with a <code>%</code> prefix) — plain <code>{img_photo}</code> will not embed the image.</li>
+        <li>The field key in the Fields editor is just <code>img_photo</code> (no percent sign) — the <code>%</code> is part of the template syntax only.</li>
+        <li>After choosing a file, a thumbnail preview appears in the form. The <strong>Width (px)</strong> input controls the rendered size; height scales proportionally.</li>
+        <li>Image embedding is only supported in <code>.docx</code> templates.</li>
+      </ul>
+
+      <h3 class="help-subsection-title">Templates &amp; Forms</h3>
+      <ul class="help-list">
+        <li>After editing a template file externally, click <strong>Reload Fields</strong> on its card to re-scan for new or renamed placeholders.</li>
+        <li>Mark rarely-used templates as <strong>Inactive</strong> to hide them from Search without deleting them.</li>
+        <li>Use <strong>Dropdown</strong> type fields to enforce consistent values (e.g. department names) and prevent typos.</li>
+        <li>Click <strong>Save Record</strong> before generating to keep a log of form data you can reload later.</li>
+        <li>The <strong>print count</strong> (🖨️) on each template card updates every time you open the Templates or Search page.</li>
+        <li>The field key badge <code>{key}</code> in the Fields editor lets you confirm the key matches your template exactly before saving.</li>
       </ul>
 
       <h3 class="help-subsection-title">Watermark Tool</h3>
