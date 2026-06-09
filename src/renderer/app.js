@@ -33,7 +33,7 @@ async function init() {
 
   try {
     // 1. Cache foundational DOM tree segments to guarantee high execution speed across lifecycle actions
-    cachedNavButtons = document.querySelectorAll(".nav-btn");
+    cachedNavButtons = []; // will be populated inside setupNavigation
     cachedViews = document.querySelectorAll(".view");
 
     // 2. Attach basic interactive event and click handlers across static layout controls
@@ -94,21 +94,58 @@ function debounce(func, wait) {
  * Binds semantic events to top navigation elements and standard tracking routes.
  */
 function setupNavigation() {
-  // Handle layout adjustments smoothly on structural user link selection events
-  cachedNavButtons.forEach((btn) => {
+  // Cache all nav items (both flat buttons and dropdown items)
+  cachedNavButtons = document.querySelectorAll(".nav-btn, .nav-dropdown-item");
+
+  // Flat nav buttons (Work Logs, Settings, Help)
+  document.querySelectorAll(".nav-btn").forEach((btn) => {
     btn.addEventListener("click", (e) => {
-      const view = e.target.dataset.view;
+      const view = e.currentTarget.dataset.view;
       if (view) switchView(view);
     });
   });
 
-  // Handle back navigation elements across form structures returning users safely to global tables
+  // Dropdown items
+  document.querySelectorAll(".nav-dropdown-item").forEach((item) => {
+    item.addEventListener("click", (e) => {
+      const view = e.currentTarget.dataset.view;
+      if (view) {
+        closeAllDropdowns();
+        switchView(view);
+      }
+    });
+  });
+
+  // Dropdown trigger buttons
+  document.querySelectorAll(".nav-group-trigger").forEach((trigger) => {
+    trigger.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const group = trigger.dataset.group;
+      const dropdown = document.getElementById(`nav-dropdown-${group}`);
+      const isOpen = dropdown?.classList.contains("nav-dropdown-open");
+      closeAllDropdowns();
+      if (!isOpen && dropdown) {
+        dropdown.classList.add("nav-dropdown-open");
+        trigger.classList.add("nav-trigger-open");
+      }
+    });
+  });
+
+  // Close dropdowns when clicking outside
+  document.addEventListener("click", () => closeAllDropdowns());
+
+  // Handle back navigation
   const backBtn = document.getElementById("back-to-search-btn");
   if (backBtn) {
     backBtn.addEventListener("click", () => {
       switchView("search");
     });
   }
+}
+
+function closeAllDropdowns() {
+  document.querySelectorAll(".nav-dropdown").forEach((d) => d.classList.remove("nav-dropdown-open"));
+  document.querySelectorAll(".nav-group-trigger").forEach((t) => t.classList.remove("nav-trigger-open"));
 }
 
 /**
@@ -119,9 +156,15 @@ function switchView(view) {
   console.log("Switching to view:", view);
   currentView = view;
 
-  // 1. Toggle highlight classes across cached layout links matching target parameter states
-  cachedNavButtons.forEach((btn) => {
+  // 1. Update active state on all nav elements (flat buttons + dropdown items)
+  document.querySelectorAll(".nav-btn, .nav-dropdown-item").forEach((btn) => {
     btn.classList.toggle("active", btn.dataset.view === view);
+  });
+
+  // 2. Highlight parent group trigger if an item inside it is active
+  document.querySelectorAll(".nav-group").forEach((group) => {
+    const hasActiveChild = group.querySelector(`.nav-dropdown-item.active`);
+    group.querySelector(".nav-group-trigger")?.classList.toggle("nav-trigger-active", !!hasActiveChild);
   });
 
   // 2. Hide active visibility across all available viewport layer containers

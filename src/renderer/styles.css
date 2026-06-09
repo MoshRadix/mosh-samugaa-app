@@ -112,33 +112,138 @@ body {
 
 .main-nav {
   display: flex;
-  gap: 6px;
+  align-items: center;
+  gap: 4px;
   background: var(--bg-secondary);
   padding: 4px;
   border-radius: var(--radius-xl);
+  position: relative;
 }
 
+/* ── Flat nav buttons (Work Logs, Settings, Help) ─────────────────────── */
 .nav-btn {
   background: transparent;
   border: none;
   color: var(--text-secondary);
-  padding: 8px 20px;
-  font-size: 0.875rem;
+  padding: 8px 16px;
+  font-size: 0.84rem;
   font-weight: 500;
   border-radius: var(--radius-lg);
   cursor: pointer;
   transition: var(--transition-fast);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
 }
-
 .nav-btn:hover {
   color: var(--text-primary);
   background: rgba(0, 0, 0, 0.04);
 }
-
 .nav-btn.active {
   background: var(--gradient-primary);
   color: white;
   box-shadow: var(--shadow-sm);
+}
+
+/* ── Nav groups with dropdowns ────────────────────────────────────────── */
+.nav-group {
+  position: relative;
+}
+
+.nav-group-trigger {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  padding: 8px 14px;
+  font-size: 0.84rem;
+  font-weight: 500;
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: var(--transition-fast);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  font-family: inherit;
+}
+.nav-group-trigger:hover,
+.nav-group-trigger.nav-trigger-open {
+  color: var(--text-primary);
+  background: rgba(0, 0, 0, 0.04);
+}
+.nav-group-trigger.nav-trigger-active {
+  color: var(--accent-primary);
+  font-weight: 600;
+}
+
+.nav-chevron {
+  transition: transform var(--transition-fast);
+  opacity: 0.6;
+}
+.nav-trigger-open .nav-chevron {
+  transform: rotate(180deg);
+  opacity: 1;
+}
+
+/* ── Dropdown panel ───────────────────────────────────────────────────── */
+.nav-dropdown {
+  display: none;
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  min-width: 180px;
+  z-index: 1000;
+  padding: 4px;
+  animation: navDropdownFade 150ms ease;
+}
+.nav-dropdown.nav-dropdown-open {
+  display: flex;
+  flex-direction: column;
+}
+@keyframes navDropdownFade {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.nav-dropdown-item {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  padding: 9px 14px;
+  font-size: 0.84rem;
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: var(--transition-fast);
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-family: inherit;
+  white-space: nowrap;
+}
+.nav-dropdown-item:hover {
+  background: var(--bg-subtle);
+  color: var(--text-primary);
+}
+.nav-dropdown-item.active {
+  background: var(--accent-primary-light);
+  color: var(--accent-primary);
+  font-weight: 600;
+}
+
+/* ── Divider between groups ───────────────────────────────────────────── */
+.nav-divider {
+  width: 1px;
+  height: 22px;
+  background: var(--border-light);
+  margin: 0 2px;
+  align-self: center;
 }
 
 /* ==========================================================================
@@ -2132,6 +2237,13 @@ kbd {
   text-transform: uppercase;
   margin-bottom: 2px;
 }
+.wl-form-row {
+  display: flex;
+  gap: 12px;
+}
+.wl-form-row .wl-form-group {
+  flex: 1;
+}
 .wl-form-group {
   display: flex;
   flex-direction: column;
@@ -2436,7 +2548,343 @@ kbd {
 }
 .btn-danger:hover {
   background: #c0392b;
-}/* ==========================================================================
+}
+
+/* ── Work Logs: header actions row ───────────────────────────────────── */
+.wl-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ── Tag selector in form ─────────────────────────────────────────────── */
+.wl-tag-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.wl-tag-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  min-height: 0;
+}
+.wl-tag-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px 2px 9px;
+  border-radius: 20px;
+  font-size: 11.5px;
+  font-weight: 600;
+}
+.wl-tag-pill-remove {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1;
+  padding: 0 1px;
+  opacity: 0.65;
+  font-family: inherit;
+  color: inherit;
+}
+.wl-tag-pill-remove:hover { opacity: 1; }
+
+.wl-tag-preset-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.wl-preset-tag {
+  border: none;
+  border-radius: 20px;
+  font-size: 11.5px;
+  font-weight: 500;
+  padding: 3px 10px;
+  cursor: pointer;
+  font-family: inherit;
+  opacity: 0.85;
+  transition: opacity var(--transition-fast), transform var(--transition-fast);
+}
+.wl-preset-tag:hover { opacity: 1; transform: scale(1.04); }
+
+.wl-tag-custom-row {
+  display: flex;
+  gap: 6px;
+}
+.wl-tag-custom-input {
+  flex: 1;
+  font-size: 12px !important;
+  padding: 6px 10px !important;
+}
+.wl-tag-add-btn {
+  padding: 6px 12px;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+/* ── Tag chip in table ────────────────────────────────────────────────── */
+.wl-tag-chip {
+  display: inline-block;
+  padding: 1px 7px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  margin: 1px 2px 1px 0;
+  white-space: nowrap;
+}
+.wl-col-tags { min-width: 100px; }
+
+/* ── Tag filter bar ───────────────────────────────────────────────────── */
+.wl-tag-filter-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--border-light);
+  flex-wrap: wrap;
+  background: var(--bg-secondary);
+  flex-shrink: 0;
+}
+.wl-tag-filter-label {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  white-space: nowrap;
+}
+.wl-tag-filter-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  flex: 1;
+}
+.wl-tag-filter-pill {
+  border: 1px solid;
+  border-radius: 20px;
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 3px 10px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+.wl-tag-filter-pill:hover { opacity: 0.85; }
+.wl-tag-filter-pill-active { box-shadow: 0 0 0 2px currentColor; }
+
+/* ── Photo attachment in form ─────────────────────────────────────────── */
+.wl-photo-attach {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.wl-photo-select-btn {
+  font-size: 12px;
+  padding: 7px 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.wl-photo-preview-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  padding: 8px;
+}
+.wl-photo-preview {
+  width: 56px;
+  height: 56px;
+  object-fit: cover;
+  border-radius: 5px;
+  border: 1px solid var(--border-light);
+  flex-shrink: 0;
+}
+.wl-photo-name {
+  font-size: 12px;
+  color: var(--text-secondary);
+  flex: 1;
+  word-break: break-all;
+  line-height: 1.4;
+}
+.wl-photo-remove-btn {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  background: var(--accent-danger-light);
+  color: var(--accent-danger);
+  border: none;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: inherit;
+}
+
+/* ── Photo thumb in table ─────────────────────────────────────────────── */
+.wl-col-photo { width: 40px; text-align: center; }
+.wl-photo-thumb-btn {
+  background: var(--accent-primary-light);
+  color: var(--accent-primary);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  padding: 4px 6px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--transition-fast);
+}
+.wl-photo-thumb-btn:hover {
+  background: var(--accent-primary);
+  color: white;
+}
+
+/* ── Photo lightbox ───────────────────────────────────────────────────── */
+.wl-photo-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.wl-lightbox-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.72);
+}
+.wl-lightbox-content {
+  position: relative;
+  z-index: 1;
+  max-width: 90vw;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+.wl-lightbox-img {
+  max-width: 88vw;
+  max-height: 80vh;
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+  object-fit: contain;
+}
+.wl-lightbox-caption {
+  color: rgba(255,255,255,0.75);
+  font-size: 13px;
+  text-align: center;
+  max-width: 600px;
+}
+.wl-lightbox-close {
+  position: absolute;
+  top: -16px;
+  right: -16px;
+  background: rgba(255,255,255,0.15);
+  border: 1px solid rgba(255,255,255,0.25);
+  color: white;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: inherit;
+  transition: background var(--transition-fast);
+}
+.wl-lightbox-close:hover { background: rgba(255,255,255,0.3); }
+
+/* ── Monthly report modal ─────────────────────────────────────────────── */
+.wl-monthly-modal-box {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  padding: 28px 28px 22px;
+  min-width: 380px;
+  max-width: 480px;
+  box-shadow: var(--shadow-lg);
+  position: relative;
+  z-index: 1;
+}
+.wl-monthly-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.wl-monthly-modal-header h3 {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.wl-monthly-close-btn {
+  background: none;
+  border: none;
+  font-size: 20px;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  line-height: 1;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  font-family: inherit;
+}
+.wl-monthly-close-btn:hover { color: var(--text-primary); background: var(--bg-subtle); }
+.wl-monthly-modal-desc {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 18px;
+  line-height: 1.5;
+}
+.wl-monthly-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+.wl-monthly-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.wl-monthly-format-row {
+  display: flex;
+  gap: 12px;
+}
+.wl-format-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+.wl-format-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 5px;
+  font-weight: 700;
+  font-size: 13px;
+}
+.wl-format-word  { background: #dce9f5; color: #2b5fa3; }
+.wl-format-excel { background: #d6eedd; color: #1e6e3c; }/* ==========================================================================
    Utilities Module — Unit Converter & Date Calculator
    ========================================================================== */
 

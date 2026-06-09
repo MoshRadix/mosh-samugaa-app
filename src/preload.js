@@ -194,7 +194,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
   /**
    * Adds a new work log entry to the dedicated work_logs table.
-   * @param {Object} data - { task, notes, createdAt }
+   * @param {Object} data - { task, notes, createdAt, tags, photoPath }
    * @returns {Promise<Object>} The newly created work log record.
    */
   addWorkLog: (data) => ipcRenderer.invoke("add-work-log", data),
@@ -215,10 +215,38 @@ contextBridge.exposeInMainWorld("electronAPI", {
   /**
    * Exports an array of work log row objects to an Excel file
    * via a native save dialog.
-   * @param {Object} data - { rows: Array<{no,date,time,task,notes}> }
+   * @param {Object} data - { rows: Array<{no,date,time,task,notes,tags}> }
    * @returns {Promise<{success:boolean, path:string}|null>}
    */
   exportWorkLogsExcel: (data) => ipcRenderer.invoke("export-work-logs-excel", data),
+
+  /**
+   * Saves a base64 photo attached to a work log entry.
+   * @param {Object} data - { dataUrl, fileName, mimeType }
+   * @returns {Promise<{path: string}>}
+   */
+  saveWorkLogPhoto: (data) => ipcRenderer.invoke("save-work-log-photo", data),
+
+  /**
+   * Reads a saved work log photo and returns it as a data URL.
+   * @param {string} photoPath - Absolute path to the stored photo file.
+   * @returns {Promise<string|null>} Base64 data URL or null.
+   */
+  getWorkLogPhoto: (photoPath) => ipcRenderer.invoke("get-work-log-photo", photoPath),
+
+  /**
+   * Exports a formatted monthly summary as a Word (.docx) report.
+   * @param {Object} data - { rows, month, officer }
+   * @returns {Promise<{success:boolean, path:string}|null>}
+   */
+  exportWorkLogsWord: (data) => ipcRenderer.invoke("export-work-logs-word", data),
+
+  /**
+   * Exports a formatted monthly summary as a styled Excel report.
+   * @param {Object} data - { rows, month, officer }
+   * @returns {Promise<{success:boolean, path:string}|null>}
+   */
+  exportWorkLogsMonthlyExcel: (data) => ipcRenderer.invoke("export-work-logs-monthly-excel", data),
 });
 
 

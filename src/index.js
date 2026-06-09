@@ -122,10 +122,29 @@ async function initWorkLogsDB() {
       id TEXT PRIMARY KEY,
       task TEXT NOT NULL,
       notes TEXT,
-      createdAt TEXT NOT NULL
+      createdAt TEXT NOT NULL,
+      tags TEXT DEFAULT '[]',
+      photoPath TEXT
     );
     CREATE INDEX IF NOT EXISTS idx_work_logs_createdAt ON work_logs(createdAt);
   `);
+
+  // Schema migrations for existing databases
+  const wlCols = wlDb.exec("PRAGMA table_info(work_logs)");
+  const wlColNames = wlCols.length ? wlCols[0].values.map(r => r[1]) : [];
+  if (!wlColNames.includes("tags")) {
+    wlDb.exec("ALTER TABLE work_logs ADD COLUMN tags TEXT DEFAULT '[]'");
+    console.log("[WorkLogs DB] Added 'tags' column");
+  }
+  if (!wlColNames.includes("photoPath")) {
+    wlDb.exec("ALTER TABLE work_logs ADD COLUMN photoPath TEXT");
+    console.log("[WorkLogs DB] Added 'photoPath' column");
+  }
+
+  // Ensure photos directory exists
+  const photosDir = path.join(app.getPath("userData"), "worklog_photos");
+  try { await fs.mkdir(photosDir, { recursive: true }); } catch (_) {}
+
   await saveWorkLogsDB();
   console.log("[WorkLogs DB] Initialized at:", WL_DB_PATH);
 }
@@ -1375,29 +1394,29 @@ ipcMain.handle("save-watermarked-image", async (event, { outputDirectory, output
 
 // ========== Work Logs IPC Handlers ==========
 
-ipcMain.handle("add-work-log", async (event, { task, notes, createdAt }) => {
+ipcMain.handle("add-work-log", async (event, { task, notes, createdAt, tags, photoPath }) => {
   const id = uuidv4();
   wlDb.run(
-    "INSERT INTO work_logs (id, task, notes, createdAt) VALUES (?, ?, ?, ?)",
-    [id, task || "", notes || "", createdAt || new Date().toISOString()]
+    "INSERT INTO work_logs (id, task, notes, createdAt, tags, photoPath) VALUES (?, ?, ?, ?, ?, ?)",
+    [id, task || "", notes || "", createdAt || new Date().toISOString(), tags || "[]", photoPath || null]
   );
   await saveWorkLogsDB();
   const rows = wlDb.exec(
-    "SELECT id, task, notes, createdAt FROM work_logs WHERE id = ?",
+    "SELECT id, task, notes, createdAt, tags, photoPath FROM work_logs WHERE id = ?",
     [id]
   );
-  if (!rows.length || !rows[0].values.length) return { id, task, notes, createdAt };
-  const [rid, rtask, rnotes, rca] = rows[0].values[0];
-  return { id: rid, task: rtask, notes: rnotes, createdAt: rca };
+  if (!rows.length || !rows[0].values.length) return { id, task, notes, createdAt, tags, photoPath };
+  const [rid, rtask, rnotes, rca, rtags, rphoto] = rows[0].values[0];
+  return { id: rid, task: rtask, notes: rnotes, createdAt: rca, tags: rtags, photoPath: rphoto };
 });
 
 ipcMain.handle("get-work-logs", async () => {
   const rows = wlDb.exec(
-    "SELECT id, task, notes, createdAt FROM work_logs ORDER BY createdAt DESC"
+    "SELECT id, task, notes, createdAt, tags, photoPath FROM work_logs ORDER BY createdAt DESC"
   );
   if (!rows.length) return [];
-  return rows[0].values.map(([id, task, notes, createdAt]) => ({
-    id, task, notes, createdAt,
+  return rows[0].values.map(([id, task, notes, createdAt, tags, photoPath]) => ({
+    id, task, notes, createdAt, tags: tags || "[]", photoPath: photoPath || null,
   }));
 });
 
@@ -1423,48 +1442,234 @@ ipcMain.handle("export-work-logs-excel", async (event, { rows }) => {
   workbook.created = new Date();
 
   const sheet = workbook.addWorksheet("Work Logs");
-
   sheet.columns = [
     { header: "No.",              key: "no",    width: 6  },
     { header: "Date",             key: "date",  width: 14 },
     { header: "Time (MVT)",       key: "time",  width: 14 },
     { header: "Task Description", key: "task",  width: 50 },
+    { header: "Tags",             key: "tags",  width: 24 },
     { header: "Notes",            key: "notes", width: 40 },
   ];
 
-  // Style header row
   const headerRow = sheet.getRow(1);
   headerRow.eachCell((cell) => {
     cell.font = { bold: true, color: { argb: "FFFFFFFF" }, size: 11 };
-    cell.fill = {
-      type: "pattern",
-      pattern: "solid",
-      fgColor: { argb: "FF4A6B5A" },
-    };
+    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF4A6B5A" } };
     cell.alignment = { vertical: "middle", horizontal: "center" };
-    cell.border = {
-      bottom: { style: "thin", color: { argb: "FFB0C8BC" } },
-    };
+    cell.border = { bottom: { style: "thin", color: { argb: "FFB0C8BC" } } };
   });
   headerRow.height = 22;
 
-  // Add data rows
   rows.forEach((r, idx) => {
     const row = sheet.addRow(r);
     row.eachCell((cell) => {
       cell.alignment = { vertical: "top", wrapText: true };
       if (idx % 2 === 1) {
-        cell.fill = {
-          type: "pattern",
-          pattern: "solid",
-          fgColor: { argb: "FFF0F4F2" },
-        };
+        cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF0F4F2" } };
       }
     });
     row.height = 18;
   });
 
   sheet.views = [{ state: "frozen", ySplit: 1 }];
+  await workbook.xlsx.writeFile(filePath);
+  return { success: true, path: filePath };
+});
+
+// ── Save a work log photo ──────────────────────────────────────────────────
+ipcMain.handle("save-work-log-photo", async (event, { dataUrl, fileName, mimeType }) => {
+  const photosDir = path.join(app.getPath("userData"), "worklog_photos");
+  try { await fs.mkdir(photosDir, { recursive: true }); } catch (_) {}
+  const ext = fileName ? path.extname(fileName) : ".jpg";
+  const outName = `${uuidv4()}${ext}`;
+  const outPath = path.join(photosDir, outName);
+  // dataUrl: "data:image/jpeg;base64,..."
+  const base64 = dataUrl.split(",")[1];
+  await fs.writeFile(outPath, Buffer.from(base64, "base64"));
+  return { path: outPath };
+});
+
+// ── Read a work log photo as data URL ────────────────────────────────────
+ipcMain.handle("get-work-log-photo", async (event, photoPath) => {
+  if (!photoPath) return null;
+  try {
+    const buf = await fs.readFile(photoPath);
+    const ext = path.extname(photoPath).toLowerCase().replace(".", "");
+    const mime = ext === "png" ? "image/png" : ext === "gif" ? "image/gif" : ext === "webp" ? "image/webp" : "image/jpeg";
+    return `data:${mime};base64,${buf.toString("base64")}`;
+  } catch (_) { return null; }
+});
+
+// ── Monthly Word export ───────────────────────────────────────────────────
+ipcMain.handle("export-work-logs-word", async (event, { rows, month, officer }) => {
+  const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
+    title: "Save Monthly Report",
+    defaultPath: path.join(
+      app.getPath("documents"),
+      `WorkLog_Report_${month.replace(/\s/g, "_")}.docx`
+    ),
+    filters: [{ name: "Word Document", extensions: ["docx"] }],
+  });
+  if (canceled || !filePath) return null;
+
+  // Build a clean OOXML docx from scratch
+  const tableRows = rows.map((r, i) => {
+    const bg = i % 2 === 0 ? "F6F8F7" : "FFFFFF";
+    return `
+    <w:tr>
+      <w:tc><w:tcPr><w:shd w:val="clear" w:color="auto" w:fill="${bg}"/><w:tcW w:w="400" w:type="dxa"/></w:tcPr><w:p><w:r><w:rPr><w:sz w:val="18"/></w:rPr><w:t>${r.no}</w:t></w:r></w:p></w:tc>
+      <w:tc><w:tcPr><w:shd w:val="clear" w:color="auto" w:fill="${bg}"/><w:tcW w:w="1400" w:type="dxa"/></w:tcPr><w:p><w:r><w:rPr><w:sz w:val="18"/></w:rPr><w:t>${r.date}</w:t></w:r></w:p></w:tc>
+      <w:tc><w:tcPr><w:shd w:val="clear" w:color="auto" w:fill="${bg}"/><w:tcW w:w="1200" w:type="dxa"/></w:tcPr><w:p><w:r><w:rPr><w:sz w:val="18"/></w:rPr><w:t>${r.time}</w:t></w:r></w:p></w:tc>
+      <w:tc><w:tcPr><w:shd w:val="clear" w:color="auto" w:fill="${bg}"/><w:tcW w:w="3800" w:type="dxa"/></w:tcPr><w:p><w:r><w:rPr><w:sz w:val="18"/></w:rPr><w:t xml:space="preserve">${(r.task || "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}</w:t></w:r></w:p></w:tc>
+      <w:tc><w:tcPr><w:shd w:val="clear" w:color="auto" w:fill="${bg}"/><w:tcW w:w="1600" w:type="dxa"/></w:tcPr><w:p><w:r><w:rPr><w:sz w:val="18"/></w:rPr><w:t xml:space="preserve">${(r.tags || "").replace(/&/g,"&amp;").replace(/</g,"&lt;")}</w:t></w:r></w:p></w:tc>
+      <w:tc><w:tcPr><w:shd w:val="clear" w:color="auto" w:fill="${bg}"/><w:tcW w:w="3200" w:type="dxa"/></w:tcPr><w:p><w:r><w:rPr><w:sz w:val="18"/></w:rPr><w:t xml:space="preserve">${(r.notes || "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}</w:t></w:r></w:p></w:tc>
+    </w:tr>`;
+  }).join("");
+
+  const headerCells = ["#","Date","Time (MVT)","Task Description","Tags","Notes"].map(h =>
+    `<w:tc><w:tcPr><w:shd w:val="clear" w:color="auto" w:fill="4A6B5A"/></w:tcPr><w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:rPr><w:b/><w:color w:val="FFFFFF"/><w:sz w:val="20"/></w:rPr><w:t>${h}</w:t></w:r></w:p></w:tc>`
+  ).join("");
+
+  const officerLine = officer
+    ? `<w:p><w:pPr><w:spacing w:after="40"/></w:pPr><w:r><w:rPr><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Officer: ${officer.replace(/&/g,"&amp;")}</w:t></w:r></w:p>`
+    : "";
+
+  const docXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:wpc="http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas"
+  xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+  xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+  <w:body>
+    <w:p><w:pPr><w:jc w:val="center"/><w:spacing w:after="80"/></w:pPr>
+      <w:r><w:rPr><w:b/><w:sz w:val="36"/><w:color w:val="4A6B5A"/></w:rPr><w:t>Monthly Work Log Report</w:t></w:r>
+    </w:p>
+    <w:p><w:pPr><w:jc w:val="center"/><w:spacing w:after="40"/></w:pPr>
+      <w:r><w:rPr><w:b/><w:sz w:val="26"/></w:rPr><w:t>${month.replace(/&/g,"&amp;")}</w:t></w:r>
+    </w:p>
+    ${officerLine}
+    <w:p><w:pPr><w:spacing w:after="40"/></w:pPr>
+      <w:r><w:rPr><w:sz w:val="20"/><w:color w:val="6B7C73"/></w:rPr><w:t xml:space="preserve">Total entries: ${rows.length}    |    Addu City Council — MTO</w:t></w:r>
+    </w:p>
+    <w:tbl>
+      <w:tblPr>
+        <w:tblW w:w="11600" w:type="dxa"/>
+        <w:tblBorders>
+          <w:top    w:val="single" w:sz="4" w:space="0" w:color="C2C8C5"/>
+          <w:left   w:val="single" w:sz="4" w:space="0" w:color="C2C8C5"/>
+          <w:bottom w:val="single" w:sz="4" w:space="0" w:color="C2C8C5"/>
+          <w:right  w:val="single" w:sz="4" w:space="0" w:color="C2C8C5"/>
+          <w:insideH w:val="single" w:sz="4" w:space="0" w:color="D6DBD9"/>
+          <w:insideV w:val="single" w:sz="4" w:space="0" w:color="D6DBD9"/>
+        </w:tblBorders>
+        <w:tblCellMar><w:top w:w="80" w:type="dxa"/><w:left w:w="120" w:type="dxa"/><w:bottom w:w="80" w:type="dxa"/><w:right w:w="120" w:type="dxa"/></w:tblCellMar>
+      </w:tblPr>
+      <w:tr>${headerCells}</w:tr>
+      ${tableRows}
+    </w:tbl>
+    <w:p><w:pPr><w:spacing w:before="200"/></w:pPr>
+      <w:r><w:rPr><w:sz w:val="18"/><w:color w:val="6B7C73"/></w:rPr>
+        <w:t xml:space="preserve">Generated by MTO Document Generator on ${new Date().toLocaleDateString("en-MV", { timeZone: "Indian/Maldives" })} (MVT)</w:t>
+      </w:r>
+    </w:p>
+    <w:sectPr>
+      <w:pgSz w:w="15840" w:h="12240" w:orient="landscape"/>
+      <w:pgMar w:top="720" w:right="720" w:bottom="720" w:left="720"/>
+    </w:sectPr>
+  </w:body>
+</w:document>`;
+
+  // Build minimal valid .docx zip
+  const zip = new PizZip();
+  zip.file("_rels/.rels", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+</Relationships>`);
+  zip.file("[Content_Types].xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+</Types>`);
+  zip.file("word/document.xml", docXml);
+  zip.file("word/_rels/document.xml.rels", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>`);
+
+  const buffer = zip.generate({ type: "nodebuffer", compression: "DEFLATE" });
+  await fs.writeFile(filePath, buffer);
+  return { success: true, path: filePath };
+});
+
+// ── Monthly styled Excel export ───────────────────────────────────────────
+ipcMain.handle("export-work-logs-monthly-excel", async (event, { rows, month, officer }) => {
+  const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
+    title: "Save Monthly Excel Report",
+    defaultPath: path.join(
+      app.getPath("documents"),
+      `WorkLog_Report_${month.replace(/\s/g, "_")}.xlsx`
+    ),
+    filters: [{ name: "Excel Workbook", extensions: ["xlsx"] }],
+  });
+  if (canceled || !filePath) return null;
+
+  const workbook = new ExcelJS.Workbook();
+  workbook.creator = "MTO Document Generator";
+  workbook.created = new Date();
+
+  const sheet = workbook.addWorksheet(month);
+
+  // Title rows
+  sheet.mergeCells("A1:F1");
+  const titleCell = sheet.getCell("A1");
+  titleCell.value = `Monthly Work Log Report — ${month}`;
+  titleCell.font = { bold: true, size: 16, color: { argb: "FF4A6B5A" } };
+  titleCell.alignment = { horizontal: "center", vertical: "middle" };
+  sheet.getRow(1).height = 32;
+
+  if (officer) {
+    sheet.mergeCells("A2:F2");
+    const offCell = sheet.getCell("A2");
+    offCell.value = `Officer: ${officer}   |   Addu City Council — MTO`;
+    offCell.font = { size: 11, color: { argb: "FF6B7C73" } };
+    offCell.alignment = { horizontal: "center" };
+    sheet.getRow(2).height = 20;
+  }
+
+  const dataStartRow = officer ? 4 : 3;
+  sheet.getRow(dataStartRow).values = ["No.", "Date", "Time (MVT)", "Task Description", "Tags", "Notes"];
+  sheet.getRow(dataStartRow).eachCell((cell) => {
+    cell.font = { bold: true, color: { argb: "FFFFFFFF" }, size: 11 };
+    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF4A6B5A" } };
+    cell.alignment = { vertical: "middle", horizontal: "center" };
+  });
+  sheet.getRow(dataStartRow).height = 22;
+
+  sheet.columns = [
+    { key: "no",    width: 6  },
+    { key: "date",  width: 14 },
+    { key: "time",  width: 14 },
+    { key: "task",  width: 52 },
+    { key: "tags",  width: 22 },
+    { key: "notes", width: 40 },
+  ];
+
+  rows.forEach((r, idx) => {
+    const rowIdx = dataStartRow + 1 + idx;
+    const row = sheet.getRow(rowIdx);
+    row.values = [r.no, r.date, r.time, r.task, r.tags, r.notes];
+    row.eachCell((cell) => {
+      cell.alignment = { vertical: "top", wrapText: true };
+      if (idx % 2 === 1) {
+        cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF0F4F2" } };
+      }
+    });
+    row.height = 18;
+  });
+
+  sheet.views = [{ state: "frozen", ySplit: dataStartRow }];
+
+  // Summary row
+  const sumRow = sheet.getRow(dataStartRow + rows.length + 2);
+  sumRow.getCell(1).value = `Total: ${rows.length} entries`;
+  sumRow.getCell(1).font = { bold: true, italic: true, color: { argb: "FF6B7C73" }, size: 10 };
 
   await workbook.xlsx.writeFile(filePath);
   return { success: true, path: filePath };

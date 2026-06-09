@@ -11,16 +11,67 @@
       <header class="app-header">
         <h1>📄 MTO Document Generator</h1>
         <nav class="main-nav">
-          <button class="nav-btn" data-view="search">Search & Print</button>
-          <button class="nav-btn" data-view="fill-form">Fill Form</button>
-          <button class="nav-btn active" data-view="templates">
-            Templates
+
+          <!-- Documents group -->
+          <div class="nav-group" id="nav-group-documents">
+            <button class="nav-group-trigger" data-group="documents">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              Documents
+              <svg class="nav-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div class="nav-dropdown" id="nav-dropdown-documents">
+              <button class="nav-dropdown-item" data-view="search">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                Search &amp; Print
+              </button>
+              <button class="nav-dropdown-item" data-view="fill-form">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg>
+                Fill Form
+              </button>
+              <button class="nav-dropdown-item active" data-view="templates">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+                Templates
+              </button>
+            </div>
+          </div>
+
+          <!-- Tools group -->
+          <div class="nav-group" id="nav-group-tools">
+            <button class="nav-group-trigger" data-group="tools">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+              Tools
+              <svg class="nav-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div class="nav-dropdown" id="nav-dropdown-tools">
+              <button class="nav-dropdown-item" data-view="utilities">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+                Utilities
+              </button>
+              <button class="nav-dropdown-item" data-view="watermark">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                Watermark
+              </button>
+            </div>
+          </div>
+
+          <!-- Work Logs — direct link -->
+          <button class="nav-btn" data-view="worklogs">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+            Work Logs
           </button>
-          <button class="nav-btn" data-view="utilities">🔧 Utilities</button>
-          <button class="nav-btn" data-view="watermark">🖼️ Watermark</button>
-          <button class="nav-btn" data-view="worklogs">📋 Work Logs</button>
-          <button class="nav-btn" data-view="settings">⚙️ Settings</button>
-          <button class="nav-btn" data-view="help">❓ Help</button>
+
+          <!-- Settings -->
+          <button class="nav-btn" data-view="settings">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            Settings
+          </button>
+
+          <!-- Help -->
+          <button class="nav-btn" data-view="help">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            Help
+          </button>
+
         </nav>
       </header>
 
@@ -342,6 +393,9 @@
         <!-- Work Logs View -->
         <div id="worklogs-view" class="view">
 
+          <!-- Hidden file input for photo attachment -->
+          <input type="file" id="wl-photo-input" accept="image/*" style="display:none">
+
           <!-- Notification banner -->
           <div id="wl-notification" class="wl-notification" aria-live="polite"></div>
 
@@ -351,10 +405,16 @@
               <h2>📋 Work Logs</h2>
               <p style="color:var(--text-tertiary);font-size:13px;margin-top:2px;">Record and track your daily work activities</p>
             </div>
-            <button id="wl-export-btn" class="btn btn-secondary wl-export-btn-header">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
-              Export to Excel
-            </button>
+            <div class="wl-header-actions">
+              <button id="wl-monthly-export-btn" class="btn btn-secondary wl-export-btn-header">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                Monthly Report
+              </button>
+              <button id="wl-export-btn" class="btn btn-secondary wl-export-btn-header">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+                Export Excel
+              </button>
+            </div>
           </div>
 
           <!-- Summary stats -->
@@ -398,24 +458,57 @@
                 New Work Log
               </div>
 
-              <div class="wl-form-group">
-                <label class="wl-label">Date <span class="wl-readonly-badge">Auto</span></label>
-                <input type="text" id="wl-auto-date" class="wl-input wl-input-readonly" readonly placeholder="DD/MM/YYYY" />
-              </div>
-              <div class="wl-form-group">
-                <label class="wl-label">Time <span class="wl-readonly-badge">Auto · MVT</span></label>
-                <input type="text" id="wl-auto-time" class="wl-input wl-input-readonly" readonly placeholder="HH:MM AM/PM" />
+              <div class="wl-form-row">
+                <div class="wl-form-group">
+                  <label class="wl-label">Date <span class="wl-readonly-badge">Auto</span></label>
+                  <input type="text" id="wl-auto-date" class="wl-input wl-input-readonly" readonly placeholder="DD/MM/YYYY" />
+                </div>
+                <div class="wl-form-group">
+                  <label class="wl-label">Time <span class="wl-readonly-badge">Auto · MVT</span></label>
+                  <input type="text" id="wl-auto-time" class="wl-input wl-input-readonly" readonly placeholder="HH:MM AM/PM" />
+                </div>
               </div>
               <div class="wl-form-group">
                 <label class="wl-label wl-label-required">Task Description</label>
-                <textarea id="wl-task-input" class="wl-textarea" rows="4"
+                <textarea id="wl-task-input" class="wl-textarea" rows="3"
                   placeholder="Describe what you worked on today…"></textarea>
               </div>
+              <!-- Tags -->
               <div class="wl-form-group">
-                <label class="wl-label">Notes <span class="wl-optional-badge">Optional</span></label>
-                <textarea id="wl-notes-input" class="wl-textarea" rows="3"
-                  placeholder="Any additional notes, references, or remarks…"></textarea>
+                <label class="wl-label">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+                  Tags <span class="wl-optional-badge">Optional</span>
+                </label>
+                <div class="wl-tag-selector" id="wl-tag-selector">
+                  <div class="wl-tag-pills" id="wl-tag-pills"></div>
+                  <div class="wl-tag-preset-row" id="wl-tag-presets"></div>
+                  <div class="wl-tag-custom-row">
+                    <input type="text" id="wl-custom-tag-input" class="wl-input wl-tag-custom-input"
+                      placeholder="Add custom tag…" maxlength="30" />
+                    <button id="wl-tag-add-btn" class="btn btn-outline wl-tag-add-btn" title="Add tag">+</button>
+                  </div>
+                </div>
               </div>
+
+              <!-- Photo attachment -->
+              <div class="wl-form-group">
+                <label class="wl-label">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                  Photo <span class="wl-optional-badge">Optional</span>
+                </label>
+                <div class="wl-photo-attach" id="wl-photo-attach">
+                  <div id="wl-photo-preview-wrap" class="wl-photo-preview-wrap" style="display:none">
+                    <img id="wl-photo-preview" class="wl-photo-preview" alt="Attachment preview" />
+                    <button id="wl-photo-remove" class="wl-photo-remove-btn" title="Remove photo">×</button>
+                    <span id="wl-photo-name" class="wl-photo-name"></span>
+                  </div>
+                  <button id="wl-photo-btn" class="btn btn-outline wl-photo-select-btn">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                    Attach Photo
+                  </button>
+                </div>
+              </div>
+
               <button id="wl-submit-btn" class="btn btn-primary wl-submit-btn">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
                 Save Log
@@ -435,16 +528,21 @@
               <!-- Filters -->
               <div class="wl-filters">
                 <input type="text" id="wl-search-input" class="wl-search-input"
-                  placeholder="Search task or notes…" />
+                  placeholder="Search task, notes, or tags…" />
                 <div class="wl-date-filters">
                   <input type="date" id="wl-filter-from" class="wl-date-input" title="From date" />
                   <span class="wl-date-sep">to</span>
                   <input type="date" id="wl-filter-to" class="wl-date-input" title="To date" />
-                  <button id="wl-filter-clear" class="btn btn-outline wl-clear-btn" title="Clear filters">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                    Clear
-                  </button>
                 </div>
+              </div>
+              <!-- Tag filter row -->
+              <div class="wl-tag-filter-row" id="wl-tag-filter-row">
+                <span class="wl-tag-filter-label">Filter by tag:</span>
+                <div id="wl-tag-filter-pills" class="wl-tag-filter-pills"></div>
+                <button id="wl-filter-clear" class="btn btn-outline wl-clear-btn" title="Clear all filters">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  Clear
+                </button>
               </div>
 
               <!-- Table -->
@@ -456,7 +554,8 @@
                       <th class="wl-col-date">Date</th>
                       <th class="wl-col-time">Time</th>
                       <th class="wl-col-task">Task Description</th>
-                      <th class="wl-col-notes">Notes</th>
+                      <th class="wl-col-tags">Tags</th>
+                      <th class="wl-col-photo">📷</th>
                       <th class="wl-col-actions"></th>
                     </tr>
                   </thead>
@@ -472,7 +571,58 @@
 
           </div><!-- /.wl-layout -->
 
+          <!-- Monthly Export Modal -->
+          <div id="wl-monthly-modal" class="wl-confirm-overlay" style="display:none" aria-modal="true" role="dialog">
+            <div class="wl-monthly-modal-box">
+              <div class="wl-monthly-modal-header">
+                <h3>Monthly Summary Report</h3>
+                <button id="wl-monthly-modal-close" class="wl-monthly-close-btn" title="Close">×</button>
+              </div>
+              <p class="wl-monthly-modal-desc">Generate a formatted report of all work logs for a selected month, ready for submission to management.</p>
+              <div class="wl-monthly-form">
+                <div class="wl-monthly-field">
+                  <label class="wl-label">Month</label>
+                  <input type="month" id="wl-monthly-picker" class="wl-input" />
+                </div>
+                <div class="wl-monthly-field">
+                  <label class="wl-label">Officer Name <span class="wl-optional-badge">Optional</span></label>
+                  <input type="text" id="wl-monthly-officer" class="wl-input" placeholder="Your name for the report header…" />
+                </div>
+                <div class="wl-monthly-field">
+                  <label class="wl-label">Report Format</label>
+                  <div class="wl-monthly-format-row">
+                    <label class="wl-format-option">
+                      <input type="radio" name="wl-monthly-format" value="word" checked />
+                      <span class="wl-format-icon wl-format-word">W</span>
+                      Word (.docx)
+                    </label>
+                    <label class="wl-format-option">
+                      <input type="radio" name="wl-monthly-format" value="excel" />
+                      <span class="wl-format-icon wl-format-excel">X</span>
+                      Excel (.xlsx)
+                    </label>
+                  </div>
+                </div>
+              </div>
+              <div class="wl-confirm-actions">
+                <button id="wl-monthly-cancel-btn" class="btn btn-outline">Cancel</button>
+                <button id="wl-monthly-generate-btn" class="btn btn-primary">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+                  Generate Report
+                </button>
+              </div>
+            </div>
+          </div>
 
+          <!-- Photo lightbox -->
+          <div id="wl-photo-lightbox" class="wl-photo-lightbox" style="display:none">
+            <div class="wl-lightbox-backdrop" id="wl-lightbox-backdrop"></div>
+            <div class="wl-lightbox-content">
+              <button class="wl-lightbox-close" id="wl-lightbox-close">×</button>
+              <img id="wl-lightbox-img" class="wl-lightbox-img" alt="Work log photo" />
+              <p id="wl-lightbox-caption" class="wl-lightbox-caption"></p>
+            </div>
+          </div>
 
         </div><!-- /#worklogs-view -->
 
