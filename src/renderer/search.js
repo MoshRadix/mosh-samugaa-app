@@ -82,6 +82,7 @@ function renderSearchResults(results) {
             <div class="template-card-actions">
                 ${doc.hasFields ? `
                     <button class="btn btn-primary btn-small fill-from-search-btn" data-template-id="${doc.id}">Fill Form</button>
+                    <button class="btn btn-batch btn-small batch-from-search-btn" data-template-id="${doc.id}">⚡ Batch</button>
                     <button class="btn btn-outline btn-small preview-template-btn" data-template-id="${doc.id}">Preview</button>
                 ` : `
                     <button class="btn btn-success btn-small print-static-btn" data-template-id="${doc.id}">Print</button>
@@ -108,11 +109,26 @@ function attachSearchEventListeners() {
         btn.addEventListener('click', handlePrintStatic);
     });
     
+    // Batch buttons
+    document.querySelectorAll('.batch-from-search-btn').forEach(btn => {
+        btn.removeEventListener('click', handleBatchFromSearch);
+        btn.addEventListener('click', handleBatchFromSearch);
+    });
+
     // Preview buttons
     document.querySelectorAll('.preview-template-btn').forEach(btn => {
         btn.removeEventListener('click', handlePreview);
         btn.addEventListener('click', handlePreview);
     });
+}
+
+function handleBatchFromSearch(event) {
+    const templateId = event.currentTarget.getAttribute('data-template-id');
+    if (typeof batchGenerateTemplate === 'function') {
+        batchGenerateTemplate(templateId);
+    } else {
+        showToast('Batch generation not available', 'error');
+    }
 }
 
 async function handleFillFromSearch(event) {

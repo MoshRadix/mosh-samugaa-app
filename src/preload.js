@@ -247,6 +247,28 @@ contextBridge.exposeInMainWorld("electronAPI", {
    * @returns {Promise<{success:boolean, path:string}|null>}
    */
   exportWorkLogsMonthlyExcel: (data) => ipcRenderer.invoke("export-work-logs-monthly-excel", data),
+
+  /**
+   * Opens a native file dialog restricted to CSV / XLSX files (for batch generation).
+   * @returns {Promise<string|null>} Absolute path of selected file, or null if cancelled.
+   */
+  openCsvXlsxDialog: () => ipcRenderer.invoke("open-csv-xlsx-dialog"),
+
+  /**
+   * Parses an XLSX workbook buffer (sent as base64) and returns columns + rows.
+   * @param {Object} data - { base64: string }
+   * @returns {Promise<{ columns: string[], rows: Object[] }>}
+   */
+  parseSpreadsheetBuffer: (data) => ipcRenderer.invoke("parse-spreadsheet-buffer", data),
+
+  /**
+   * Generates a document for every row in the provided data array using the
+   * given template, applying the same pipeline (meta_, paragraph mode, etc.)
+   * as single-record generation. Returns a result summary.
+   * @param {Object} data - { templateId, rows: Array<Object>, outputFormat }
+   * @returns {Promise<{ total, succeeded, failed, results: Array }>}
+   */
+  batchGenerateDocuments: (data) => ipcRenderer.invoke("batch-generate-documents", data),
 });
 
 

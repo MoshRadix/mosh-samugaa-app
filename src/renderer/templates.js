@@ -272,7 +272,8 @@ async function renderTemplates() {
         <div class="template-card-actions">
           ${
             template.hasFields
-              ? `<button class="btn btn-primary btn-small" onclick="fillTemplate('${template.id}')">Fill Form</button>`
+              ? `<button class="btn btn-primary btn-small" onclick="fillTemplate('${template.id}')">Fill Form</button>
+                 <button class="btn btn-batch btn-small" onclick="batchGenerateTemplate('${template.id}')">⚡ Batch</button>`
               : `<button class="btn btn-success btn-small" onclick="printStaticDocument('${template.id}')">Print</button>`
           }
           <button class="btn btn-outline btn-small" onclick="previewTemplate('${template.id}')">Preview</button>
@@ -772,7 +773,448 @@ async function previewTemplate(id) {
     showToast("Error previewing template: " + error.message, "error");
   }
 }
-// Make sure these functions are available globally
+// ============================================================
+// BATCH GENERATION
+// ============================================================
+
+// State shared across batch modal steps
+let _batchTemplateId = null;
+let _batchParsedRows = [];    // raw row objects from parsed file
+let _batchColumns = [];       // column headers from file
+let _batchTemplate = null;
+
+/**
+ * Entry point — called from template card "⚡ Batch" button.
+ */
+async function batchGenerateTemplate(templateId) {
+  const templates = await window.electronAPI.getTemplates();
+  const template = templates.find((t) => t.id === templateId);
+  if (!template) { showToast("Template not found", "warning"); return; }
+  if (!template.hasFields || !template.fields || template.fields.length === 0) {
+    showToast("This template has no fields — batch generation requires fillable fields.", "warning");
+    return;
+  }
+
+  _batchTemplateId = templateId;
+  _batchTemplate = template;
+  _batchParsedRows = [];
+  _batchColumns = [];
+  _batchCurrentStep = "upload";
+
+  // Reset modal to step 1
+  document.getElementById("batch-modal-title").textContent = `Batch Generate: ${escapeHtml(template.name)}`;
+  document.getElementById("batch-modal-subtitle").textContent =
+    `${template.fields.filter(f => !f.key.endsWith("_hidden")).length} fillable fields · ${template.type.toUpperCase()} output`;
+
+  // Reset upload zone
+  const uploadZone = document.getElementById("batch-upload-zone");
+  const fileInfo = document.getElementById("batch-file-info");
+  if (uploadZone) uploadZone.style.display = "";
+  if (fileInfo) fileInfo.style.display = "none";
+  // Reset next button label
+  const nextBtn = document.getElementById("batch-next-btn");
+  if (nextBtn) { nextBtn.style.display = ""; nextBtn.disabled = true; nextBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg> Next`; }
+  // Reset cancel
+  const cancelBtn = document.getElementById("batch-cancel-btn");
+  if (cancelBtn) cancelBtn.disabled = false;
+
+  _batchShowStep("upload");
+  _batchSetNextBtn("disabled");
+
+  openModal("batch-modal");
+  _batchWireModal();
+}
+
+/**
+ * Wire up all event handlers inside the batch modal.
+ * Safe to call multiple times — uses a flag guard.
+ */
+let _batchWired = false;
+function _batchWireModal() {
+  if (_batchWired) return;
+  _batchWired = true;
+
+  // Close / cancel
+  const modal = document.getElementById("batch-modal");
+  modal.querySelector(".close").addEventListener("click", () => closeModal("batch-modal"));
+  document.getElementById("batch-cancel-btn").addEventListener("click", () => closeModal("batch-modal"));
+
+  // Upload zone — click to browse
+  document.getElementById("batch-browse-btn").addEventListener("click", (e) => {
+    e.stopPropagation();
+    _batchOpenFilePicker();
+  });
+  document.getElementById("batch-change-file-btn").addEventListener("click", () => _batchOpenFilePicker());
+
+  // Upload zone — drag & drop
+  const zone = document.getElementById("batch-upload-zone");
+  zone.addEventListener("click", () => _batchOpenFilePicker());
+  zone.addEventListener("dragover", (e) => { e.preventDefault(); zone.classList.add("drag-over"); });
+  zone.addEventListener("dragleave", () => zone.classList.remove("drag-over"));
+  zone.addEventListener("drop", (e) => {
+    e.preventDefault();
+    zone.classList.remove("drag-over");
+    const file = e.dataTransfer.files[0];
+    if (file) _batchParseFile(file);
+  });
+
+  // Next button
+  document.getElementById("batch-next-btn").addEventListener("click", _batchNextStep);
+}
+
+async function _batchOpenFilePicker() {
+  const filePath = await window.electronAPI.openCsvXlsxDialog();
+  if (!filePath) return;
+  // We need to read file contents. Since file.path is unavailable in sandboxed renderer,
+  // the user must pick via Electron dialog, but we still need to parse it renderer-side.
+  // We'll pass the path back to main via a dedicated read-file IPC, or use fetch on file://
+  // Actually we already have the path from openCsvXlsxDialog — read it via fetch file://
+  try {
+    const ext = filePath.split(".").pop().toLowerCase();
+    const url = "file://" + filePath.replace(/\\/g, "/");
+    const resp = await fetch(url);
+    const buf = await resp.arrayBuffer();
+
+    let rows = [], columns = [];
+
+    if (ext === "csv") {
+      const text = new TextDecoder("utf-8").decode(buf);
+      const parsed = _batchParseCSV(text);
+      columns = parsed.columns;
+      rows = parsed.rows;
+    } else if (ext === "xlsx") {
+      // Parse xlsx in renderer using a minimal built-in approach:
+      // We'll send the buffer to main for parsing via a small helper IPC,
+      // or we can parse it here with the SheetJS-compatible approach.
+      // Since index.js already has ExcelJS, use a dedicated IPC for reading.
+      const base64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
+      const parsed = await window.electronAPI.parseSpreadsheetBuffer({ base64 });
+      columns = parsed.columns;
+      rows = parsed.rows;
+    } else {
+      showToast("Unsupported file type. Please select a CSV or XLSX file.", "warning");
+      return;
+    }
+
+    if (rows.length === 0) {
+      showToast("The file appears to be empty or has no data rows.", "warning");
+      return;
+    }
+
+    _batchColumns = columns;
+    _batchParsedRows = rows;
+
+    const fileName = filePath.split(/[\\/]/).pop();
+    document.getElementById("batch-upload-zone").style.display = "none";
+    const fileInfo = document.getElementById("batch-file-info");
+    fileInfo.style.display = "flex";
+    document.getElementById("batch-file-name").textContent = fileName;
+    document.getElementById("batch-row-count").textContent = `${rows.length} row${rows.length !== 1 ? "s" : ""} detected`;
+
+    _batchSetNextBtn("enabled", "Map Fields →");
+    _batchBuildMappingTable();
+  } catch (err) {
+    console.error("[Batch] File parse error:", err);
+    showToast("Could not read the file: " + err.message, "error");
+  }
+}
+
+function _batchParseFile(file) {
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    const buf = e.target.result;
+    const ext = file.name.split(".").pop().toLowerCase();
+    let rows = [], columns = [];
+
+    try {
+      if (ext === "csv") {
+        const text = new TextDecoder("utf-8").decode(buf);
+        const parsed = _batchParseCSV(text);
+        columns = parsed.columns;
+        rows = parsed.rows;
+      } else if (ext === "xlsx") {
+        const base64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
+        const parsed = await window.electronAPI.parseSpreadsheetBuffer({ base64 });
+        columns = parsed.columns;
+        rows = parsed.rows;
+      } else {
+        showToast("Unsupported file type. Please drop a CSV or XLSX file.", "warning");
+        return;
+      }
+
+      if (rows.length === 0) {
+        showToast("The file appears to be empty or has no data rows.", "warning");
+        return;
+      }
+
+      _batchColumns = columns;
+      _batchParsedRows = rows;
+
+      document.getElementById("batch-upload-zone").style.display = "none";
+      const fileInfo = document.getElementById("batch-file-info");
+      fileInfo.style.display = "flex";
+      document.getElementById("batch-file-name").textContent = file.name;
+      document.getElementById("batch-row-count").textContent = `${rows.length} row${rows.length !== 1 ? "s" : ""} detected`;
+
+      _batchSetNextBtn("enabled", "Map Fields →");
+      _batchBuildMappingTable();
+    } catch (err) {
+      console.error("[Batch] Drag-drop parse error:", err);
+      showToast("Could not read the file: " + err.message, "error");
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+/**
+ * Minimal RFC 4180-compliant CSV parser.
+ * Returns { columns: string[], rows: Object[] }
+ */
+function _batchParseCSV(text) {
+  const lines = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
+  const nonEmpty = lines.filter((l) => l.trim() !== "");
+  if (nonEmpty.length < 2) return { columns: [], rows: [] };
+
+  const parseLine = (line) => {
+    const result = [];
+    let cur = "", inQuote = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (inQuote) {
+        if (ch === '"' && line[i + 1] === '"') { cur += '"'; i++; }
+        else if (ch === '"') { inQuote = false; }
+        else { cur += ch; }
+      } else {
+        if (ch === '"') { inQuote = true; }
+        else if (ch === ',') { result.push(cur); cur = ""; }
+        else { cur += ch; }
+      }
+    }
+    result.push(cur);
+    return result;
+  };
+
+  const columns = parseLine(nonEmpty[0]);
+  const rows = nonEmpty.slice(1).map((line) => {
+    const vals = parseLine(line);
+    const obj = {};
+    columns.forEach((col, i) => { obj[col] = vals[i] !== undefined ? vals[i] : ""; });
+    return obj;
+  });
+
+  return { columns, rows };
+}
+
+function _batchBuildMappingTable() {
+  if (!_batchTemplate) return;
+  const visibleFields = (_batchTemplate.fields || []).filter(
+    (f) => !f.key.endsWith("_hidden")
+  );
+  const firstRow = _batchParsedRows[0] || {};
+  const tbody = document.getElementById("batch-mapping-body");
+
+  const colOptions = ['<option value="">— skip —</option>']
+    .concat(_batchColumns.map((c) => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`))
+    .join("");
+
+  tbody.innerHTML = visibleFields.map((field, idx) => {
+    // Auto-match: case-insensitive exact or partial match on key / label
+    const autoMatch = _batchColumns.find(
+      (c) =>
+        c.toLowerCase() === field.key.toLowerCase() ||
+        (field.label && c.toLowerCase() === field.label.toLowerCase()) ||
+        c.toLowerCase().replace(/[\s_-]/g, "") === field.key.toLowerCase().replace(/[\s_-]/g, "")
+    ) || "";
+
+    const selectedOptions = _batchColumns.map(
+      (c) => `<option value="${escapeHtml(c)}" ${c === autoMatch ? "selected" : ""}>${escapeHtml(c)}</option>`
+    );
+    const opts = '<option value="">— skip —</option>' + selectedOptions.join("");
+
+    const preview = autoMatch ? escapeHtml(String(firstRow[autoMatch] || "")) : '<em class="log-info">—</em>';
+
+    return `<tr>
+      <td>
+        <div class="batch-field-label">${escapeHtml(field.label || field.key)}</div>
+        <span class="batch-field-key">${escapeHtml(field.key)}</span>
+      </td>
+      <td>
+        <select data-field-key="${escapeHtml(field.key)}" data-field-idx="${idx}" onchange="_batchUpdatePreview(this)">
+          ${opts}
+        </select>
+      </td>
+      <td>
+        <span class="batch-preview-val" id="batch-preview-${idx}">${preview}</span>
+      </td>
+    </tr>`;
+  }).join("");
+}
+
+function _batchUpdatePreview(selectEl) {
+  const idx = selectEl.getAttribute("data-field-idx");
+  const col = selectEl.value;
+  const firstRow = _batchParsedRows[0] || {};
+  const previewEl = document.getElementById(`batch-preview-${idx}`);
+  if (previewEl) {
+    previewEl.innerHTML = col
+      ? escapeHtml(String(firstRow[col] || ""))
+      : '<em class="log-info">—</em>';
+  }
+}
+
+function _batchShowStep(step) {
+  ["upload", "mapping", "progress", "done"].forEach((s) => {
+    const el = document.getElementById(`batch-step-${s}`);
+    if (el) el.style.display = s === step ? "block" : "none";
+  });
+}
+
+function _batchSetNextBtn(state, label) {
+  const btn = document.getElementById("batch-next-btn");
+  if (!btn) return;
+  if (state === "disabled") {
+    btn.disabled = true;
+    btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg> ${label || "Next"}`;
+  } else if (state === "enabled") {
+    btn.disabled = false;
+    btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg> ${label || "Next"}`;
+  } else if (state === "hidden") {
+    btn.style.display = "none";
+  } else if (state === "show") {
+    btn.style.display = "";
+  }
+}
+
+let _batchCurrentStep = "upload"; // upload | mapping | generating | done
+
+async function _batchNextStep() {
+  if (_batchCurrentStep === "upload") {
+    // Move to mapping
+    _batchShowStep("mapping");
+    _batchCurrentStep = "mapping";
+    _batchSetNextBtn("enabled", "Generate Documents →");
+  } else if (_batchCurrentStep === "mapping") {
+    // Collect mapping and start generation
+    await _batchRunGeneration();
+  } else if (_batchCurrentStep === "done") {
+    closeModal("batch-modal");
+  }
+}
+
+async function _batchRunGeneration() {
+  if (!_batchTemplate || _batchParsedRows.length === 0) return;
+
+  // Build mapping: fieldKey → column name
+  const mapping = {};
+  document.querySelectorAll("#batch-mapping-body select").forEach((sel) => {
+    const key = sel.getAttribute("data-field-key");
+    if (key && sel.value) mapping[key] = sel.value;
+  });
+
+  // Build rows with only mapped values
+  const rows = _batchParsedRows.map((rawRow) => {
+    const obj = {};
+    Object.entries(mapping).forEach(([fieldKey, colName]) => {
+      obj[fieldKey] = rawRow[colName] !== undefined ? String(rawRow[colName]) : "";
+    });
+    return obj;
+  });
+
+  // Switch to progress step
+  _batchShowStep("progress");
+  _batchCurrentStep = "generating";
+  _batchSetNextBtn("disabled", "Generating…");
+  document.getElementById("batch-cancel-btn").disabled = true;
+
+  const total = rows.length;
+  const logEl = document.getElementById("batch-log");
+  const barEl = document.getElementById("batch-progress-bar");
+  const textEl = document.getElementById("batch-progress-text");
+  const pctEl = document.getElementById("batch-progress-pct");
+
+  logEl.innerHTML = `<span class="log-info">Starting batch generation of ${total} document${total !== 1 ? "s" : ""}…</span>\n`;
+
+  const outputFormat = _batchTemplate.type === "excel" ? "xlsx" : "docx";
+
+  // Process in chunks of 5 so the UI can update
+  const CHUNK = 5;
+  let succeeded = 0;
+  let failed = 0;
+
+  for (let start = 0; start < total; start += CHUNK) {
+    const chunk = rows.slice(start, Math.min(start + CHUNK, total));
+    const chunkIndices = chunk.map((_, i) => start + i);
+
+    // Run chunk via IPC
+    let chunkResult;
+    try {
+      chunkResult = await window.electronAPI.batchGenerateDocuments({
+        templateId: _batchTemplateId,
+        rows: chunk,
+        outputFormat,
+      });
+    } catch (err) {
+      // Whole chunk failed
+      chunk.forEach((_, i) => {
+        logEl.innerHTML += `<span class="log-err">✗ Row ${start + i + 1}: ${escapeHtml(err.message)}</span>\n`;
+        failed++;
+      });
+      continue;
+    }
+
+    chunkResult.results.forEach((r) => {
+      const rowNum = start + r.row;
+      if (r.success) {
+        logEl.innerHTML += `<span class="log-ok">✓ Row ${rowNum}: ${escapeHtml(r.outputFileName)}</span>\n`;
+        succeeded++;
+      } else {
+        logEl.innerHTML += `<span class="log-err">✗ Row ${rowNum}: ${escapeHtml(r.error || "Unknown error")}</span>\n`;
+        failed++;
+      }
+    });
+
+    // Update progress
+    const done = Math.min(start + CHUNK, total);
+    const pct = Math.round((done / total) * 100);
+    barEl.style.width = pct + "%";
+    textEl.textContent = `${done} of ${total}`;
+    pctEl.textContent = pct + "%";
+    logEl.scrollTop = logEl.scrollHeight;
+
+    // Yield to keep UI responsive
+    await new Promise((r) => setTimeout(r, 10));
+  }
+
+  barEl.style.width = "100%";
+  textEl.textContent = `${total} of ${total}`;
+  pctEl.textContent = "100%";
+  logEl.scrollTop = logEl.scrollHeight;
+
+  // Done step
+  _batchShowStep("done");
+  _batchCurrentStep = "done";
+
+  const doneIcon = document.getElementById("batch-done-icon");
+  const doneSummary = document.getElementById("batch-done-summary");
+  doneIcon.textContent = failed === 0 ? "✅" : "⚠️";
+  doneSummary.innerHTML = `
+    <strong>${succeeded}</strong> document${succeeded !== 1 ? "s" : ""} generated successfully.<br>
+    ${failed > 0 ? `<span style="color:var(--accent-danger)">${failed} row${failed !== 1 ? "s" : ""} failed.</span><br>` : ""}
+    Files saved to the outputs folder.
+  `;
+
+  document.getElementById("batch-cancel-btn").disabled = false;
+  _batchSetNextBtn("show");
+  _batchSetNextBtn("enabled", "Close");
+
+  // Reload templates to update print count
+  await loadTemplates();
+}
+
+window.batchGenerateTemplate = batchGenerateTemplate;
+window._batchUpdatePreview = _batchUpdatePreview;
+
+// Make sure functions are available globally
 window.editFieldTypes = editFieldTypes;
 window.saveFieldSettings = saveFieldSettings;
 window.removeField = removeField;

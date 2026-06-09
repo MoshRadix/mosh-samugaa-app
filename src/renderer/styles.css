@@ -5000,3 +5000,288 @@ kbd {
   font-size: 11px;
   color: #94a3b8;
 }
+
+/* ==========================================================================
+   Batch Generate Modal
+   ========================================================================== */
+.batch-modal-content {
+  max-width: 780px;
+}
+
+.batch-modal-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin-bottom: 24px;
+}
+
+.batch-modal-header h2 {
+  margin-bottom: 4px;
+}
+
+.batch-modal-icon {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  background: var(--accent-primary-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent-primary);
+}
+
+.batch-modal-subtitle {
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  margin: 0;
+}
+
+.batch-step {
+  margin-bottom: 20px;
+}
+
+.batch-step-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--accent-primary);
+  margin-bottom: 12px;
+}
+
+.batch-upload-zone {
+  border: 2px dashed var(--border-medium);
+  border-radius: var(--radius-lg);
+  padding: 36px 24px;
+  text-align: center;
+  color: var(--text-secondary);
+  background: var(--bg-subtle);
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+  cursor: pointer;
+}
+
+.batch-upload-zone:hover,
+.batch-upload-zone.drag-over {
+  border-color: var(--accent-primary);
+  background: var(--accent-primary-light);
+  color: var(--text-primary);
+}
+
+.batch-upload-zone svg {
+  color: var(--text-tertiary);
+  margin-bottom: 12px;
+}
+
+.batch-upload-zone p {
+  margin: 4px 0;
+  font-size: 0.9rem;
+}
+
+.batch-upload-hint {
+  font-size: 0.78rem !important;
+  color: var(--text-tertiary);
+  margin-bottom: 14px !important;
+}
+
+.batch-upload-zone .btn {
+  margin-top: 8px;
+}
+
+.batch-file-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--accent-success-light);
+  border: 1px solid var(--accent-success);
+  border-radius: var(--radius-md);
+  padding: 10px 16px;
+  font-size: 0.875rem;
+  color: var(--text-primary);
+}
+
+.batch-file-info svg {
+  color: var(--accent-success);
+  flex-shrink: 0;
+}
+
+.batch-file-info span:first-of-type {
+  flex: 1;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.batch-row-count {
+  font-size: 0.8rem !important;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  flex: none !important;
+}
+
+.batch-change-file-btn {
+  flex-shrink: 0;
+}
+
+.batch-mapping-hint {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+}
+
+.batch-mapping-table-wrap {
+  max-height: 340px;
+  overflow-y: auto;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+}
+
+.batch-mapping-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.batch-mapping-table th {
+  background: var(--bg-secondary);
+  padding: 9px 14px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.batch-mapping-table td {
+  padding: 8px 14px;
+  border-top: 1px solid var(--border-light);
+  vertical-align: middle;
+}
+
+.batch-mapping-table tr:nth-child(even) td {
+  background: var(--bg-subtle);
+}
+
+.batch-mapping-table select {
+  width: 100%;
+  padding: 5px 8px;
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-sm);
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  font-size: 0.83rem;
+}
+
+.batch-field-key {
+  font-family: monospace;
+  font-size: 0.78rem;
+  background: var(--bg-secondary);
+  border-radius: 4px;
+  padding: 2px 6px;
+  color: var(--accent-primary);
+}
+
+.batch-field-label {
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  margin-bottom: 3px;
+}
+
+.batch-preview-val {
+  color: var(--text-tertiary);
+  font-size: 0.8rem;
+  font-style: italic;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 160px;
+}
+
+/* Progress */
+.batch-progress-wrap {
+  margin-bottom: 16px;
+}
+
+.batch-progress-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.batch-progress-track {
+  height: 8px;
+  background: var(--bg-secondary);
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.batch-progress-bar {
+  height: 100%;
+  background: var(--gradient-primary);
+  border-radius: 99px;
+  transition: width 0.3s ease;
+}
+
+.batch-log {
+  max-height: 220px;
+  overflow-y: auto;
+  font-size: 0.8rem;
+  font-family: monospace;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+.batch-log .log-ok  { color: var(--accent-success); }
+.batch-log .log-err { color: var(--accent-danger); }
+.batch-log .log-info { color: var(--text-tertiary); }
+
+/* Done state */
+.batch-done-icon {
+  font-size: 2.5rem;
+  text-align: center;
+  margin: 12px 0 8px;
+}
+
+.batch-done-summary {
+  text-align: center;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+  line-height: 1.6;
+}
+
+.batch-done-summary strong {
+  color: var(--accent-primary);
+}
+
+/* Footer */
+.batch-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-light);
+}
+
+/* Batch button in template card */
+.btn-batch {
+  background: var(--accent-info-light);
+  color: var(--accent-info);
+  border: 1px solid transparent;
+}
+
+.btn-batch:hover {
+  background: var(--accent-info);
+  color: var(--text-on-accent);
+}

@@ -1106,6 +1106,88 @@
           </div>
         </div>
       </div>
+
+      <!-- Batch Generate Modal -->
+      <div id="batch-modal" class="modal">
+        <div class="modal-content batch-modal-content">
+          <span class="close">&times;</span>
+          <div class="batch-modal-header">
+            <div class="batch-modal-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+            </div>
+            <div>
+              <h2 id="batch-modal-title">Batch Generate Documents</h2>
+              <p class="batch-modal-subtitle" id="batch-modal-subtitle">Generate multiple documents from a spreadsheet</p>
+            </div>
+          </div>
+
+          <!-- Step 1: Upload -->
+          <div id="batch-step-upload" class="batch-step">
+            <div class="batch-step-label">Step 1 — Upload your data file</div>
+            <div class="batch-upload-zone" id="batch-upload-zone">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              <p>Drop a <strong>CSV</strong> or <strong>Excel (.xlsx)</strong> file here</p>
+              <p class="batch-upload-hint">Each row = one document. First row must be column headers.</p>
+              <button class="btn btn-outline btn-small" id="batch-browse-btn">Browse file…</button>
+            </div>
+            <div class="batch-file-info" id="batch-file-info" style="display:none">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              <span id="batch-file-name">—</span>
+              <span id="batch-row-count" class="batch-row-count"></span>
+              <button class="btn btn-outline btn-small batch-change-file-btn" id="batch-change-file-btn">Change</button>
+            </div>
+          </div>
+
+          <!-- Step 2: Column mapping -->
+          <div id="batch-step-mapping" class="batch-step" style="display:none">
+            <div class="batch-step-label">Step 2 — Map columns to template fields</div>
+            <p class="batch-mapping-hint">Match each template field to the corresponding column in your file. Leave as "— skip —" to use a blank value.</p>
+            <div class="batch-mapping-table-wrap">
+              <table class="batch-mapping-table" id="batch-mapping-table">
+                <thead>
+                  <tr>
+                    <th>Template Field</th>
+                    <th>Column in File</th>
+                    <th>Preview (row 1)</th>
+                  </tr>
+                </thead>
+                <tbody id="batch-mapping-body">
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Step 3: Progress -->
+          <div id="batch-step-progress" class="batch-step" style="display:none">
+            <div class="batch-step-label">Generating documents…</div>
+            <div class="batch-progress-wrap">
+              <div class="batch-progress-header">
+                <span id="batch-progress-text">0 of 0</span>
+                <span id="batch-progress-pct">0%</span>
+              </div>
+              <div class="batch-progress-track">
+                <div id="batch-progress-bar" class="batch-progress-bar" style="width:0%"></div>
+              </div>
+            </div>
+            <div id="batch-log" class="batch-log"></div>
+          </div>
+
+          <!-- Step 4: Done -->
+          <div id="batch-step-done" class="batch-step" style="display:none">
+            <div class="batch-done-icon" id="batch-done-icon">✅</div>
+            <div id="batch-done-summary" class="batch-done-summary"></div>
+          </div>
+
+          <!-- Footer actions -->
+          <div class="batch-modal-footer">
+            <button class="btn btn-outline" id="batch-cancel-btn">Cancel</button>
+            <button class="btn btn-primary" id="batch-next-btn" disabled>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+              Next
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Shared confirmation dialog (used by all pages) -->

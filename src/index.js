@@ -1282,6 +1282,146 @@ ipcMain.handle("open-file-dialog", async () => {
   });
   return result.canceled ? null : result.filePaths[0];
 });
+
+// ── Batch generation: CSV / XLSX file picker ─────────────────────────────────
+ipcMain.handle("open-csv-xlsx-dialog", async () => {
+  const result = await dialog.showOpenDialog(mainWindow, {
+    title: "Select data file for batch generation",
+    properties: ["openFile"],
+    filters: [
+      { name: "CSV / Excel files", extensions: ["csv", "xlsx"] },
+    ],
+  });
+  return result.canceled ? null : result.filePaths[0];
+});
+
+// ── Parse spreadsheet buffer (sent as base64 from renderer) ──────────────────
+ipcMain.handle("parse-spreadsheet-buffer", async (event, { base64 }) => {
+  const buf = Buffer.from(base64, "base64");
+  const workbook = new ExcelJS.Workbook();
+  await workbook.xlsx.load(buf);
+  const sheet = workbook.worksheets[0];
+  if (!sheet) return { columns: [], rows: [] };
+
+  const rawRows = [];
+  sheet.eachRow((row, rowNumber) => {
+    const vals = [];
+    row.eachCell({ includeEmpty: true }, (cell) => {
+      let v = cell.value;
+      if (v === null || v === undefined) v = "";
+      else if (typeof v === "object" && v.text) v = v.text; // rich text
+      else if (typeof v === "object" && v.result !== undefined) v = v.result; // formula
+      else v = String(v);
+      vals.push(v);
+    });
+    rawRows.push(vals);
+  });
+
+  if (rawRows.length < 2) return { columns: [], rows: [] };
+
+  const maxCols = Math.max(...rawRows.map((r) => r.length));
+  const columns = rawRows[0].map((h, i) => (h !== "" ? String(h) : `Column${i + 1}`));
+  const rows = rawRows.slice(1).map((vals) => {
+    const obj = {};
+    columns.forEach((col, i) => { obj[col] = i < vals.length ? String(vals[i] || "") : ""; });
+    return obj;
+  });
+
+  return { columns, rows };
+});
+
+// ── Batch generation: generate one document per row ──────────────────────────
+ipcMain.handle(
+  "batch-generate-documents",
+  async (event, { templateId, rows, outputFormat = "docx" }) => {
+    const template = getTemplateById(templateId);
+    if (!template) throw new Error("Template not found");
+    await fs.access(template.filePath);
+
+    const DIVEHI_MONTHS_BATCH = [
+      "ޖެނުއަރީ","ފެބްރުއަރީ","މާރޗް","އެޕްރީލް","މެއި","ޖޫން",
+      "ޖުލައި","އޯގަސްޓް","ސެޕްޓެމްބަރ","އޮކްޓޯބަރ","ނޮވެމްބަރ","ޑިސެމްބަރ",
+    ];
+    const ENGLISH_MONTHS_BATCH = [
+      "January","February","March","April","May","June",
+      "July","August","September","October","November","December",
+    ];
+
+    const total = rows.length;
+    let succeeded = 0;
+    let failed = 0;
+    const results = [];
+
+    for (let i = 0; i < rows.length; i++) {
+      const formData = { ...rows[i] };
+
+      try {
+        // ── Paragraph mode ─────────────────────────────────────────────
+        if (template.fields && Array.isArray(template.fields)) {
+          for (const field of template.fields) {
+            if (field.type !== "textarea" || !field.paragraphMode) continue;
+            const raw = formData[field.key];
+            if (typeof raw !== "string" || !raw.trim()) continue;
+            formData[`${field.key}_paragraphs`] = raw
+              .split(/\n{2,}/)
+              .map((p) => ({ paragraph: p.replace(/\n/g, " ").trim() }))
+              .filter((p) => p.paragraph.length > 0);
+          }
+        }
+
+        // ── Meta fields (Maldives Time) ────────────────────────────────
+        try {
+          const mvtNow = new Date(
+            new Date().toLocaleString("en-US", { timeZone: "Indian/Maldives" }),
+          );
+          const pad = (n) => String(n).padStart(2, "0");
+          const mvtDateStr = `${mvtNow.getFullYear()}-${pad(mvtNow.getMonth() + 1)}-${pad(mvtNow.getDate())}`;
+          const [yr, mo, dy] = mvtDateStr.split("-").map(Number);
+          const metaEn = `${dy} ${ENGLISH_MONTHS_BATCH[mo - 1]} ${yr}`;
+          const metaDv = `${dy} ${DIVEHI_MONTHS_BATCH[mo - 1]} ${yr}`;
+          formData["meta_generated_date"]        = formData["meta_generated_date"]        || metaEn;
+          formData["meta_generated_date_divehi"] = formData["meta_generated_date_divehi"] || metaDv;
+          formData["meta_generated_time"]        = formData["meta_generated_time"]        || `${pad(mvtNow.getHours())}:${pad(mvtNow.getMinutes())}`;
+          formData["meta_template_name"]         = formData["meta_template_name"]         || template.name || "";
+        } catch (_) {}
+
+        // ── Output path ────────────────────────────────────────────────
+        const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+        const rowLabel = String(i + 1).padStart(4, "0");
+        const outputFileName = `${template.name}_batch_${rowLabel}_${timestamp}.${outputFormat}`;
+        const outputPath = path.join(getOutputsDir(), outputFileName);
+
+        if (template.type === "word") {
+          await generateWordDocument(template.filePath, outputPath, formData);
+        } else if (template.type === "excel") {
+          await generateExcelDocument(template.filePath, outputPath, formData);
+        } else {
+          throw new Error("Unsupported template type");
+        }
+
+        // Save record
+        const record = {
+          id: uuidv4(),
+          templateId: template.id,
+          data: formData,
+          outputPath,
+          printed: false,
+          createdAt: new Date().toISOString(),
+        };
+        saveDataRecord(record);
+
+        succeeded++;
+        results.push({ row: i + 1, success: true, outputPath, outputFileName });
+      } catch (rowErr) {
+        failed++;
+        results.push({ row: i + 1, success: false, error: rowErr.message });
+      }
+    }
+
+    await saveDatabase();
+    return { total, succeeded, failed, results };
+  },
+);
 ipcMain.handle("save-file-dialog", async (event, { defaultName, filters }) => {
   const result = await dialog.showSaveDialog(mainWindow, {
     defaultPath: defaultName,
