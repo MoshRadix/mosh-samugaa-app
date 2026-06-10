@@ -782,6 +782,7 @@ let _batchTemplateId = null;
 let _batchParsedRows = [];    // raw row objects from parsed file
 let _batchColumns = [];       // column headers from file
 let _batchTemplate = null;
+let _batchCombinePdf = false; // whether to combine output into a single PDF
 
 /**
  * Entry point — called from template card "⚡ Batch" button.
@@ -799,6 +800,7 @@ async function batchGenerateTemplate(templateId) {
   _batchTemplate = template;
   _batchParsedRows = [];
   _batchColumns = [];
+  _batchCombinePdf = false;
   _batchCurrentStep = "upload";
 
   // Reset modal to step 1
@@ -1048,6 +1050,34 @@ function _batchBuildMappingTable() {
       </td>
     </tr>`;
   }).join("");
+
+  // Render the "Combined PDF" toggle below the table (only for Word templates)
+  const isWordTemplate = (_batchTemplate.type === "word");
+  let pdfToggleEl = document.getElementById("batch-combine-pdf-row");
+  if (!pdfToggleEl) {
+    pdfToggleEl = document.createElement("div");
+    pdfToggleEl.id = "batch-combine-pdf-row";
+    pdfToggleEl.className = "batch-combine-pdf-row";
+    const mapStep = document.getElementById("batch-step-mapping");
+    if (mapStep) mapStep.appendChild(pdfToggleEl);
+  }
+  if (isWordTemplate) {
+    pdfToggleEl.style.display = "";
+    pdfToggleEl.innerHTML = `
+      <label class="batch-combine-pdf-label">
+        <input type="checkbox" id="batch-combine-pdf-chk" ${_batchCombinePdf ? "checked" : ""}>
+        <span class="batch-combine-pdf-text">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          Combine all documents into a single PDF
+          <span class="batch-combine-pdf-hint">(requires Microsoft Word to be installed)</span>
+        </span>
+      </label>`;
+    document.getElementById("batch-combine-pdf-chk").onchange = function() {
+      _batchCombinePdf = this.checked;
+    };
+  } else {
+    pdfToggleEl.style.display = "none";
+  }
 }
 
 function _batchUpdatePreview(selectEl) {
@@ -1132,7 +1162,8 @@ async function _batchRunGeneration() {
   const textEl = document.getElementById("batch-progress-text");
   const pctEl = document.getElementById("batch-progress-pct");
 
-  logEl.innerHTML = `<span class="log-info">Starting batch generation of ${total} document${total !== 1 ? "s" : ""}…</span>\n`;
+  const combineLabel = _batchCombinePdf ? " + combining into PDF…" : "";
+  logEl.innerHTML = `<span class="log-info">Starting batch generation of ${total} document${total !== 1 ? "s" : ""}${combineLabel}</span>\n`;
 
   const outputFormat = _batchTemplate.type === "excel" ? "xlsx" : "docx";
 
@@ -1140,10 +1171,10 @@ async function _batchRunGeneration() {
   const CHUNK = 5;
   let succeeded = 0;
   let failed = 0;
+  const successOutputPaths = []; // track for PDF merging
 
   for (let start = 0; start < total; start += CHUNK) {
     const chunk = rows.slice(start, Math.min(start + CHUNK, total));
-    const chunkIndices = chunk.map((_, i) => start + i);
 
     // Run chunk via IPC
     let chunkResult;
@@ -1167,6 +1198,7 @@ async function _batchRunGeneration() {
       if (r.success) {
         logEl.innerHTML += `<span class="log-ok">✓ Row ${rowNum}: ${escapeHtml(r.outputFileName)}</span>\n`;
         succeeded++;
+        if (r.outputPath) successOutputPaths.push(r.outputPath);
       } else {
         logEl.innerHTML += `<span class="log-err">✗ Row ${rowNum}: ${escapeHtml(r.error || "Unknown error")}</span>\n`;
         failed++;
@@ -1190,6 +1222,27 @@ async function _batchRunGeneration() {
   pctEl.textContent = "100%";
   logEl.scrollTop = logEl.scrollHeight;
 
+  // ── Combined PDF step ──────────────────────────────────────────────────────
+  let combinedPdfFileName = null;
+  if (_batchCombinePdf && successOutputPaths.length > 0 && _batchTemplate.type === "word") {
+    logEl.innerHTML += `<span class="log-info">Converting and merging ${successOutputPaths.length} document${successOutputPaths.length !== 1 ? "s" : ""} into PDF…</span>\n`;
+    logEl.scrollTop = logEl.scrollHeight;
+    try {
+      const mergeResult = await window.electronAPI.batchMergeToPdf({
+        docxPaths: successOutputPaths,
+        templateName: _batchTemplate.name,
+      });
+      combinedPdfFileName = mergeResult.combinedFileName;
+      logEl.innerHTML += `<span class="log-ok">✅ Combined PDF created: ${escapeHtml(mergeResult.combinedFileName)} (${mergeResult.pageCount} page${mergeResult.pageCount !== 1 ? "s" : ""})</span>\n`;
+      if (mergeResult.conversionErrors && mergeResult.conversionErrors.length > 0) {
+        logEl.innerHTML += `<span class="log-err">⚠ ${mergeResult.conversionErrors.length} file${mergeResult.conversionErrors.length !== 1 ? "s" : ""} could not be converted to PDF.</span>\n`;
+      }
+    } catch (mergeErr) {
+      logEl.innerHTML += `<span class="log-err">✗ PDF merge failed: ${escapeHtml(mergeErr.message)}</span>\n`;
+    }
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+
   // Done step
   _batchShowStep("done");
   _batchCurrentStep = "done";
@@ -1197,11 +1250,27 @@ async function _batchRunGeneration() {
   const doneIcon = document.getElementById("batch-done-icon");
   const doneSummary = document.getElementById("batch-done-summary");
   doneIcon.textContent = failed === 0 ? "✅" : "⚠️";
-  doneSummary.innerHTML = `
-    <strong>${succeeded}</strong> document${succeeded !== 1 ? "s" : ""} generated successfully.<br>
-    ${failed > 0 ? `<span style="color:var(--accent-danger)">${failed} row${failed !== 1 ? "s" : ""} failed.</span><br>` : ""}
-    Files saved to the outputs folder.
-  `;
+
+  if (_batchCombinePdf && combinedPdfFileName) {
+    doneSummary.innerHTML = `
+      <strong>${succeeded}</strong> document${succeeded !== 1 ? "s" : ""} generated and merged into:<br>
+      <code style="font-size:0.85em;word-break:break-all;">${escapeHtml(combinedPdfFileName)}</code><br>
+      ${failed > 0 ? `<span style="color:var(--accent-danger)">${failed} row${failed !== 1 ? "s" : ""} failed.</span><br>` : ""}
+      Saved to the outputs folder.
+    `;
+  } else if (_batchCombinePdf) {
+    doneSummary.innerHTML = `
+      <strong>${succeeded}</strong> document${succeeded !== 1 ? "s" : ""} generated successfully.<br>
+      ${failed > 0 ? `<span style="color:var(--accent-danger)">${failed} row${failed !== 1 ? "s" : ""} failed.</span><br>` : ""}
+      <span style="color:var(--accent-warning)">PDF merge did not complete — individual files saved to the outputs folder.</span>
+    `;
+  } else {
+    doneSummary.innerHTML = `
+      <strong>${succeeded}</strong> document${succeeded !== 1 ? "s" : ""} generated successfully.<br>
+      ${failed > 0 ? `<span style="color:var(--accent-danger)">${failed} row${failed !== 1 ? "s" : ""} failed.</span><br>` : ""}
+      Files saved to the outputs folder.
+    `;
+  }
 
   document.getElementById("batch-cancel-btn").disabled = false;
   _batchSetNextBtn("show");

@@ -14,17 +14,20 @@ window.initHelp = function () {
       <div class="help-hero-icon">📄</div>
       <div class="help-hero-text">
         <h1 class="help-hero-title">MTO Document Generator</h1>
-        <p class="help-hero-sub">Complete user guide — templates, tools, placeholders, and more</p>
+        <p class="help-hero-sub">Complete user guide — templates, batch generation, tools, placeholders, and more</p>
       </div>
+      <div class="help-hero-version" id="help-hero-version"></div>
     </div>
 
     <!-- ══ QUICK-NAV PILLS ══════════════════════════════════════ -->
     <div class="help-quicknav">
+      <span class="help-quicknav-label">Jump to:</span>
       <a href="#hn-overview"     class="help-pill">Overview</a>
       <a href="#hn-navigation"   class="help-pill">Navigation</a>
       <a href="#hn-templates"    class="help-pill">Templates</a>
       <a href="#hn-search"       class="help-pill">Search &amp; Print</a>
       <a href="#hn-fillform"     class="help-pill">Fill Form</a>
+      <a href="#hn-batch"        class="help-pill">⚡ Batch Generate</a>
       <a href="#hn-placeholders" class="help-pill">Placeholders</a>
       <a href="#hn-watermark"    class="help-pill">Watermark</a>
       <a href="#hn-worklogs"     class="help-pill">Work Logs</a>
@@ -44,8 +47,9 @@ window.initHelp = function () {
       <p>
         Templates can be <strong>fillable</strong> (contain <code>{placeholder}</code> tags that
         produce a guided form) or <strong>static</strong> (printed as-is). The app supports
-        Divehi (Thaana) and English text, bilingual date formatting, automatic date-range population,
-        weekday computation, image embedding, saved records, and a growing suite of built-in tools.
+        Dhivehi (Thaana) and English text, bilingual date formatting, automatic date-range population,
+        weekday computation, image embedding, batch document generation, saved records, and a
+        growing suite of built-in tools.
       </p>
       <div class="help-feature-grid">
         <div class="help-feature-card">
@@ -54,9 +58,14 @@ window.initHelp = function () {
           <span>Fill placeholders through a guided UI</span>
         </div>
         <div class="help-feature-card">
+          <span class="help-feature-icon">⚡</span>
+          <strong>Batch Generate</strong>
+          <span>Generate hundreds of documents from a CSV or Excel list</span>
+        </div>
+        <div class="help-feature-card">
           <span class="help-feature-icon">🌐</span>
           <strong>Bilingual</strong>
-          <span>Divehi &amp; English dates and text</span>
+          <span>Dhivehi &amp; English dates and text</span>
         </div>
         <div class="help-feature-card">
           <span class="help-feature-icon">🖼️</span>
@@ -78,6 +87,11 @@ window.initHelp = function () {
           <strong>Calendar</strong>
           <span>Maldives holidays &amp; Hijri dates</span>
         </div>
+        <div class="help-feature-card">
+          <span class="help-feature-icon">🌙</span>
+          <strong>Moon &amp; Tides</strong>
+          <span>Lunar phases &amp; Addu City tidal predictions</span>
+        </div>
       </div>
     </div>
 
@@ -89,9 +103,9 @@ window.initHelp = function () {
         <table class="help-table">
           <thead><tr><th>Tab</th><th>Purpose</th></tr></thead>
           <tbody>
-            <tr><td><strong>Search &amp; Print</strong></td><td>Find any template by name, description, or category and print or fill it immediately.</td></tr>
+            <tr><td><strong>Search &amp; Print</strong></td><td>Find any template by name, description, or category and print, fill, or batch-generate documents immediately.</td></tr>
             <tr><td><strong>Fill Form</strong></td><td>Active form for the currently selected fillable template. Only accessible after choosing a template.</td></tr>
-            <tr><td><strong>Templates</strong></td><td>Full template library — upload, edit, configure fields, preview, or delete templates.</td></tr>
+            <tr><td><strong>Templates</strong></td><td>Full template library — upload, edit, configure fields, preview, batch-generate, or delete templates.</td></tr>
             <tr><td><strong>🔧 Utilities</strong></td><td>Unit Converter, Date Calculator, Scientific Calculator, Maldives Calendar, Moon Phase, and Tide Chart — all in one place.</td></tr>
             <tr><td><strong>🖼️ Watermark</strong></td><td>Batch-apply a watermark image to multiple photos — corner placement or full-width overlay.</td></tr>
             <tr><td><strong>📋 Work Logs</strong></td><td>Record, search, filter, and export a timestamped log of tasks and work activities.</td></tr>
@@ -126,6 +140,7 @@ window.initHelp = function () {
           <thead><tr><th>Button</th><th>Action</th></tr></thead>
           <tbody>
             <tr><td><strong>Fill Form</strong></td><td>Open the fill form for a fillable template (shown only when the template has fields).</td></tr>
+            <tr><td><strong>⚡ Batch</strong></td><td>Open the Batch Generator wizard to produce multiple documents from a CSV or Excel file at once.</td></tr>
             <tr><td><strong>Print</strong></td><td>Send a static template directly to the default printer without any form.</td></tr>
             <tr><td><strong>Edit</strong></td><td>Rename, re-describe, re-categorise, or toggle Active / Inactive status.</td></tr>
             <tr><td><strong>⚙️ Fields</strong></td><td>Open the field configuration editor for each detected placeholder.</td></tr>
@@ -160,7 +175,7 @@ window.initHelp = function () {
             <tr><td><strong>Paragraph mode</strong></td><td>(<code>textarea</code> only) When enabled, blank lines in the textarea create separate Word paragraphs via the loop syntax. See §&nbsp;Paragraph &amp; Multi-line Text.</td></tr>
             <tr><td><strong>Rows</strong></td><td>(<code>textarea</code> only) Controls the visible height of the textarea in the form. Defaults to 8 rows in paragraph mode, 3 otherwise.</td></tr>
             <tr><td><strong>Dropdown choices</strong></td><td>(<code>dropdown</code> only) Enter one option per line.</td></tr>
-            <tr><td><strong>RTL (Right-to-Left)</strong></td><td>Enables Divehi / Thaana keyboard and formats date fields in Divehi script.</td></tr>
+            <tr><td><strong>RTL (Right-to-Left)</strong></td><td>Enables Dhivehi / Thaana keyboard and formats date fields in Dhivehi script.</td></tr>
             <tr><td><strong>Required</strong></td><td>Prevents document generation if the field is left empty.</td></tr>
           </tbody>
         </table>
@@ -186,6 +201,7 @@ window.initHelp = function () {
           <thead><tr><th>Button</th><th>Action</th></tr></thead>
           <tbody>
             <tr><td><strong>Fill Form</strong></td><td>Open the fill form for a fillable template.</td></tr>
+            <tr><td><strong>⚡ Batch</strong></td><td>Open the Batch Generator wizard — available on all fillable templates.</td></tr>
             <tr><td><strong>Print</strong></td><td>Send a static template directly to the default printer.</td></tr>
             <tr><td><strong>Preview</strong></td><td>Open the source file for a quick look without printing.</td></tr>
           </tbody>
@@ -223,7 +239,7 @@ window.initHelp = function () {
       <h3 class="help-subsection-title">Auto Language Switching</h3>
       <p>
         When you move between form fields, the app automatically switches the keyboard language:
-        <strong>Divehi (Thaana)</strong> for RTL fields and <strong>English</strong> for LTR fields.
+        <strong>Dhivehi (Thaana)</strong> for RTL fields and <strong>English</strong> for LTR fields.
         A notification banner confirms each switch.
       </p>
       <ul class="help-list">
@@ -272,6 +288,83 @@ window.initHelp = function () {
         Date fields whose placeholder key contains common words like <code>today</code>,
         <code>start</code>, or <code>end</code> open with a sensible default date already set,
         so you rarely need to change them manually.
+      </p>
+    </div>
+
+    <!-- ══ BATCH GENERATION ══════════════════════════════════════ -->
+    <div class="help-section" id="hn-batch">
+      <h2 class="help-section-title">⚡ Batch Document Generation</h2>
+      <p>
+        The <strong>Batch Generator</strong> lets you produce many filled documents at once from a
+        spreadsheet — ideal for issuing the same form to multiple employees, generating monthly
+        reports in bulk, or creating personalised letters for a list of recipients.
+      </p>
+      <p>
+        The <strong>⚡ Batch</strong> button appears on every fillable template card — both on the
+        <strong>Templates</strong> page and the <strong>Search &amp; Print</strong> page.
+        Clicking it opens a four-step wizard:
+      </p>
+
+      <div class="help-steps">
+        <div class="help-step">
+          <div class="help-step-num">1</div>
+          <div class="help-step-body">
+            <strong>Upload Data File</strong>
+            <p>Drag-and-drop or browse to a <code>.csv</code>, <code>.xlsx</code>, or <code>.xls</code> file.
+            Each row will become one generated document. The first row must be a header row with column names.</p>
+          </div>
+        </div>
+        <div class="help-step">
+          <div class="help-step-num">2</div>
+          <div class="help-step-body">
+            <strong>Map Columns to Fields</strong>
+            <p>A mapping table appears with every template field on the left.
+            Use the dropdown on the right to pick which column from your file supplies each field's value.
+            Columns can be left unmapped — those fields will be blank in the output.</p>
+          </div>
+        </div>
+        <div class="help-step">
+          <div class="help-step-num">3</div>
+          <div class="help-step-body">
+            <strong>Generate</strong>
+            <p>Click <strong>Generate</strong>. A native folder picker lets you choose the output directory.
+            A live progress log appears, showing each document as it is created.
+            Failed rows are clearly flagged so you can investigate without stopping the whole batch.</p>
+            <p>
+              For <code>.docx</code> templates you can optionally tick
+              <strong>Combine all documents into a single PDF</strong> before generating
+              (requires Microsoft Word to be installed on the machine).
+            </p>
+          </div>
+        </div>
+        <div class="help-step">
+          <div class="help-step-num">4</div>
+          <div class="help-step-body">
+            <strong>Review Results</strong>
+            <p>A summary shows how many documents succeeded and how many failed.
+            The output folder is opened automatically when the batch completes.</p>
+          </div>
+        </div>
+      </div>
+
+      <h3 class="help-subsection-title">Preparing Your Data File</h3>
+      <ul class="help-list">
+        <li>The <strong>first row must be column headers</strong> — these become the names you pick in the mapping step.</li>
+        <li>Each subsequent row is one document. Empty rows are skipped automatically.</li>
+        <li>Date columns should be formatted as <code>YYYY-MM-DD</code> (e.g. <code>2026-06-10</code>) for reliable parsing. Excel date cells are also read correctly.</li>
+        <li>Keep column names short and descriptive — e.g. <em>Name</em>, <em>ID</em>, <em>StartDate</em>.</li>
+        <li>For boolean fields use <code>Yes</code> / <code>No</code> (or <code>True</code> / <code>False</code>) in the column.</li>
+      </ul>
+
+      <h3 class="help-subsection-title">Output Files</h3>
+      <ul class="help-list">
+        <li>Each document is saved as <code>{TemplateName}_{row number}.docx</code> (or <code>.xlsx</code>) in the folder you chose.</li>
+        <li>If the <strong>Combine into PDF</strong> option was enabled, an additional merged <code>.pdf</code> file is created in the same folder once all individual documents are done.</li>
+        <li>Existing files with the same name are overwritten without warning — use a fresh folder per batch to avoid conflicts.</li>
+      </ul>
+      <p class="help-note">
+        ℹ️ The Combine into PDF option requires Microsoft Word to be installed and accessible on the machine.
+        If Word is not found, individual <code>.docx</code> files are still saved successfully.
       </p>
     </div>
 
@@ -391,15 +484,6 @@ window.initHelp = function () {
         Each newline becomes a <code>&lt;w:br/&gt;</code> break inside a <strong>single paragraph</strong>
         in the generated Word document. Use for short notes, addresses, or remarks.
       </p>
-      <div class="help-table-wrapper">
-        <table class="help-table">
-          <thead><tr><th>Placeholder in template</th><th>Form control</th></tr></thead>
-          <tbody>
-            <tr><td><code>{text_remarks}</code></td><td>Textarea (3 rows default)</td></tr>
-            <tr><td><code>{text_notes_divehi}</code></td><td>Textarea with Thaana input</td></tr>
-          </tbody>
-        </table>
-      </div>
 
       <h4 class="help-subsubsection-title">Paragraph-loop mode</h4>
       <p>
@@ -571,7 +655,7 @@ window.initHelp = function () {
       <div class="help-note">
         <strong>Short weekday name reference</strong><br>
         English: Sun · Mon · Tue · Wed · Thu · Fri · Sat<br>
-        Divehi:  އާދި · ހޯމަ · އަން · ބުދަ · ބުރާ · ހުކު · ހޮނި
+        Divehi: &nbsp;އާދި · ހޯމަ · އަން · ބުދަ · ބުރާ · ހުކު · ހޮނި
       </div>
 
       <!-- ── Full quick-ref ──────────────────────────────────── -->
@@ -810,6 +894,10 @@ window.initHelp = function () {
         percentage, age of the moon in days, and dates of the next major phases (New Moon,
         First Quarter, Full Moon, Last Quarter). The display updates automatically each day.
       </p>
+      <p class="help-note">
+        ℹ️ Spring tides (higher highs and lower lows) occur around Full Moon and New Moon.
+        Neap tides occur at First Quarter and Last Quarter.
+      </p>
 
       <h3 class="help-subsection-title">🌊 Tide Chart</h3>
       <p>
@@ -849,7 +937,7 @@ window.initHelp = function () {
           <tbody>
             <tr><td><strong>Templates Directory</strong></td><td>Where uploaded template files (<code>.docx</code>, <code>.xlsx</code>) are stored on disk.</td></tr>
             <tr><td><strong>Outputs Directory</strong></td><td>Where generated documents are saved when using <em>Generate Only</em>.</td></tr>
-            <tr><td><strong>Database Folder</strong></td><td>Folder containing <code>database.json</code> — the registry of all templates and saved records.</td></tr>
+            <tr><td><strong>Database Folder</strong></td><td>Folder containing <code>mto_forms.db</code> — the registry of all templates, saved records, and field definitions.</td></tr>
             <tr><td><strong>Save Settings</strong></td><td>Apply new directory paths immediately. All views reload to reflect the change.</td></tr>
             <tr><td><strong>Reset to Defaults</strong></td><td>Restore all paths to their original default locations.</td></tr>
           </tbody>
@@ -857,7 +945,7 @@ window.initHelp = function () {
       </div>
       <p class="help-note">
         ⚠️ After changing the Database Folder, the app uses the new location immediately.
-        If you move <code>database.json</code> manually, point this setting to its new folder.
+        If you move <code>mto_forms.db</code> manually, point this setting to its new folder.
       </p>
       <h3 class="help-subsection-title">About</h3>
       <p>
@@ -878,6 +966,15 @@ window.initHelp = function () {
         <li>Older templates that use keys like <code>{Name}</code> or <code>{issue_date}</code> continue to work — backward compatibility is fully preserved.</li>
       </ul>
 
+      <h3 class="help-subsection-title">Batch Generation</h3>
+      <ul class="help-list">
+        <li>Always include a <strong>header row</strong> in your CSV or Excel file — the wizard uses these column names for mapping.</li>
+        <li>Format date columns as <code>YYYY-MM-DD</code> for reliable parsing. Excel date cells work too.</li>
+        <li>Test your mapping with a <strong>2–3 row sample file</strong> first before running a large batch.</li>
+        <li>Use a <strong>fresh empty folder</strong> for each batch run — the app overwrites files with the same name without warning.</li>
+        <li>The <strong>Combine into PDF</strong> option requires Microsoft Word installed on the machine. Skip it if Word is not available.</li>
+      </ul>
+
       <h3 class="help-subsection-title">Paragraph &amp; Multi-line Fields</h3>
       <ul class="help-list">
         <li>Use <code>text_</code> prefix for any free-text field — e.g. <code>{text_intro}</code>, <code>{text_notes}</code>. The app auto-detects them as <code>textarea</code> type.</li>
@@ -886,7 +983,6 @@ window.initHelp = function () {
           <code style="display:inline-block;margin-top:4px;">{#text_body_paragraphs}{paragraph}{/text_body_paragraphs}</code><br>
           Each block of text separated by a blank line in the form becomes its own Word paragraph.
         </li>
-        <li>Paragraph-mode textareas show 8 rows by default — adjust the <strong>Rows</strong> setting in the field editor if you need more or less space.</li>
       </ul>
 
       <h3 class="help-subsection-title">Dates &amp; Bilingual Fields</h3>
@@ -921,7 +1017,6 @@ window.initHelp = function () {
         <li>Use <strong>Dropdown</strong> type fields to enforce consistent values (e.g. department names) and prevent typos.</li>
         <li>Click <strong>Save Record</strong> before generating to keep a log of form data you can reload later.</li>
         <li>The <strong>print count</strong> (🖨️) on each template card updates every time you open the Templates or Search page.</li>
-        <li>The field key badge <code>{key}</code> in the Fields editor lets you confirm the key matches your template exactly before saving.</li>
       </ul>
 
       <h3 class="help-subsection-title">Watermark Tool</h3>
@@ -950,6 +1045,16 @@ window.initHelp = function () {
 
   `;
 
+  // Populate version badge in hero
+  if (window.electronAPI && window.electronAPI.getAboutInfo) {
+    window.electronAPI.getAboutInfo().then(info => {
+      const vEl = document.getElementById('help-hero-version');
+      if (vEl && info && info.version) {
+        vEl.textContent = 'v' + info.version;
+      }
+    }).catch(() => {});
+  }
+
   // Smooth scroll for quick-nav pills
   container.querySelectorAll('.help-pill').forEach(pill => {
     pill.addEventListener('click', e => {
@@ -958,4 +1063,27 @@ window.initHelp = function () {
       if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
   });
+
+  // Highlight active section on scroll
+  const sections = container.querySelectorAll('.help-section[id]');
+  const pills = container.querySelectorAll('.help-pill[href]');
+  const scrollRoot = container.closest('.settings-container') || container.parentElement;
+
+  function _updateActivePill() {
+    let current = null;
+    sections.forEach(sec => {
+      const rect = sec.getBoundingClientRect();
+      const parentRect = scrollRoot.getBoundingClientRect();
+      if (rect.top - parentRect.top <= 80) current = sec.id;
+    });
+    pills.forEach(pill => {
+      const isActive = pill.getAttribute('href') === '#' + current;
+      pill.classList.toggle('help-pill-active', isActive);
+    });
+  }
+
+  if (scrollRoot) {
+    scrollRoot.addEventListener('scroll', _updateActivePill, { passive: true });
+    _updateActivePill();
+  }
 };

@@ -16,6 +16,12 @@ let ImageModule = null;
 try {
   ImageModule = require("docxtemplater-image-module-free");
 } catch (_) {}
+
+// pdf-lib for merging batch output into a single PDF
+let PDFLib = null;
+try {
+  PDFLib = require("pdf-lib");
+} catch (_) {}
 // const ExcelJS = require("exceljs");
 const ExcelJS = require("@protobi/exceljs");
 const { v4: uuidv4 } = require("uuid");
@@ -1330,6 +1336,55 @@ ipcMain.handle("parse-spreadsheet-buffer", async (event, { base64 }) => {
   return { columns, rows };
 });
 
+// ── Helper: convert a .docx file to .pdf using PowerShell + Word COM ──────────
+// Works on Windows where Microsoft Word is installed (standard office machines).
+// Returns the path to the generated PDF (same base name, .pdf extension).
+async function convertDocxToPdf(docxPath) {
+  const pdfPath = docxPath.replace(/\.docx$/i, ".pdf");
+  if (process.platform !== "win32") {
+    throw new Error("DOCX→PDF conversion requires Windows with Microsoft Word installed.");
+  }
+  const { exec } = require("child_process");
+  // Use Word COM via PowerShell. wdFormatPDF = 17.
+  const escaped = docxPath.replace(/\\/g, "\\\\").replace(/'/g, "''");
+  const pdfEscaped = pdfPath.replace(/\\/g, "\\\\").replace(/'/g, "''");
+  const ps = `
+$w = New-Object -ComObject Word.Application;
+$w.Visible = $false;
+$doc = $w.Documents.Open('${escaped}');
+$doc.SaveAs([ref]'${pdfEscaped}', [ref]17);
+$doc.Close();
+$w.Quit();
+[System.Runtime.Interopservices.Marshal]::ReleaseComObject($w) | Out-Null;
+`.trim().replace(/\n/g, " ");
+  await new Promise((resolve, reject) => {
+    exec(`powershell -NoProfile -NonInteractive -Command "${ps}"`, { timeout: 60000 }, (err) => {
+      if (err) reject(new Error(`Word COM conversion failed: ${err.message}`));
+      else resolve();
+    });
+  });
+  // Verify the PDF was created
+  await fs.access(pdfPath);
+  return pdfPath;
+}
+
+// ── Helper: merge an array of PDF file paths into one PDF ──────────────────────
+async function mergePdfsToSingleFile(pdfPaths, outputPath) {
+  if (!PDFLib) throw new Error("pdf-lib is not installed. Run: npm install pdf-lib");
+  const { PDFDocument } = PDFLib;
+  const merged = await PDFDocument.create();
+  for (const pdfPath of pdfPaths) {
+    const bytes = await fs.readFile(pdfPath);
+    const srcDoc = await PDFDocument.load(bytes);
+    const pageCount = srcDoc.getPageCount();
+    const copiedPages = await merged.copyPages(srcDoc, [...Array(pageCount).keys()]);
+    copiedPages.forEach((page) => merged.addPage(page));
+  }
+  const mergedBytes = await merged.save();
+  await fs.writeFile(outputPath, mergedBytes);
+  return outputPath;
+}
+
 // ── Batch generation: generate one document per row ──────────────────────────
 ipcMain.handle(
   "batch-generate-documents",
@@ -1420,6 +1475,54 @@ ipcMain.handle(
 
     await saveDatabase();
     return { total, succeeded, failed, results };
+  },
+);
+
+// ── Merge-to-PDF: convert a list of .docx files to PDF then merge into one ────
+ipcMain.handle(
+  "batch-merge-to-pdf",
+  async (event, { docxPaths, templateName }) => {
+    if (!docxPaths || docxPaths.length === 0) throw new Error("No files to merge");
+
+    // Step 1: convert each docx → pdf via Word COM
+    const pdfPaths = [];
+    const conversionErrors = [];
+    for (const docxPath of docxPaths) {
+      try {
+        const pdfPath = await convertDocxToPdf(docxPath);
+        pdfPaths.push(pdfPath);
+      } catch (convErr) {
+        conversionErrors.push({ path: docxPath, error: convErr.message });
+      }
+    }
+
+    if (pdfPaths.length === 0) {
+      throw new Error(
+        "PDF conversion failed for all documents. Ensure Microsoft Word is installed on this computer.\n" +
+        (conversionErrors[0] ? conversionErrors[0].error : "")
+      );
+    }
+
+    // Step 2: merge into a single PDF
+    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+    const combinedFileName = `${templateName}_batch_combined_${timestamp}.pdf`;
+    const combinedPath = path.join(getOutputsDir(), combinedFileName);
+    await mergePdfsToSingleFile(pdfPaths, combinedPath);
+
+    // Step 3: clean up individual docx + intermediate pdf files
+    for (const docxPath of docxPaths) {
+      try { await fs.unlink(docxPath); } catch (_) {}
+    }
+    for (const pdfPath of pdfPaths) {
+      try { await fs.unlink(pdfPath); } catch (_) {}
+    }
+
+    return {
+      combinedPath,
+      combinedFileName,
+      pageCount: pdfPaths.length,
+      conversionErrors,
+    };
   },
 );
 ipcMain.handle("save-file-dialog", async (event, { defaultName, filters }) => {

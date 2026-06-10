@@ -269,6 +269,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
    * @returns {Promise<{ total, succeeded, failed, results: Array }>}
    */
   batchGenerateDocuments: (data) => ipcRenderer.invoke("batch-generate-documents", data),
+  batchMergeToPdf: (data) => ipcRenderer.invoke("batch-merge-to-pdf", data),
 });
 
 

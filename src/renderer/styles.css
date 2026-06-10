@@ -1333,6 +1333,86 @@ select:disabled {
   line-height: 1.4;
 }
 
+/* Active nav pill */
+.help-pill-active {
+  background: var(--accent-primary);
+  color: #fff;
+  border-color: var(--accent-primary);
+}
+
+/* Quick-nav label */
+.help-quicknav-label {
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  align-self: center;
+  white-space: nowrap;
+  margin-right: 0.1rem;
+}
+
+/* Hero version badge */
+.help-hero-version {
+  margin-left: auto;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: rgba(255,255,255,0.7);
+  background: rgba(255,255,255,0.15);
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: 999px;
+  padding: 0.2rem 0.65rem;
+  white-space: nowrap;
+  align-self: flex-start;
+}
+
+/* Batch steps */
+.help-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  margin: 0.75rem 0 1rem 0;
+}
+.help-step {
+  display: flex;
+  gap: 0.85rem;
+  align-items: flex-start;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  padding: 0.85rem 1rem;
+}
+.help-step-num {
+  flex-shrink: 0;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 50%;
+  background: var(--accent-primary);
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 0.1rem;
+}
+.help-step-body {
+  flex: 1;
+  min-width: 0;
+}
+.help-step-body strong {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  display: block;
+  margin-bottom: 0.3rem;
+}
+.help-step-body p {
+  font-size: 0.84rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin: 0 0 0.4rem 0;
+}
+.help-step-body p:last-child { margin-bottom: 0; }
+
 /* kbd styling */
 kbd {
   display: inline-block;
@@ -5262,6 +5342,46 @@ kbd {
 
 .batch-done-summary strong {
   color: var(--accent-primary);
+}
+
+/* Combined PDF toggle row */
+.batch-combine-pdf-row {
+  margin-top: 16px;
+  padding: 10px 14px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+}
+
+.batch-combine-pdf-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+  font-size: 0.875rem;
+  color: var(--text-primary);
+}
+
+.batch-combine-pdf-label input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent-primary);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.batch-combine-pdf-text {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.batch-combine-pdf-hint {
+  font-size: 0.78rem;
+  color: var(--text-muted, #888);
+  font-style: italic;
 }
 
 /* Footer */
