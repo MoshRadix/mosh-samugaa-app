@@ -790,16 +790,19 @@ function initUtilities() {
 // ============================================================================
 
 const CALC_HISTORY_KEY = "mto_utilities_calc_history";
-const CALC_HISTORY_MAX = 100;
+const CALC_HISTORY_MAX = 200;
 
 let _calc = {
-  display: "0",           // what shows on screen
-  expression: "",         // expression line above display (updates live)
-  fullExpression: "",     // full accumulated expression string for history
-  operand: null,          // left-hand operand stored for pending op
-  operator: null,         // pending operator
+  display: "0",
+  expression: "",
+  fullExpression: "",
+  operand: null,
+  operator: null,
   waitingForOperand: false,
   justEqualed: false,
+  memory: 0,
+  sciMode: false,
+  histSearch: "",
 };
 
 function calcLoadHistory() {
@@ -815,41 +818,95 @@ function calcAddHistory(expression, result) {
   calcSaveHistory(hist);
   calcRenderHistory();
 }
+function calcDeleteHistory(ts) {
+  const hist = calcLoadHistory().filter(h => h.ts !== ts);
+  calcSaveHistory(hist);
+  calcRenderHistory();
+}
 
 function calcRenderHistory() {
   const list  = document.getElementById("calc-history-list");
   const empty = document.getElementById("calc-history-empty");
   if (!list) return;
-  const hist = calcLoadHistory();
+
+  let hist = calcLoadHistory();
+
+  // Search filter
+  const q = (_calc.histSearch || "").toLowerCase().trim();
+  if (q) {
+    hist = hist.filter(h =>
+      String(h.expression).toLowerCase().includes(q) ||
+      String(h.result).toLowerCase().includes(q)
+    );
+  }
+
+  // Clear existing items
+  list.querySelectorAll(".calc-history-item").forEach(el => el.remove());
+
   if (hist.length === 0) {
     empty && (empty.style.display = "flex");
-    // remove any existing items
-    list.querySelectorAll(".calc-history-item").forEach(el => el.remove());
+    if (q) empty.querySelector("p").textContent = "No matching calculations.";
+    else   empty.querySelector("p").textContent = "No calculations yet.";
     return;
   }
   empty && (empty.style.display = "none");
-  list.querySelectorAll(".calc-history-item").forEach(el => el.remove());
-  hist.forEach((entry, idx) => {
+
+  hist.forEach((entry) => {
     const div = document.createElement("div");
     div.className = "calc-history-item";
     const date = new Date(entry.ts);
-    const timeStr = date.toLocaleTimeString("en-US", { hour:"2-digit", minute:"2-digit" });
+    const now  = new Date();
+    const isToday    = date.toDateString() === now.toDateString();
+    const isYesterday = (() => {
+      const y = new Date(now); y.setDate(y.getDate() - 1);
+      return date.toDateString() === y.toDateString();
+    })();
+    let dateStr;
+    if (isToday)     dateStr = date.toLocaleTimeString("en-US", { hour:"2-digit", minute:"2-digit" });
+    else if (isYesterday) dateStr = "Yesterday " + date.toLocaleTimeString("en-US", { hour:"2-digit", minute:"2-digit" });
+    else             dateStr = date.toLocaleDateString("en-US", { month:"short", day:"numeric" }) + " " + date.toLocaleTimeString("en-US", { hour:"2-digit", minute:"2-digit" });
+
     div.innerHTML = `
       <div class="calc-hist-expr">${escapeHtml(entry.expression)}</div>
-      <div class="calc-hist-result">= ${escapeHtml(String(entry.result))}</div>
-      <div class="calc-hist-meta">${timeStr}</div>
-      <button class="calc-hist-reuse" data-value="${escapeHtml(String(entry.result))}" title="Use this result">↵</button>
+      <div class="calc-hist-main-row">
+        <div class="calc-hist-result">= ${escapeHtml(String(entry.result))}</div>
+        <span class="calc-hist-meta">${dateStr}</span>
+        <div class="calc-hist-actions">
+          <button class="calc-hist-btn calc-hist-copy" title="Copy result">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          </button>
+          <button class="calc-hist-btn calc-hist-reuse" title="Use as input">↵</button>
+          <button class="calc-hist-btn calc-hist-delete" title="Delete">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+      </div>
     `;
-    div.querySelector(".calc-hist-reuse").addEventListener("click", (e) => {
-      const val = e.currentTarget.dataset.value;
-      _calc.display = val;
+
+    div.querySelector(".calc-hist-reuse").addEventListener("click", () => {
+      _calc.display = String(entry.result);
       _calc.expression = "";
       _calc.operand = null;
       _calc.operator = null;
       _calc.waitingForOperand = false;
       _calc.justEqualed = false;
       calcUpdateDisplay();
+      calcHighlightActiveOp();
     });
+
+    div.querySelector(".calc-hist-copy").addEventListener("click", (e) => {
+      navigator.clipboard?.writeText(String(entry.result)).catch(() => {});
+      const btn = e.currentTarget;
+      btn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>`;
+      setTimeout(() => {
+        btn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`;
+      }, 1200);
+    });
+
+    div.querySelector(".calc-hist-delete").addEventListener("click", () => {
+      calcDeleteHistory(entry.ts);
+    });
+
     list.appendChild(div);
   });
 }
@@ -858,36 +915,57 @@ function escapeHtml(s) {
   return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
 }
 
+function calcFormatDisplay(numStr) {
+  // Add thousands separators to the integer part for display only
+  if (!numStr || numStr === "Infinity" || numStr === "-Infinity" || numStr === "NaN") return numStr;
+  const neg = numStr.startsWith("-");
+  const s = neg ? numStr.slice(1) : numStr;
+  const [intPart, decPart] = s.split(".");
+  const formatted = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  const result = (neg ? "-" : "") + formatted + (decPart !== undefined ? "." + decPart : "");
+  return result;
+}
+
 function calcUpdateDisplay() {
   const screen = document.getElementById("calc-screen");
   const expr   = document.getElementById("calc-expression");
-  if (screen) screen.textContent = _calc.display;
+  const memInd = document.getElementById("calc-memory-indicator");
+
+  if (screen) screen.textContent = calcFormatDisplay(_calc.display);
   if (expr)   expr.textContent   = _calc.expression;
-  // shrink font for long numbers
+  if (memInd) memInd.style.display = _calc.memory !== 0 ? "block" : "none";
+
+  // Shrink font for long numbers
   if (screen) {
     const len = _calc.display.length;
     screen.style.fontSize = len > 14 ? "20px" : len > 10 ? "26px" : len > 7 ? "32px" : "";
   }
 }
 
+function calcHighlightActiveOp() {
+  const panel = document.querySelector('.util-tab-panel[data-panel="calculator"]');
+  if (!panel) return;
+  panel.querySelectorAll(".calc-btn-op").forEach(btn => {
+    btn.classList.toggle("active-op", btn.dataset.op === _calc.operator && _calc.waitingForOperand);
+  });
+}
+
 function calcFormatNumber(n) {
   if (!isFinite(n)) return String(n);
-  // avoid scientific notation for reasonably sized numbers
-  if (Math.abs(n) < 1e15 && Math.abs(n) > 1e-7 || n === 0) {
-    // strip trailing zeros after decimal
-    let s = parseFloat(n.toPrecision(12)).toString();
-    return s;
+  if (Math.abs(n) < 1e15 && (Math.abs(n) > 1e-9 || n === 0)) {
+    return parseFloat(n.toPrecision(12)).toString();
   }
   return n.toExponential(6);
 }
 
 function calcApplyOp(a, op, b) {
   switch(op) {
-    case "+": return a + b;
-    case "−": return a - b;
-    case "×": return a * b;
-    case "÷": return b === 0 ? (a === 0 ? NaN : Infinity) : a / b;
-    default:  return b;
+    case "+":  return a + b;
+    case "−":  return a - b;
+    case "×":  return a * b;
+    case "÷":  return b === 0 ? (a === 0 ? NaN : Infinity) : a / b;
+    case "^":  return Math.pow(a, b);
+    default:   return b;
   }
 }
 
@@ -898,7 +976,6 @@ function calcHandleDigit(digit) {
     _calc.justEqualed = false;
   } else {
     if (_calc.justEqualed) {
-      // start fresh after equals
       _calc.display = digit;
       _calc.expression = "";
       _calc.fullExpression = "";
@@ -910,6 +987,7 @@ function calcHandleDigit(digit) {
     }
   }
   calcUpdateDisplay();
+  calcHighlightActiveOp();
 }
 
 function calcHandleDecimal() {
@@ -928,32 +1006,28 @@ function calcHandleOperator(op) {
   const current = parseFloat(_calc.display);
 
   if (_calc.fullExpression === "" || _calc.justEqualed) {
-    // First operand: seed fullExpression with the current number
     _calc.fullExpression = _calc.display;
     _calc.justEqualed = false;
   }
 
   if (_calc.operator && !_calc.waitingForOperand) {
-    // Chain: apply the pending op to get the running total
     const result = calcApplyOp(_calc.operand, _calc.operator, current);
     _calc.display = calcFormatNumber(result);
     _calc.operand = result;
-    // Append the number the user just finished typing to fullExpression
     _calc.fullExpression += _calc.display;
   } else {
     _calc.operand = current;
-    // If we were waiting (operator pressed twice), don't append the number again
     if (!_calc.waitingForOperand) {
       _calc.fullExpression = _calc.display;
     }
   }
 
-  // Append the operator symbol to fullExpression
   _calc.fullExpression += op;
   _calc.operator = op;
   _calc.expression = _calc.fullExpression;
   _calc.waitingForOperand = true;
   calcUpdateDisplay();
+  calcHighlightActiveOp();
 }
 
 function calcHandleEquals() {
@@ -962,11 +1036,10 @@ function calcHandleEquals() {
   const result  = calcApplyOp(_calc.operand, _calc.operator, current);
   const resultStr = calcFormatNumber(result);
 
-  // Complete the full expression string with the last number
   const completeExpr = _calc.fullExpression + _calc.display;
-
   calcAddHistory(completeExpr, resultStr);
-  _calc.expression = completeExpr + "=";
+
+  _calc.expression = completeExpr + " =";
   _calc.display = resultStr;
   _calc.fullExpression = "";
   _calc.operand = null;
@@ -974,6 +1047,7 @@ function calcHandleEquals() {
   _calc.waitingForOperand = false;
   _calc.justEqualed = true;
   calcUpdateDisplay();
+  calcHighlightActiveOp();
 }
 
 function calcHandlePercent() {
@@ -994,8 +1068,15 @@ function calcHandleToggleSign() {
 }
 
 function calcHandleClearAll() {
-  _calc = { display:"0", expression:"", fullExpression:"", operand:null, operator:null, waitingForOperand:false, justEqualed:false };
+  _calc.display = "0";
+  _calc.expression = "";
+  _calc.fullExpression = "";
+  _calc.operand = null;
+  _calc.operator = null;
+  _calc.waitingForOperand = false;
+  _calc.justEqualed = false;
   calcUpdateDisplay();
+  calcHighlightActiveOp();
 }
 
 function calcHandleBackspace() {
@@ -1004,8 +1085,84 @@ function calcHandleBackspace() {
   calcUpdateDisplay();
 }
 
+// ── Scientific functions ─────────────────────────────────────────────────────
+
+function calcHandleSci(fn) {
+  const val = parseFloat(_calc.display);
+  let result, label;
+  switch (fn) {
+    case "sin":  result = Math.sin(val * Math.PI / 180); label = `sin(${val}°)`; break;
+    case "cos":  result = Math.cos(val * Math.PI / 180); label = `cos(${val}°)`; break;
+    case "tan":  result = Math.tan(val * Math.PI / 180); label = `tan(${val}°)`; break;
+    case "log":  result = val > 0 ? Math.log10(val) : NaN; label = `log(${val})`; break;
+    case "ln":   result = val > 0 ? Math.log(val)   : NaN; label = `ln(${val})`; break;
+    case "sqrt": result = val >= 0 ? Math.sqrt(val) : NaN; label = `√${val}`; break;
+    case "sq":   result = val * val;  label = `${val}²`; break;
+    case "inv":  result = val !== 0 ? 1 / val : Infinity; label = `1/${val}`; break;
+    case "pi":   result = Math.PI;    label = "π"; break;
+    case "e":    result = Math.E;     label = "e"; break;
+    case "abs":  result = Math.abs(val); label = `|${val}|`; break;
+    default: return;
+  }
+  const resultStr = calcFormatNumber(result);
+  // For constants (pi, e), just insert — don't add to history
+  if (fn === "pi" || fn === "e") {
+    _calc.display = resultStr;
+    _calc.justEqualed = false;
+    _calc.waitingForOperand = false;
+  } else {
+    calcAddHistory(label, resultStr);
+    _calc.display = resultStr;
+    _calc.expression = label + " =";
+    _calc.fullExpression = "";
+    _calc.operand = null;
+    _calc.operator = null;
+    _calc.waitingForOperand = false;
+    _calc.justEqualed = true;
+  }
+  calcUpdateDisplay();
+  calcHighlightActiveOp();
+}
+
+// ── Memory ───────────────────────────────────────────────────────────────────
+
+function calcHandleMemory(action) {
+  const val = parseFloat(_calc.display);
+  switch (action) {
+    case "mc":
+      _calc.memory = 0;
+      break;
+    case "mr":
+      _calc.display = calcFormatNumber(_calc.memory);
+      _calc.waitingForOperand = false;
+      _calc.justEqualed = false;
+      break;
+    case "mplus":
+      _calc.memory += isNaN(val) ? 0 : val;
+      break;
+    case "mminus":
+      _calc.memory -= isNaN(val) ? 0 : val;
+      break;
+  }
+  calcUpdateDisplay();
+  // Flash MR button if memory was just recalled
+  if (action === "mr") {
+    const btn = document.querySelector('.calc-btn-mem[data-action="mr"]');
+    if (btn) { btn.classList.add("mem-flash"); setTimeout(() => btn.classList.remove("mem-flash"), 350); }
+  }
+}
+
+// ── Scientific toggle ─────────────────────────────────────────────────────────
+
+function calcToggleSciMode() {
+  _calc.sciMode = !_calc.sciMode;
+  const panel = document.getElementById("calc-sci-panel");
+  const btn   = document.getElementById("calc-sci-toggle");
+  if (panel) panel.style.display = _calc.sciMode ? "block" : "none";
+  if (btn)   btn.classList.toggle("active", _calc.sciMode);
+}
+
 function initCalculator() {
-  // Button clicks
   const panel = document.querySelector('.util-tab-panel[data-panel="calculator"]');
   if (!panel) return;
 
@@ -1014,7 +1171,9 @@ function initCalculator() {
       const digit  = btn.dataset.digit;
       const op     = btn.dataset.op;
       const action = btn.dataset.action;
+      const sci    = btn.dataset.sci;
       if (digit !== undefined) { calcHandleDigit(digit); return; }
+      if (sci   !== undefined) { calcHandleSci(sci);     return; }
       if (op    !== undefined) { calcHandleOperator(op); return; }
       switch (action) {
         case "clear-all":    calcHandleClearAll();   break;
@@ -1022,11 +1181,15 @@ function initCalculator() {
         case "percent":      calcHandlePercent();    break;
         case "decimal":      calcHandleDecimal();    break;
         case "equals":       calcHandleEquals();     break;
+        case "backspace":    calcHandleBackspace();  break;
+        case "mc": case "mr": case "mplus": case "mminus":
+          calcHandleMemory(action); break;
       }
     });
   });
 
-  // Clear history button
+  document.getElementById("calc-sci-toggle")?.addEventListener("click", calcToggleSciMode);
+
   document.getElementById("calc-clear-history")?.addEventListener("click", async () => {
     if (await showConfirm("Clear calculator history?", "Clear")) {
       calcSaveHistory([]);
@@ -1034,7 +1197,12 @@ function initCalculator() {
     }
   });
 
-  // Keyboard support (only when calculator tab is active)
+  document.getElementById("calc-hist-search")?.addEventListener("input", (e) => {
+    _calc.histSearch = e.target.value;
+    calcRenderHistory();
+  });
+
+  // Keyboard support
   document.addEventListener("keydown", (e) => {
     const panel = document.querySelector('.util-tab-panel[data-panel="calculator"]');
     if (!panel?.classList.contains("active")) return;
@@ -1048,6 +1216,7 @@ function initCalculator() {
       case "-": calcHandleOperator("−"); break;
       case "*": calcHandleOperator("×"); break;
       case "/": e.preventDefault(); calcHandleOperator("÷"); break;
+      case "^": calcHandleOperator("^"); break;
       case "Enter": case "=": calcHandleEquals(); break;
       case "Backspace": calcHandleBackspace(); break;
       case "Escape": calcHandleClearAll(); break;
@@ -1172,123 +1341,217 @@ function computeMoonRiseSet(date, moon) {
 }
 
 /* ─── Canvas moon illustration ─── */
+/**
+ * Draws the moon phase using a clean, correct astronomical rendering algorithm.
+ *
+ * Convention (Northern Hemisphere / equatorial view, matching standard emoji):
+ *   phase 0      = New Moon      (fully dark)
+ *   phase 0→0.5  = Waxing        (RIGHT side lit)
+ *   phase 0.5    = Full Moon     (fully lit)
+ *   phase 0.5→1  = Waning        (LEFT side lit)
+ *
+ * Algorithm:
+ *   1. Paint the full disc with the lit (golden) gradient.
+ *   2. On an offscreen canvas, draw the dark region as a solid path, then
+ *      composite it over the lit disc with destination-in to mask it.
+ *      The dark region path is constructed by tracing:
+ *        – the limb arc  (outer edge on the dark side)
+ *        – the terminator ellipse arc (inner boundary)
+ *      The terminator is an ellipse with:
+ *        x semi-axis = |cos(phase × 2π)| × R  (0 at quarters, R at new/full)
+ *        y semi-axis = R
+ *      Its bow direction (which side it curves toward) encodes crescent vs gibbous:
+ *        phase 0→0.25   waxing crescent : terminator bows RIGHT (toward lit/right side)
+ *        phase 0.25→0.5 waxing gibbous  : terminator bows LEFT  (toward dark/left side)
+ *        phase 0.5→0.75 waning gibbous  : terminator bows LEFT  (toward dark/right side)
+ *        phase 0.75→1   waning crescent : terminator bows LEFT  (toward lit/left side)
+ *
+ *      The CCW arc (anticlockwise=true in canvas) naturally traces the LEFT side.
+ *      A negative x-scale flips it to trace the RIGHT side.
+ *      So: termSign = -1 → bows RIGHT, termSign = +1 → bows LEFT.
+ */
 function drawMoonCanvas(canvas, phase, illumination) {
-  const ctx = canvas.getContext("2d");
-  const W = canvas.width, H = canvas.height;
-  const cx = W/2, cy = H/2, R = W/2 - 12;
-  ctx.clearRect(0, 0, W, H);
-
-  // Outer glow
-  const glow = ctx.createRadialGradient(cx, cy, R*0.6, cx, cy, R*1.4);
-  glow.addColorStop(0, "rgba(255,240,180,0.18)");
-  glow.addColorStop(1, "rgba(255,240,180,0)");
-  ctx.fillStyle = glow;
-  ctx.beginPath(); ctx.arc(cx, cy, R*1.4, 0, Math.PI*2); ctx.fill();
-
-  // Dark side of the moon
-  ctx.save();
-  ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI*2);
-  ctx.fillStyle = "#1a1f2e"; ctx.fill();
-
-  // Lit crescent/gibbous using clip
-  ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI*2); ctx.clip();
-
-  // The lit part is drawn as the union/intersection of two circles:
-  // We use the standard approach: draw the lit ellipse
-  const p = phase; // 0..1
-  // Determine limb direction (waxing: right side lit, waning: left side lit)
-  const waxing = p < 0.5;
-  const pNorm  = waxing ? p * 2 : (p - 0.5) * 2; // 0..1 within half cycle
-
-  // Half-ellipse width: 0 at new/full → R at quarter
-  // For crescent: lit half-circle on one side + dark ellipse overlay
-  // For gibbous: full circle lit − dark ellipse on one side
-
-  // Compute ellipse x-radius (negative = gibbous, positive = crescent)
-  // At phase 0 (new): pNorm=0, ellipseX = R (crescent, width 0)
-  // At phase 0.25 (quarter): pNorm=0.5, ellipseX = 0
-  // At phase 0.5 (full): pNorm=1, ellipseX = -R (gibbous full)
-  const ellipseX = R * Math.cos(pNorm * Math.PI);
-
-  if (waxing) {
-    // Lit on right half
-    // Draw right semicircle
-    const litGrad = ctx.createRadialGradient(cx + R*0.2, cy - R*0.1, R*0.1, cx, cy, R);
-    litGrad.addColorStop(0, "#fff8e0");
-    litGrad.addColorStop(0.5, "#f5d97a");
-    litGrad.addColorStop(1, "#c8a84b");
-    ctx.fillStyle = litGrad;
-    ctx.beginPath();
-    ctx.arc(cx, cy, R, -Math.PI/2, Math.PI/2); // right semi
-    ctx.closePath(); ctx.fill();
-
-    // Overlay dark ellipse to carve crescent or reveal gibbous
-    ctx.fillStyle = ellipseX >= 0 ? "#1a1f2e" : litGrad;
-    ctx.save();
-    ctx.translate(cx, cy);
-    ctx.scale(Math.abs(ellipseX)/R || 0.001, 1);
-    ctx.beginPath();
-    if (ellipseX >= 0) {
-      ctx.arc(0, 0, R, -Math.PI/2, Math.PI/2); ctx.closePath(); ctx.fill();
-    } else {
-      ctx.arc(0, 0, R, Math.PI/2, -Math.PI/2); ctx.closePath();
-      const litG2 = ctx.createRadialGradient(R*0.2, -R*0.1, R*0.1, 0, 0, R);
-      litG2.addColorStop(0, "#fff8e0"); litG2.addColorStop(0.5, "#f5d97a"); litG2.addColorStop(1, "#c8a84b");
-      ctx.fillStyle = litG2; ctx.fill();
-    }
-    ctx.restore();
-  } else {
-    // Waning — lit on left
-    const litGrad = ctx.createRadialGradient(cx - R*0.2, cy - R*0.1, R*0.1, cx, cy, R);
-    litGrad.addColorStop(0, "#fff8e0");
-    litGrad.addColorStop(0.5, "#f5d97a");
-    litGrad.addColorStop(1, "#c8a84b");
-    ctx.fillStyle = litGrad;
-    ctx.beginPath();
-    ctx.arc(cx, cy, R, Math.PI/2, -Math.PI/2); // left semi
-    ctx.closePath(); ctx.fill();
-
-    const pn2 = (p - 0.5) * 2;
-    const eX2 = R * Math.cos(pn2 * Math.PI);
-    ctx.save();
-    ctx.translate(cx, cy);
-    ctx.scale(Math.abs(eX2)/R || 0.001, 1);
-    ctx.beginPath();
-    if (eX2 >= 0) {
-      ctx.arc(0, 0, R, Math.PI/2, -Math.PI/2); ctx.closePath();
-      ctx.fillStyle = "#1a1f2e"; ctx.fill();
-    } else {
-      ctx.arc(0, 0, R, -Math.PI/2, Math.PI/2); ctx.closePath();
-      const litG2 = ctx.createRadialGradient(-R*0.2, -R*0.1, R*0.1, 0, 0, R);
-      litG2.addColorStop(0, "#fff8e0"); litG2.addColorStop(0.5, "#f5d97a"); litG2.addColorStop(1, "#c8a84b");
-      ctx.fillStyle = litG2; ctx.fill();
-    }
-    ctx.restore();
+  const dpr = window.devicePixelRatio || 1;
+  const cssW = parseInt(canvas.style.width  || canvas.getAttribute("width"))  || canvas.width;
+  const cssH = parseInt(canvas.style.height || canvas.getAttribute("height")) || canvas.height;
+  if (canvas.width  !== cssW * dpr || canvas.height !== cssH * dpr) {
+    canvas.width  = cssW * dpr;
+    canvas.height = cssH * dpr;
   }
 
-  // Subtle craters
+  const ctx = canvas.getContext("2d");
+  ctx.save();
+  ctx.scale(dpr, dpr);
+
+  const W = cssW, H = cssH;
+  const cx = W / 2, cy = H / 2;
+  const R  = Math.min(W, H) / 2 - 14;
+
+  ctx.clearRect(0, 0, W, H);
+
+  // ── Outer atmospheric glow ──────────────────────────────────────────────
+  const glowR = R * 1.45;
+  const glow  = ctx.createRadialGradient(cx, cy, R * 0.7, cx, cy, glowR);
+  glow.addColorStop(0, `rgba(255,240,180,${0.06 + illumination * 0.14})`);
+  glow.addColorStop(1, "rgba(255,240,180,0)");
+  ctx.fillStyle = glow;
+  ctx.beginPath(); ctx.arc(cx, cy, glowR, 0, Math.PI * 2); ctx.fill();
+
+  // ── Offscreen canvas: composite lit disc + dark mask ──────────────────
+  const off = document.createElement("canvas");
+  off.width  = cssW;
+  off.height = cssH;
+  const oc = off.getContext("2d");
+
+  // 1. Draw full lit disc
+  const litGrad = oc.createRadialGradient(cx + R*0.15, cy - R*0.15, R*0.05, cx, cy, R);
+  litGrad.addColorStop(0,   "#fffaea");
+  litGrad.addColorStop(0.45,"#f5d97a");
+  litGrad.addColorStop(0.82,"#d4a93a");
+  litGrad.addColorStop(1,   "#b8882a");
+  oc.beginPath(); oc.arc(cx, cy, R, 0, Math.PI * 2);
+  oc.fillStyle = litGrad; oc.fill();
+
+  // 2. Cut dark region using destination-out on a helper canvas, then blit
+  //
+  //  The terminator ellipse x-semi-axis: tx = cos(phase·2π)·R
+  //    tx > 0  →  new→1stQ  and lastQ→new  (crescent): ellipse bows toward RIGHT
+  //    tx < 0  →  1stQ→full and full→lastQ (gibbous):  ellipse bows toward LEFT
+  //    tx = 0  →  quarter (flat terminator)
+  //
+  //  Dark-side:
+  //    Waxing (phase < 0.5) : dark is LEFT  (limb = left arc, angles π/2 → -π/2 CCW)
+  //    Waning (phase ≥ 0.5) : dark is RIGHT (limb = right arc, angles -π/2 → π/2 CCW)
+  //
+  //  Dark region path = limb-arc + terminator-ellipse-arc (closed)
+  //  The terminator arc is always arc(0,0,R, PI/2, -PI/2, true) — CCW in canvas = traces LEFT side.
+  //  A negative x-scale flips it to trace the RIGHT side.
+  //    Crescent waxing : bows RIGHT  → scale(-sx, 1)  [negative flips to right]
+  //    Gibbous  waxing : bows LEFT   → scale(+sx, 1)
+  //    Gibbous  waning : bows LEFT   → scale(-sx2, 1) [in flipped waning coords]
+  //    Crescent waning : bows RIGHT  → scale(+sx2, 1)
+
+  const darkCanvas = document.createElement("canvas");
+  darkCanvas.width  = cssW;
+  darkCanvas.height = cssH;
+  const dc = darkCanvas.getContext("2d");
+
+  // Terminator parameters
+  const tx   = Math.cos(phase * 2 * Math.PI) * R;  // signed x semi-axis
+  const sx   = Math.abs(tx) / R;                    // 0..1 scale factor
+
+  dc.save();
+  dc.translate(cx, cy);
+  dc.beginPath();
+
+  if (phase < 0.5) {
+    // ── WAXING: dark side is LEFT ──────────────────────────────────────
+    // Limb arc: left semicircle from top (−π/2) going CCW (leftward) to bottom (π/2)
+    // In canvas coords (y-down), "going CCW visually" means arc(..., true) — anticlockwise flag
+    dc.arc(0, 0, R, -Math.PI/2, Math.PI/2, true);   // left limb: top → left → bottom
+
+    // Terminator arc: from bottom (0,R) back to top (0,-R) via the terminator ellipse
+    // tx > 0 (crescent): ellipse bows RIGHT  → positive scale on x
+    // tx < 0 (gibbous):  ellipse bows LEFT   → negative scale on x
+    // We scale x, draw a right-half arc CCW (visually left arc in scaled space),
+    // then restore scale. The path continues from where the limb arc ended (0,R).
+    dc.save();
+    const termSign = (tx >= 0) ? 1 : -1;   // crescent: +scale keeps bow RIGHT (large dark); gibbous: -scale flips bow LEFT (small dark)
+    dc.scale(termSign * sx, 1);
+    // Right semicircle CCW: from bottom (π/2) to top (−π/2)
+    dc.arc(0, 0, R, Math.PI/2, -Math.PI/2, true);
+    dc.restore();
+
+  } else {
+    // ── WANING: dark side is RIGHT ─────────────────────────────────────
+    // Limb arc: right semicircle from top (−π/2) going CW (rightward) to bottom (π/2)
+    dc.arc(0, 0, R, -Math.PI/2, Math.PI/2, false);  // right limb: top → right → bottom
+
+    // Terminator arc: from bottom back to top
+    // phase 0.5→0.75 (gibbous waning): tx2 = cos((phase−0.5)·2π)·R > 0, but bows LEFT (into dark=right side)
+    // phase 0.75→1   (crescent waning): tx2 < 0, bows RIGHT (toward lit=left side)
+    const phase2 = phase - 0.5;
+    const tx2    = Math.cos(phase2 * 2 * Math.PI) * R;
+    const sx2    = Math.abs(tx2) / R;
+    dc.save();
+    // Gibbous waning (tx2>0): bow is on the RIGHT (dark side) → negative scale to bow left in CCW arc
+    // Crescent waning (tx2<0): bow is on the LEFT (lit side) → positive scale
+    const termSign2 = (tx2 >= 0) ? 1 : -1;
+    dc.scale(termSign2 * sx2, 1);
+    dc.arc(0, 0, R, Math.PI/2, -Math.PI/2, true);
+    dc.restore();
+  }
+
+  dc.closePath();
+  dc.fillStyle = "#000";
+  dc.fill();
+  dc.restore();
+
+  // Cut dark canvas out of lit disc
+  oc.save();
+  oc.globalCompositeOperation = "destination-out";
+  oc.drawImage(darkCanvas, 0, 0);
+  oc.restore();
+
+  // 3. Add mare (dark patches) as subtle texture on the lit disc
+  oc.save();
+  oc.globalCompositeOperation = "multiply";
+  oc.globalAlpha = 0.18;
+  // Mare Imbrium (upper left)
+  oc.beginPath(); oc.ellipse(cx - R*0.22, cy - R*0.18, R*0.28, R*0.22, -0.3, 0, Math.PI*2);
+  oc.fillStyle = "#a07820"; oc.fill();
+  // Mare Serenitatis (upper right)
+  oc.beginPath(); oc.ellipse(cx + R*0.10, cy - R*0.20, R*0.18, R*0.16,  0.2, 0, Math.PI*2);
+  oc.fillStyle = "#9a7218"; oc.fill();
+  // Mare Tranquillitatis (right of centre)
+  oc.beginPath(); oc.ellipse(cx + R*0.18, cy - R*0.02, R*0.22, R*0.18, -0.1, 0, Math.PI*2);
+  oc.fillStyle = "#8a6a14"; oc.fill();
+  // Mare Nubium / Oceanus Procellarum (left large)
+  oc.beginPath(); oc.ellipse(cx - R*0.30, cy + R*0.05, R*0.30, R*0.38,  0.15, 0, Math.PI*2);
+  oc.fillStyle = "#906c10"; oc.fill();
+  // Mare Crisium (far right edge)
+  oc.beginPath(); oc.ellipse(cx + R*0.52, cy - R*0.22, R*0.11, R*0.09,  0.3, 0, Math.PI*2);
+  oc.fillStyle = "#7a5e10"; oc.fill();
+  oc.restore();
+
+  // 4. Subtle craters (on lit face)
+  oc.save();
+  oc.globalAlpha = 0.10;
   const craters = [
-    {x:0.15, y:-0.2, r:0.07}, {x:-0.3, y:0.1, r:0.09},
-    {x:0.2,  y:0.3,  r:0.06}, {x:-0.1, y:-0.35,r:0.05},
-    {x:0.38, y:-0.1, r:0.055},{x:-0.25,y:0.38, r:0.07},
+    {x:0.38, y:-0.32, r:0.055}, {x:-0.08, y: 0.45, r:0.065},
+    {x: 0.25,y: 0.28, r:0.05 }, {x:-0.40, y:-0.08, r:0.08 },
+    {x:-0.12,y:-0.38, r:0.045}, {x: 0.48, y: 0.12, r:0.05 },
+    {x:-0.52,y: 0.28, r:0.055}, {x: 0.05, y:-0.55, r:0.04 },
   ];
   craters.forEach(c => {
-    ctx.save();
-    ctx.globalAlpha = 0.12;
-    ctx.beginPath();
-    ctx.arc(cx + c.x*R, cy + c.y*R, c.r*R, 0, Math.PI*2);
-    ctx.fillStyle = "#000"; ctx.fill();
-    ctx.restore();
+    oc.beginPath();
+    oc.arc(cx + c.x*R, cy + c.y*R, c.r*R, 0, Math.PI*2);
+    oc.fillStyle = "#6a5000"; oc.fill();
   });
+  oc.restore();
 
-  ctx.restore();
+  // 5. Rim shadow (inner edge of dark side)
+  oc.save();
+  oc.globalCompositeOperation = "source-over";
+  const rimGrad = oc.createRadialGradient(cx, cy, R*0.82, cx, cy, R);
+  rimGrad.addColorStop(0, "rgba(0,0,0,0)");
+  rimGrad.addColorStop(1, "rgba(0,0,0,0.28)");
+  oc.beginPath(); oc.arc(cx, cy, R, 0, Math.PI*2);
+  oc.fillStyle = rimGrad; oc.fill();
+  oc.restore();
 
-  // Rim highlight
+  // ── Blit offscreen canvas to main canvas ──────────────────────────────
+  ctx.drawImage(off, 0, 0);
+
+  // ── Rim highlight ────────────────────────────────────────────────────
   ctx.save();
   ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI*2);
-  ctx.strokeStyle = "rgba(255,240,160,0.25)";
-  ctx.lineWidth = 2; ctx.stroke();
+  ctx.strokeStyle = "rgba(255,240,160,0.30)";
+  ctx.lineWidth   = 1.5;
+  ctx.stroke();
   ctx.restore();
+
+  ctx.restore(); // undo DPR scale
 }
 
 /* ─── Stars background ─── */
@@ -1388,39 +1651,72 @@ function renderMoonFact(phase) {
 
 /* ─── Main init / refresh ─── */
 function initMoonPhase() {
-  const now = new Date();
-  const moon = computeMoonData(now);
-  const riseSet = computeMoonRiseSet(now, moon);
-
-  // Canvas
   const canvas = document.getElementById("moon-canvas");
-  if (canvas) drawMoonCanvas(canvas, moon.phase, moon.illumination);
-
-  // Stars
-  const stars = document.getElementById("moon-stars");
+  const stars  = document.getElementById("moon-stars");
   if (stars) renderStars(stars);
 
-  // Hero info
-  const setEl = (id, val) => { const e = document.getElementById(id); if(e) e.textContent = val; };
-  setEl("moon-phase-name",  moon.phaseName);
-  setEl("moon-phase-emoji", moon.emoji);
-  setEl("moon-phase-date",  now.toLocaleDateString("en-US",{weekday:"long",year:"numeric",month:"long",day:"numeric"}));
-  setEl("moon-illumination", Math.round(moon.illumination * 100) + "%");
-  setEl("moon-age",          moon.age.toFixed(1) + " days");
-  setEl("moon-cycle-day",    moon.cycleDay + " / 30");
-  setEl("moon-distance",     moon.distance.toLocaleString() + " km");
-  setEl("moon-rise",         riseSet.rise);
-  setEl("moon-set",          riseSet.set);
+  function fullRefresh() {
+    const now  = new Date();
+    const moon = computeMoonData(now);
+    const riseSet = computeMoonRiseSet(now, moon);
 
-  renderMoonCycleStrip(now);
-  renderUpcomingPhases(moon.nextPhases);
-  renderMoonFact(moon.phase);
+    if (canvas) drawMoonCanvas(canvas, moon.phase, moon.illumination);
 
-  // Auto-refresh every minute (redraw canvas + stats)
+    const setEl = (id, val) => { const e = document.getElementById(id); if(e) e.textContent = val; };
+    setEl("moon-phase-name",  moon.phaseName);
+    setEl("moon-phase-emoji", moon.emoji);
+    setEl("moon-phase-date",
+      now.toLocaleDateString("en-US", {weekday:"long", year:"numeric", month:"long", day:"numeric"})
+    );
+    setEl("moon-illumination", Math.round(moon.illumination * 100) + "%");
+    setEl("moon-age",          moon.age.toFixed(2) + " days");
+    setEl("moon-cycle-day",    moon.cycleDay + " / 30");
+    setEl("moon-distance",     moon.distance.toLocaleString() + " km");
+    setEl("moon-rise",         riseSet.rise);
+    setEl("moon-set",          riseSet.set);
+
+    renderMoonCycleStrip(now);
+    renderUpcomingPhases(moon.nextPhases);
+    renderMoonFact(moon.phase);
+
+    // Live clock / phase age ticking display
+    const liveEl = document.getElementById("moon-live-age");
+    if (liveEl) {
+      const totalSecs = Math.round(moon.age * 86400);
+      const d = Math.floor(totalSecs / 86400);
+      const h = Math.floor((totalSecs % 86400) / 3600);
+      const m = Math.floor((totalSecs % 3600) / 60);
+      const s = totalSecs % 60;
+      liveEl.textContent =
+        `${d}d ${String(h).padStart(2,"0")}h ${String(m).padStart(2,"0")}m ${String(s).padStart(2,"0")}s`;
+    }
+  }
+
+  // Full refresh once on load
+  fullRefresh();
+
+  // Live tick every second — updates clock and redraws canvas
   if (_moonAnimFrame) clearInterval(_moonAnimFrame);
   _moonAnimFrame = setInterval(() => {
-    const n = new Date();
-    const m = computeMoonData(n);
-    if (canvas) drawMoonCanvas(canvas, m.phase, m.illumination);
-  }, 60000);
+    const now  = new Date();
+    const moon = computeMoonData(now);
+
+    // Redraw canvas every second for smoothness
+    if (canvas) drawMoonCanvas(canvas, moon.phase, moon.illumination);
+
+    // Update live age clock every second
+    const liveEl = document.getElementById("moon-live-age");
+    if (liveEl) {
+      const totalSecs = Math.round(moon.age * 86400);
+      const d = Math.floor(totalSecs / 86400);
+      const h = Math.floor((totalSecs % 86400) / 3600);
+      const m = Math.floor((totalSecs % 3600) / 60);
+      const s = totalSecs % 60;
+      liveEl.textContent =
+        `${d}d ${String(h).padStart(2,"0")}h ${String(m).padStart(2,"0")}m ${String(s).padStart(2,"0")}s`;
+    }
+
+    // Full stat refresh once per minute
+    if (now.getSeconds() === 0) fullRefresh();
+  }, 1000);
 }

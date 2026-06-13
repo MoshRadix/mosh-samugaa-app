@@ -830,12 +830,46 @@
                 <div class="calc-card">
                   <!-- Display -->
                   <div class="calc-display">
+                    <div id="calc-memory-indicator" class="calc-memory-indicator" style="display:none">M</div>
                     <div id="calc-expression" class="calc-expression"></div>
                     <div id="calc-screen" class="calc-screen">0</div>
                   </div>
-                  <!-- Buttons -->
+
+                  <!-- Scientific panel (hidden by default) -->
+                  <div id="calc-sci-panel" class="calc-sci-panel" style="display:none">
+                    <div class="calc-sci-grid">
+                      <button class="calc-btn calc-btn-sci" data-sci="sin">sin</button>
+                      <button class="calc-btn calc-btn-sci" data-sci="cos">cos</button>
+                      <button class="calc-btn calc-btn-sci" data-sci="tan">tan</button>
+                      <button class="calc-btn calc-btn-sci" data-sci="log">log</button>
+                      <button class="calc-btn calc-btn-sci" data-sci="ln">ln</button>
+                      <button class="calc-btn calc-btn-sci" data-sci="sqrt">√</button>
+                      <button class="calc-btn calc-btn-sci" data-sci="sq">x²</button>
+                      <button class="calc-btn calc-btn-sci" data-sci="inv">1/x</button>
+                      <button class="calc-btn calc-btn-sci" data-op="^" class="calc-btn-sci">xʸ</button>
+                      <button class="calc-btn calc-btn-sci" data-sci="pi">π</button>
+                      <button class="calc-btn calc-btn-sci" data-sci="e">e</button>
+                      <button class="calc-btn calc-btn-sci" data-sci="abs">|x|</button>
+                    </div>
+                  </div>
+
+                  <!-- Utility row: Memory + Sci toggle — separated from main grid -->
+                  <div class="calc-utility-row">
+                    <div class="calc-mem-group">
+                      <button class="calc-btn calc-btn-mem" data-action="mc" title="Memory Clear">MC</button>
+                      <button class="calc-btn calc-btn-mem" data-action="mr" title="Memory Recall">MR</button>
+                      <button class="calc-btn calc-btn-mem" data-action="mplus" title="Memory Add">M+</button>
+                      <button class="calc-btn calc-btn-mem" data-action="mminus" title="Memory Subtract">M−</button>
+                    </div>
+                    <button class="calc-btn calc-btn-sci-toggle" id="calc-sci-toggle" title="Toggle scientific mode">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+                      Scientific
+                    </button>
+                  </div>
+
+                  <!-- Main buttons -->
                   <div class="calc-grid">
-                    <!-- Row 1 -->
+                    <!-- Row 1: function keys + operators -->
                     <button class="calc-btn calc-btn-fn" data-action="clear-all">AC</button>
                     <button class="calc-btn calc-btn-fn" data-action="toggle-sign">+/−</button>
                     <button class="calc-btn calc-btn-fn" data-action="percent">%</button>
@@ -855,10 +889,12 @@
                     <button class="calc-btn calc-btn-num" data-digit="2">2</button>
                     <button class="calc-btn calc-btn-num" data-digit="3">3</button>
                     <button class="calc-btn calc-btn-op" data-op="+">+</button>
-                    <!-- Row 5 -->
+                    <!-- Row 5: 0 spans 2, . and ⌫ take next 2 -->
                     <button class="calc-btn calc-btn-num calc-btn-zero" data-digit="0">0</button>
                     <button class="calc-btn calc-btn-num" data-action="decimal">.</button>
-                    <button class="calc-btn calc-btn-eq" data-action="equals">=</button>
+                    <button class="calc-btn calc-btn-fn calc-btn-backspace" data-action="backspace">⌫</button>
+                    <!-- Row 6: = alone, full width -->
+                    <button class="calc-btn calc-btn-eq calc-btn-eq-solo" data-action="equals">=</button>
                   </div>
                 </div>
               </div>
@@ -870,10 +906,14 @@
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                     History
                   </h3>
-                  <button id="calc-clear-history" class="btn btn-danger uc-hist-btn" title="Clear history">
+                  <button id="calc-clear-history" class="btn btn-danger uc-hist-btn" title="Clear all history">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
                     Clear
                   </button>
+                </div>
+                <div class="calc-history-search-wrap">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="calc-hist-search-icon"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                  <input id="calc-hist-search" type="text" class="calc-hist-search-input" placeholder="Search calculations…" autocomplete="off">
                 </div>
                 <div class="calc-history-scroll" id="calc-history-list">
                   <div class="calc-history-empty" id="calc-history-empty">
@@ -935,8 +975,11 @@
               <!-- Hero: illustration + current phase -->
               <div class="moon-hero">
                 <div class="moon-sky">
-                  <canvas id="moon-canvas" class="moon-canvas" width="220" height="220"></canvas>
+                  <canvas id="moon-canvas" class="moon-canvas" width="240" height="240" style="width:240px;height:240px"></canvas>
                   <div class="moon-stars" id="moon-stars" aria-hidden="true"></div>
+                  <div class="moon-live-badge">
+                    <span class="moon-live-dot"></span>Live
+                  </div>
                 </div>
                 <div class="moon-hero-info">
                   <div class="moon-phase-badge" id="moon-phase-badge">
@@ -971,6 +1014,11 @@
                       <span class="moon-stat-label">Moonset</span>
                       <span class="moon-stat-val" id="moon-set">—</span>
                     </div>
+                  </div>
+                  <!-- Live age counter -->
+                  <div class="moon-live-age-row">
+                    <span class="moon-live-age-label">Precise age</span>
+                    <span id="moon-live-age" class="moon-live-age-val">—</span>
                   </div>
                   <div class="moon-location-badge">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
