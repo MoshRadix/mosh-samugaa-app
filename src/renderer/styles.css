@@ -4599,7 +4599,16 @@ kbd {
 /* Declared holiday day cell highlight */
 .cal-day--declared,
 .cal-week-day--declared {
-  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%) !important;
+  border-color: #93c5fd !important;
+}
+.cal-day--declared:hover,
+.cal-week-day--declared:hover {
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%) !important;
+}
+.cal-day--declared .cal-day-greg,
+.cal-week-day--declared .cal-week-day-greg {
+  color: #1d4ed8;
 }
 .cal-day--declared .cal-day-holiday-label,
 .cal-week-day--declared .cal-week-holiday-label {

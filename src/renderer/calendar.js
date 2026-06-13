@@ -10,7 +10,7 @@
 // ============================================================================
 
 const CAL_LANG_KEY    = "mto_cal_lang";
-const CAL_REMOTE_URL  = "https://raw.githubusercontent.com/YOUR-ORG/mto-holidays/main/holidays.json";
+const CAL_REMOTE_URL  = "https://api.npoint.io/8221abfb843e0b947998";
 const CAL_CACHE_KEY   = "mto_cal_remote_holidays";
 const CAL_CACHE_TS_KEY = "mto_cal_remote_ts";
 const CAL_CACHE_TTL   = 24 * 60 * 60 * 1000; // 24 hours in ms
@@ -255,10 +255,12 @@ let _calSyncMeta   = null; // { last_updated, source } from remote JSON
 function mergeRemoteHolidays(entries) {
   for (const h of entries) {
     if (!h.date || !h.en) continue;
+    // Remote entries are government-declared special holidays regardless of
+    // the type field in the JSON (which is sometimes mislabelled "islamic").
     CAL_HOLIDAY_MAP[h.date] = {
       en:          h.en,
       dv:          h.dv || h.en,
-      type:        h.type || "declared",
+      type:        "declared",
       gazette_ref: h.gazette_ref || null,
       remote:      true,
     };
