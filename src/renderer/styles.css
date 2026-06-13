@@ -4505,6 +4505,12 @@ kbd {
   color: #c0392b;
   border: 1px solid #e8a09a;
 }
+/* Declared / special presidential holidays */
+.cal-badge--declared {
+  background: #eef4ff;
+  color: #1a56db;
+  border: 1px solid #a4cafe;
+}
 
 .cal-detail-holiday-name {
   font-size: 12px;
@@ -4513,6 +4519,95 @@ kbd {
   line-height: 1.4;
   margin-top: 4px;
 }
+.cal-detail-gazette {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  margin-top: 5px;
+  font-style: italic;
+}
+
+/* ── Legend row (legend + sync pill side by side) ── */
+.cal-legend-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* ── Sync status pill ── */
+.cal-sync-status {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  padding: 3px 10px 3px 8px;
+  border-radius: 20px;
+  border: 1px solid var(--border-light);
+  background: var(--bg-secondary);
+  color: var(--text-tertiary);
+  white-space: nowrap;
+  min-height: 24px;
+}
+.cal-sync-status[data-status="idle"] { display: none; }
+.cal-sync-status[data-status="loading"] {
+  color: var(--text-secondary);
+}
+.cal-sync-status[data-status="ok"] {
+  color: #16a34a;
+  background: #f0fdf4;
+  border-color: #86efac;
+}
+.cal-sync-status[data-status="cached"] {
+  color: #1a56db;
+  background: #eff6ff;
+  border-color: #bfdbfe;
+}
+.cal-sync-status[data-status="error"] {
+  color: #b45309;
+  background: #fffbeb;
+  border-color: #fcd34d;
+}
+.cal-sync-icon {
+  font-size: 12px;
+  font-weight: 700;
+}
+.cal-sync-status[data-status="loading"] .cal-sync-icon {
+  display: inline-block;
+  animation: cal-spin 1s linear infinite;
+}
+@keyframes cal-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+.cal-sync-refresh {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  color: inherit;
+  padding: 0 0 0 4px;
+  line-height: 1;
+  opacity: 0.7;
+  transition: opacity 0.15s, transform 0.2s;
+}
+.cal-sync-refresh:hover {
+  opacity: 1;
+  transform: rotate(30deg);
+}
+
+/* Declared holiday day cell highlight */
+.cal-day--declared,
+.cal-week-day--declared {
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+}
+.cal-day--declared .cal-day-holiday-label,
+.cal-week-day--declared .cal-week-holiday-label {
+  color: #1d4ed8;
+}
+
+/* Legend swatch for declared */
+.cal-legend-swatch--declared { background: #3b82f6; opacity: 0.75; }
 
 /* ============================================================
    RESPONSIVE ADJUSTMENTS

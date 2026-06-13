@@ -9,7 +9,11 @@
 // CONSTANTS & DATA
 // ============================================================================
 
-const CAL_LANG_KEY = "mto_cal_lang";
+const CAL_LANG_KEY    = "mto_cal_lang";
+const CAL_REMOTE_URL  = "https://raw.githubusercontent.com/YOUR-ORG/mto-holidays/main/holidays.json";
+const CAL_CACHE_KEY   = "mto_cal_remote_holidays";
+const CAL_CACHE_TS_KEY = "mto_cal_remote_ts";
+const CAL_CACHE_TTL   = 24 * 60 * 60 * 1000; // 24 hours in ms
 
 const CAL_I18N = {
   en: {
@@ -225,26 +229,120 @@ function formatHijri(gYear, gMonth, gDay, lang) {
 // HOLIDAY LOOKUP
 // ============================================================================
 
-/** Build a fast lookup map keyed by "YYYY-MM-DD" */
+/** Build a fast lookup map keyed by "YYYY-MM-DD" from bundled data */
 function buildHolidayMap() {
   const map = {};
-  // Fixed annual holidays
+  const thisYear = new Date().getFullYear();
   for (const [mmdd, names] of Object.entries(MV_FIXED_HOLIDAYS)) {
-    // Store for multiple years (today ±5 years)
-    const thisYear = new Date().getFullYear();
     for (let yr = thisYear - 3; yr <= thisYear + 5; yr++) {
-      const key = `${yr}-${mmdd}`;
-      map[key] = { ...names, type: "fixed" };
+      map[`${yr}-${mmdd}`] = { ...names, type: "fixed" };
     }
   }
-  // Variable Islamic holidays
   for (const h of MV_ISLAMIC_HOLIDAYS) {
     map[h.date] = { en: h.en, dv: h.dv, type: "islamic" };
   }
   return map;
 }
 
-const CAL_HOLIDAY_MAP = buildHolidayMap();
+// Live map — starts from bundled data; remote entries are merged in on load
+let CAL_HOLIDAY_MAP = buildHolidayMap();
+
+// Sync status: "idle" | "loading" | "ok" | "cached" | "error"
+let _calSyncStatus = "idle";
+let _calSyncMeta   = null; // { last_updated, source } from remote JSON
+
+/** Merge a flat array of {date, en, dv, type} entries into the live map */
+function mergeRemoteHolidays(entries) {
+  for (const h of entries) {
+    if (!h.date || !h.en) continue;
+    CAL_HOLIDAY_MAP[h.date] = {
+      en:          h.en,
+      dv:          h.dv || h.en,
+      type:        h.type || "declared",
+      gazette_ref: h.gazette_ref || null,
+      remote:      true,
+    };
+  }
+}
+
+/**
+ * Fetch remote holidays from GitHub.
+ * Uses localStorage as a 24-hour cache so the app works offline.
+ * Calls renderCalendar() + renderSyncStatus() when done.
+ */
+async function fetchRemoteHolidays() {
+  _calSyncStatus = "loading";
+  renderSyncStatus();
+
+  // ── 1. Try cache first ──────────────────────────────────────────────────
+  const cachedTs   = parseInt(localStorage.getItem(CAL_CACHE_TS_KEY) || "0", 10);
+  const cachedData = localStorage.getItem(CAL_CACHE_KEY);
+  const age        = Date.now() - cachedTs;
+
+  if (cachedData && age < CAL_CACHE_TTL) {
+    try {
+      const parsed = JSON.parse(cachedData);
+      const entries = flattenRemoteJson(parsed);
+      mergeRemoteHolidays(entries);
+      _calSyncMeta   = { last_updated: parsed.last_updated, source: parsed.source };
+      _calSyncStatus = "cached";
+      renderSyncStatus();
+      renderCalendar();
+      return;
+    } catch (_) { /* corrupt cache — fall through to fetch */ }
+  }
+
+  // ── 2. Fetch from GitHub ────────────────────────────────────────────────
+  try {
+    const resp = await fetch(CAL_REMOTE_URL, { cache: "no-store" });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const json = await resp.json();
+
+    const entries = flattenRemoteJson(json);
+    mergeRemoteHolidays(entries);
+
+    _calSyncMeta   = { last_updated: json.last_updated, source: json.source };
+    _calSyncStatus = "ok";
+
+    // Persist to cache
+    localStorage.setItem(CAL_CACHE_KEY,    JSON.stringify(json));
+    localStorage.setItem(CAL_CACHE_TS_KEY, String(Date.now()));
+  } catch (err) {
+    console.warn("[Calendar] Remote holiday fetch failed:", err.message);
+    // Try stale cache as last resort
+    if (cachedData) {
+      try {
+        const parsed  = JSON.parse(cachedData);
+        const entries = flattenRemoteJson(parsed);
+        mergeRemoteHolidays(entries);
+        _calSyncMeta   = { last_updated: parsed.last_updated, source: parsed.source };
+      } catch (_) { /* ignore */ }
+    }
+    _calSyncStatus = "error";
+  }
+
+  renderSyncStatus();
+  renderCalendar();
+}
+
+/** Flatten the years-keyed remote JSON into a single array */
+function flattenRemoteJson(json) {
+  const entries = [];
+  if (!json || typeof json.years !== "object") return entries;
+  for (const yearEntries of Object.values(json.years)) {
+    if (Array.isArray(yearEntries)) entries.push(...yearEntries);
+  }
+  return entries;
+}
+
+/** Invalidate cache and re-fetch */
+async function refreshRemoteHolidays() {
+  localStorage.removeItem(CAL_CACHE_KEY);
+  localStorage.removeItem(CAL_CACHE_TS_KEY);
+  // Reset to bundled data before re-fetching so stale remote entries are cleared
+  CAL_HOLIDAY_MAP = buildHolidayMap();
+  await fetchRemoteHolidays();
+}
 
 function getHolidayInfo(year, month1based, day) {
   const key = `${year}-${String(month1based).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
@@ -307,7 +405,13 @@ function calDayCell(year, month1, day, opts = {}) {
   let classes = "cal-day";
   if (outsideMonth) classes += " cal-day--outside";
   if (weekend)      classes += " cal-day--weekend";
-  if (holiday)      classes += " cal-day--holiday";
+  if (holiday) {
+    if (holiday.type === "declared" || holiday.type === "special") {
+      classes += " cal-day--declared";
+    } else {
+      classes += " cal-day--holiday";
+    }
+  }
   if (isToday)      classes += " cal-day--today";
   if (isSelected)   classes += " cal-day--selected";
   if (compact)      classes += " cal-day--compact";
@@ -401,7 +505,13 @@ function renderWeekView(container) {
 
     let classes = "cal-week-day";
     if (weekend)    classes += " cal-week-day--weekend";
-    if (holiday)    classes += " cal-week-day--holiday";
+    if (holiday) {
+      if (holiday.type === "declared" || holiday.type === "special") {
+        classes += " cal-week-day--declared";
+      } else {
+        classes += " cal-week-day--holiday";
+      }
+    }
     if (isToday)    classes += " cal-week-day--today";
     if (isSelected) classes += " cal-week-day--selected";
 
@@ -499,7 +609,16 @@ function renderDayDetail() {
 
   let badges = "";
   if (weekend)  badges += `<span class="cal-badge cal-badge--weekend">${t("weekend")}</span>`;
-  if (holiday)  badges += `<span class="cal-badge cal-badge--holiday">${t("publicHoliday")}</span>`;
+  if (holiday) {
+    const typeClass = (holiday.type === "declared" || holiday.type === "special")
+      ? "cal-badge--declared"
+      : "cal-badge--holiday";
+    badges += `<span class="cal-badge ${typeClass}">${t("publicHoliday")}</span>`;
+  }
+
+  const gazetteHtml = holiday?.gazette_ref
+    ? `<div class="cal-detail-gazette">📋 ${holiday.gazette_ref}</div>`
+    : "";
 
   panel.innerHTML = `
     <div class="cal-detail-date">
@@ -515,8 +634,41 @@ function renderDayDetail() {
       </div>
       ${badges ? `<div class="cal-detail-badges">${badges}</div>` : ""}
       ${holiday ? `<div class="cal-detail-holiday-name">${holiday[_calState.lang]}</div>` : ""}
+      ${gazetteHtml}
     </div>
   `;
+}
+
+// ============================================================================
+// SYNC STATUS PILL
+// ============================================================================
+
+function renderSyncStatus() {
+  const el = document.getElementById("cal-sync-status");
+  if (!el) return;
+
+  const icons = { loading: "⟳", ok: "✓", cached: "✓", error: "⚠", idle: "" };
+  const labels = {
+    loading: "Checking for updates…",
+    ok:      _calSyncMeta ? `Updated ${_calSyncMeta.last_updated}` : "Holidays up to date",
+    cached:  _calSyncMeta ? `Cached · ${_calSyncMeta.last_updated}` : "Cached",
+    error:   "Could not reach server — using local data",
+    idle:    "",
+  };
+
+  el.dataset.status = _calSyncStatus;
+  el.innerHTML = `
+    <span class="cal-sync-icon">${icons[_calSyncStatus]}</span>
+    <span class="cal-sync-label">${labels[_calSyncStatus]}</span>
+    ${_calSyncStatus !== "loading"
+      ? `<button class="cal-sync-refresh" id="cal-sync-refresh-btn" title="Refresh holidays from server">↺</button>`
+      : ""}
+  `;
+
+  document.getElementById("cal-sync-refresh-btn")?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    refreshRemoteHolidays();
+  });
 }
 
 // ============================================================================
@@ -654,6 +806,9 @@ function initCalendar() {
   _calendarInitialized = true;
 
   calLoadState();
+
+  // Kick off background fetch of remote holidays (non-blocking)
+  fetchRemoteHolidays();
 
   // View toggle buttons
   ["week","month","year"].forEach(v => {

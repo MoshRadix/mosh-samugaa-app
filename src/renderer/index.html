@@ -950,11 +950,15 @@
                 </div>
               </div>
 
-              <!-- Legend -->
-              <div class="cal-legend">
-                <span class="cal-legend-item"><span class="cal-legend-swatch cal-legend-swatch--today"></span>Today</span>
-                <span class="cal-legend-item"><span class="cal-legend-swatch cal-legend-swatch--weekend"></span>Fri / Sat (Weekend)</span>
-                <span class="cal-legend-item"><span class="cal-legend-swatch cal-legend-swatch--holiday"></span>Public Holiday</span>
+              <!-- Legend + sync status -->
+              <div class="cal-legend-row">
+                <div class="cal-legend">
+                  <span class="cal-legend-item"><span class="cal-legend-swatch cal-legend-swatch--today"></span>Today</span>
+                  <span class="cal-legend-item"><span class="cal-legend-swatch cal-legend-swatch--weekend"></span>Fri / Sat (Weekend)</span>
+                  <span class="cal-legend-item"><span class="cal-legend-swatch cal-legend-swatch--holiday"></span>Public Holiday</span>
+                  <span class="cal-legend-item"><span class="cal-legend-swatch cal-legend-swatch--declared"></span>Declared Holiday</span>
+                </div>
+                <div id="cal-sync-status" class="cal-sync-status" data-status="idle"></div>
               </div>
 
               <!-- Main area -->
