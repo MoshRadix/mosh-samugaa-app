@@ -14,7 +14,7 @@ window.initHelp = function () {
       <div class="help-hero-icon">📄</div>
       <div class="help-hero-text">
         <h1 class="help-hero-title">MTO Samugaa</h1>
-        <p class="help-hero-sub">Complete user guide — templates, batch generation, tools, placeholders, and more</p>
+        <p class="help-hero-sub">Complete user guide — templates, batch generation, tools, prayer times, placeholders, and more</p>
       </div>
       <div class="help-hero-version" id="help-hero-version"></div>
     </div>
@@ -32,6 +32,8 @@ window.initHelp = function () {
       <a href="#hn-watermark"    class="help-pill">Watermark</a>
       <a href="#hn-worklogs"     class="help-pill">Work Logs</a>
       <a href="#hn-utilities"    class="help-pill">Utilities</a>
+      <a href="#hn-prayertimes"  class="help-pill">🕌 Prayer Times</a>
+      <a href="#hn-randompicker" class="help-pill">🎲 Random Picker</a>
       <a href="#hn-settings"     class="help-pill">Settings</a>
       <a href="#hn-tips"         class="help-pill">Tips</a>
     </div>
@@ -83,6 +85,16 @@ window.initHelp = function () {
           <span>Unit converter, date calc, tides &amp; more</span>
         </div>
         <div class="help-feature-card">
+          <span class="help-feature-icon">🕌</span>
+          <strong>Prayer Times</strong>
+          <span>Daily prayer schedule, Qibla, countdown &amp; Hijri date</span>
+        </div>
+        <div class="help-feature-card">
+          <span class="help-feature-icon">🎲</span>
+          <strong>Random Picker</strong>
+          <span>Assign choices to lists with animated shuffle</span>
+        </div>
+        <div class="help-feature-card">
           <span class="help-feature-icon">📅</span>
           <strong>Calendar</strong>
           <span>Maldives holidays &amp; Hijri dates</span>
@@ -107,6 +119,8 @@ window.initHelp = function () {
             <tr><td><strong>Fill Form</strong></td><td>Active form for the currently selected fillable template. Only accessible after choosing a template.</td></tr>
             <tr><td><strong>Templates</strong></td><td>Full template library — upload, edit, configure fields, preview, batch-generate, or delete templates.</td></tr>
             <tr><td><strong>🔧 Utilities</strong></td><td>Unit Converter, Date Calculator, Scientific Calculator, Maldives Calendar, Moon Phase, and Tide Chart — all in one place.</td></tr>
+            <tr><td><strong>🕌 Prayer Times</strong></td><td>Daily prayer schedule for Addu City (Gan), live countdown to the next prayer, sun times, Qibla compass, and Hijri date.</td></tr>
+            <tr><td><strong>🎲 Random Picker</strong></td><td>Assign a shuffled list of choices to a list of names — with animated countdown, grouped or list view, and copy-to-clipboard.</td></tr>
             <tr><td><strong>🖼️ Watermark</strong></td><td>Batch-apply a watermark image to multiple photos — corner placement or full-width overlay.</td></tr>
             <tr><td><strong>📋 Work Logs</strong></td><td>Record, search, filter, and export a timestamped log of tasks and work activities.</td></tr>
             <tr><td><strong>⚙️ Settings</strong></td><td>Change storage directories and view app information.</td></tr>
@@ -923,6 +937,129 @@ window.initHelp = function () {
       </p>
     </div>
 
+    <!-- ══ PRAYER TIMES ══════════════════════════════════════════ -->
+    <div class="help-section" id="hn-prayertimes">
+      <h2 class="help-section-title">🕌 Prayer Times</h2>
+      <p>
+        The <strong>Prayer Times</strong> page shows the daily prayer schedule for
+        <strong>Addu City (Gan), Maldives</strong> using the pre-computed Namaadhu app
+        database. All times are in <strong>Maldives Standard Time (MVT, UTC+5)</strong>.
+      </p>
+
+      <h3 class="help-subsection-title">Prayer Cards</h3>
+      <p>
+        Six time cards are shown — Fajr, Sunrise, Dhuhr, Asr, Maghrib, and Isha — each
+        displaying both 12-hour and 24-hour formats. The <strong>current prayer</strong>
+        (the one in progress) and the <strong>next prayer</strong> are highlighted with
+        colour badges so you can see at a glance where you are in the day.
+      </p>
+
+      <h3 class="help-subsection-title">Countdown Card</h3>
+      <p>
+        A live countdown panel shows the name, icon, and Arabic label of the upcoming
+        prayer along with a seconds-accurate timer. A progress ring and bar visualise
+        how far through the interval between the previous and next prayer you currently are.
+      </p>
+
+      <h3 class="help-subsection-title">Sun Information</h3>
+      <p>
+        Below the countdown, a sun-info strip shows Sunrise, Solar Noon (Dhuhr),
+        Sunset (Maghrib), and the total day length calculated from those times.
+      </p>
+
+      <h3 class="help-subsection-title">Qibla Compass</h3>
+      <p>
+        A graphical compass needle points toward Makkah from the Addu City coordinates,
+        together with the bearing in degrees and the nearest compass direction
+        (e.g. <em>337.2° NNW</em>).
+      </p>
+
+      <h3 class="help-subsection-title">Date Navigation</h3>
+      <div class="help-table-wrapper">
+        <table class="help-table">
+          <thead><tr><th>Control</th><th>Behaviour</th></tr></thead>
+          <tbody>
+            <tr><td><strong>‹ / ›</strong> arrows</td><td>Move one day backward or forward to look up prayer times for any date.</td></tr>
+            <tr><td><strong>Today</strong></td><td>Jump back to the current date immediately.</td></tr>
+            <tr><td><strong>Hijri date</strong></td><td>Shown next to the Gregorian date in the header and in the countdown card.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="help-note">
+        ℹ️ Times are sourced from the Namaadhu app pre-computed database (Hithadhoo /
+        Addu Atoll, station 82) and are fixed to the Gan coordinates
+        (0.629°N, 73.099°E). They are provided for guidance; always consult
+        an authoritative local source for religious obligations.
+      </p>
+    </div>
+
+    <!-- ══ RANDOM PICKER ════════════════════════════════════════ -->
+    <div class="help-section" id="hn-randompicker">
+      <h2 class="help-section-title">🎲 Random Picker</h2>
+      <p>
+        The <strong>Random Picker</strong> randomly assigns a shuffled list of
+        <em>choices</em> to a list of <em>names</em> — useful for allocating duty
+        months, assigning tasks, forming teams, or any situation that requires a
+        fair, impartial draw.
+      </p>
+
+      <h3 class="help-subsection-title">How to Use</h3>
+      <ol class="help-list">
+        <li>Enter your <strong>names</strong> in the left panel — one per line, or comma-separated.</li>
+        <li>Enter your <strong>choices</strong> in the right panel (e.g. months, days, teams). Use the quick-preset buttons — <em>Months, Days, Colours, Teams, Quarters</em> — to populate the choices field instantly.</li>
+        <li>Click <strong>Shuffle &amp; Assign</strong>. A 5-second animated countdown plays before the results appear (you can skip it at any time).</li>
+        <li>Results appear below as coloured cards grouped by choice or as a flat name → choice list.</li>
+      </ol>
+
+      <h3 class="help-subsection-title">Assignment Modes</h3>
+      <div class="help-table-wrapper">
+        <table class="help-table">
+          <thead><tr><th>Situation</th><th>Behaviour</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><strong>More choices than names</strong></td>
+              <td>A random subset of choices is selected and paired one-to-one with the names.</td>
+            </tr>
+            <tr>
+              <td><strong>Equal choices and names</strong></td>
+              <td>Each choice is assigned to exactly one name — a perfect 1-to-1 shuffle.</td>
+            </tr>
+            <tr>
+              <td><strong>More names than choices</strong></td>
+              <td>Multi-slot mode activates automatically. Each choice is distributed across
+              multiple names as evenly as possible (e.g. 12 names and 3 choices → 4 names per choice).
+              A hint banner confirms this mode is in use.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 class="help-subsection-title">View Modes &amp; Copy</h3>
+      <ul class="help-list">
+        <li><strong>Grouped</strong> — Results are shown as one card per choice, with all assigned names listed inside it.</li>
+        <li><strong>List</strong> — Results are shown as a row per name: <em>Name → Choice</em>.</li>
+        <li>Switching view mode reshuffles immediately (skipping the countdown).</li>
+        <li>Click <strong>📋 Copy Results</strong> to copy the full assignment table to the clipboard as plain text.</li>
+      </ul>
+
+      <h3 class="help-subsection-title">Other Controls</h3>
+      <div class="help-table-wrapper">
+        <table class="help-table">
+          <thead><tr><th>Control</th><th>Action</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Preset buttons</strong></td><td>Populate the Choices field with a common preset list (Months, Days, Colours, Teams, Quarters) in one click.</td></tr>
+            <tr><td><strong>Live counters</strong></td><td>Below each input, a count badge updates in real time showing how many names or choices have been entered.</td></tr>
+            <tr><td><strong>Skip (countdown)</strong></td><td>During the animated countdown, click Skip to reveal results immediately.</td></tr>
+            <tr><td><strong>Clear All</strong></td><td>Resets both input fields and hides the results panel.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="help-note">
+        💡 Each shuffle is completely random — re-clicking <strong>Shuffle &amp; Assign</strong>
+        with the same inputs will produce a different distribution every time.
+      </p>
+    </div>
+
     <!-- ══ SETTINGS ══════════════════════════════════════════════ -->
     <div class="help-section" id="hn-settings">
       <h2 class="help-section-title">⚙️ Settings Page</h2>
@@ -1032,6 +1169,20 @@ window.initHelp = function () {
         <li>Press <kbd>Enter</kbd> in the Task field to save quickly without reaching for the mouse.</li>
         <li>Use <strong>From / To</strong> date filters to scope the view before exporting — only filtered rows are written to Excel.</li>
         <li>Work log timestamps are fixed to <strong>MVT</strong> and cannot be edited, ensuring an accurate audit trail.</li>
+      </ul>
+
+      <h3 class="help-subsection-title">Prayer Times</h3>
+      <ul class="help-list">
+        <li>Times are fixed to <strong>Addu City (Gan) coordinates</strong> — they are not affected by GPS or device location.</li>
+        <li>Use the ‹ / › arrows to look up prayer times for any past or future date without leaving the page.</li>
+        <li>The Hijri date displayed is a calculated approximation; local moon-sighting announcements take precedence for religious purposes.</li>
+      </ul>
+
+      <h3 class="help-subsection-title">Random Picker</h3>
+      <ul class="help-list">
+        <li>Names and choices can be typed one per line <em>or</em> comma-separated — mix both styles freely.</li>
+        <li>Use the <strong>Months</strong> preset and a list of 12 staff names to instantly generate a duty roster.</li>
+        <li>The <strong>Copy Results</strong> button copies the formatted table to your clipboard, ready to paste into Word, Excel, or a chat message.</li>
       </ul>
 
       <h3 class="help-subsection-title">Utilities</h3>

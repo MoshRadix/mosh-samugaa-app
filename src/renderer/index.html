@@ -9,7 +9,46 @@
   <body>
     <div class="app-container">
       <header class="app-header">
-        <h1>🧭 MTO Samugaa</h1>
+        <h1>
+          <svg class="app-compass-icon" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <defs>
+              <linearGradient id="cg-ring" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#6c8b7a"/>
+                <stop offset="100%" stop-color="#5a7667"/>
+              </linearGradient>
+              <linearGradient id="cg-north" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#c47a6e"/>
+                <stop offset="100%" stop-color="#a85f54"/>
+              </linearGradient>
+              <linearGradient id="cg-south" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#8aab98"/>
+                <stop offset="100%" stop-color="#6c8b7a"/>
+              </linearGradient>
+              <filter id="cg-shadow" x="-20%" y="-20%" width="140%" height="140%">
+                <feDropShadow dx="0" dy="1" stdDeviation="1.5" flood-color="rgba(44,62,53,0.18)"/>
+              </filter>
+            </defs>
+            <!-- Outer bezel ring -->
+            <circle cx="20" cy="20" r="18.5" fill="none" stroke="url(#cg-ring)" stroke-width="1.8" opacity="0.55"/>
+            <!-- Inner dial face -->
+            <circle cx="20" cy="20" r="15.5" fill="#f6f8f7" stroke="url(#cg-ring)" stroke-width="1" opacity="0.4"/>
+            <!-- Cardinal tick marks -->
+            <line x1="20" y1="4.5"  x2="20" y2="7"    stroke="#6c8b7a" stroke-width="1.5" stroke-linecap="round" opacity="0.7"/>
+            <line x1="20" y1="33"   x2="20" y2="35.5"  stroke="#6c8b7a" stroke-width="1.5" stroke-linecap="round" opacity="0.7"/>
+            <line x1="4.5" y1="20"  x2="7"  y2="20"   stroke="#6c8b7a" stroke-width="1.5" stroke-linecap="round" opacity="0.7"/>
+            <line x1="33"  y1="20"  x2="35.5" y2="20"  stroke="#6c8b7a" stroke-width="1.5" stroke-linecap="round" opacity="0.7"/>
+            <!-- Needle — north (red) -->
+            <polygon points="20,7.5 22.2,20 20,21.5 17.8,20"
+              fill="url(#cg-north)" filter="url(#cg-shadow)"/>
+            <!-- Needle — south (green) -->
+            <polygon points="20,32.5 22.2,20 20,18.5 17.8,20"
+              fill="url(#cg-south)" filter="url(#cg-shadow)"/>
+            <!-- Centre cap -->
+            <circle cx="20" cy="20" r="2.4" fill="url(#cg-ring)" opacity="0.9"/>
+            <circle cx="20" cy="20" r="1.1" fill="#f6f8f7"/>
+          </svg>
+          MTO Samugaa
+        </h1>
         <nav class="main-nav">
 
           <!-- Documents group -->
@@ -1343,6 +1382,7 @@
                 <span class="cal-legend-item"><span class="cal-legend-swatch cal-legend-swatch--weekend"></span>Fri / Sat (Weekend)</span>
                 <span class="cal-legend-item"><span class="cal-legend-swatch cal-legend-swatch--holiday"></span>Public Holiday</span>
                 <span class="cal-legend-item"><span class="cal-legend-swatch cal-legend-swatch--declared"></span>Declared Holiday</span>
+                <span class="cal-legend-item"><span class="cal-legend-swatch cal-legend-swatch--observance"></span>Int'l Day</span>
               </div>
               <div id="cal-sync-status" class="cal-sync-status" data-status="idle"></div>
             </div>

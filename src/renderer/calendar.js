@@ -48,7 +48,7 @@ const CAL_I18N = {
       "ޖަނަވަރީ","ފެބްރުއަރީ","މާރިޗް","އޭޕްރިލް","މެއި","ޖޫން",
       "ޖުލައި","އޮގަސްޓް","ސެޕްޓެންބަރ","އޮކްޓޯބަރ","ނޮވެންބަރ","ޑިސެންބަރ"
     ],
-    dayNamesShort: ["އާދި","ހޯމަ","އަން","ބުދަ","ބ.ތ","ހުކުރު","ހޮނި"],
+    dayNamesShort: ["އާދި","ހޯމަ","އަން","ބުދަ","ބުރާ","ހުކުރު","ހޮނި"],
     dayNamesFull: ["އާދީއްތަ","ހޯމަ","އަންގާރަ","ބުދަ","ބުރާސްފަތި","ހުކުރު","ހޮނިހިރު"],
     hijriMonths: [
       "މުޙައްރަމް","ސަފަރު","ރަބީޢު ލްއައްވަލް","ރަބީޢު ލްއާޚިރު",
@@ -82,6 +82,93 @@ const MV_FIXED_HOLIDAYS = {
   "07-27": { en: "Independence Day", dv: "މިނިވަން ދުވަސް" },
   "11-03": { en: "Victory Day",      dv: "ނަޞްރުގެ ދުވަސް" },
   "11-11": { en: "Republic Day",     dv: "ޖުމްހޫރީ ދުވަސް" },
+};
+
+/**
+ * International observance days (MM-DD format).
+ * Awareness / commemorative days — shown in a distinct colour, not public holidays.
+ */
+const INTL_OBSERVANCE_DAYS = {
+  "01-04": { en: "World Braille Day",                                        dv: "ދުނިޔޭގެ ބްރެއިލް ދުވަސް" },
+  "01-24": { en: "International Education Day",                              dv: "ބައިނަލް އަޤްވާމީ ތަޢުލީމީ ދުވަސް" },
+  "01-27": { en: "Holocaust Remembrance Day",                                dv: "ހޮލޮކޯސްޓް ހަނދާންކުރުމުގެ ދުވަސް" },
+  "02-04": { en: "World Cancer Day",                                         dv: "ދުނިޔޭގެ ކެންސަރ ދުވަސް" },
+  "02-06": { en: "Int'l Day of Zero Tolerance for FGM",                     dv: "ބައިނަލް އަޤްވާމީ އަންހެނުން ޚިތާނުކުރުން ހުއްޓުވުމުގެ ދުވަސް" },
+  "02-11": { en: "Int'l Day of Women and Girls in Science",                  dv: "ބައިނަލް އަޤްވާމީ ސައިންސްގައި އަންހެނުންނާއި އަންހެންކުދިންގެ ދުވަސް" },
+  "02-13": { en: "World Radio Day",                                          dv: "ދުނިޔޭގެ ރޭޑިއޯ ދުވަސް" },
+  "02-20": { en: "World Day of Social Justice",                              dv: "ދުނިޔޭގެ އިޖްތިމާޢީ ޢަދާލަތުގެ ދުވަސް" },
+  "02-21": { en: "International Mother Language Day",                        dv: "ބައިނަލް އަޤްވާމީ މާދަރީ ބަހުގެ ދުވަސް" },
+  "03-01": { en: "World Civil Defence Day",                                  dv: "ދުނިޔޭގެ ސިވިލް ޑިފެންސް ދުވަސް" },
+  "03-03": { en: "World Wildlife Day",                                       dv: "ދުނިޔޭގެ ވައިލްޑްލައިފް ދުވަސް" },
+  "03-04": { en: "World Obesity Day",                                        dv: "ދުނިޔޭގެ ފަލަކަމުގެ ދުވަސް" },
+  "03-08": { en: "International Women's Day",                                dv: "ބައިނަލް އަޤްވާމީ އަންހެނުންގެ ދުވަސް" },
+  "03-15": { en: "World Consumer Rights Day",                                dv: "ދުނިޔޭގެ ކޮންސިއުމަރ ޙައްޤުތަކުގެ ދުވަސް" },
+  "03-20": { en: "World Happiness Day",                                      dv: "ދުނިޔޭގެ އުފާވެރިކަމުގެ ދުވަސް" },
+  "03-21": { en: "World Down Syndrome Day",                                  dv: "ދުނިޔޭގެ ޑައުން ސިންޑްރޯމް ދުވަސް" },
+  "03-22": { en: "World Water Day",                                          dv: "ދުނިޔޭގެ ފެނުގެ ދުވަސް" },
+  "03-23": { en: "World Meteorological Day",                                 dv: "ދުނިޔޭގެ މޫސުމީ ދުވަސް" },
+  "03-24": { en: "World Tuberculosis Day",                                   dv: "ދުނިޔޭގެ ޓިބީ ދުވަސް" },
+  "04-02": { en: "World Autism Awareness Day",                               dv: "ދުނިޔޭގެ އޯޓިޒަމް ދުވަސް" },
+  "04-07": { en: "World Health Day",                                         dv: "ދުނިޔޭގެ ޞިއްޙަތުގެ ދުވަސް" },
+  "04-22": { en: "Earth Day",                                                dv: "ދުނިޔޭގެ ދުވަސް" },
+  "04-23": { en: "World Book and Copyright Day",                             dv: "ދުނިޔޭގެ ފޮތާއި އަލިފުބާ ދުވަސް" },
+  "04-25": { en: "World Malaria Day",                                        dv: "ދުނިޔޭގެ މެލޭރިއާ ދުވަސް" },
+  "05-03": { en: "World Press Freedom Day",                                  dv: "ދުނިޔޭގެ ނޫސްވެރިކަމުގެ މިނިވަންކަމުގެ ދުވަސް" },
+  "05-05": { en: "World Hand Hygiene Day",                                   dv: "ދުނިޔޭގެ އަތްދޮވުމުގެ ދުވަސް" },
+  "05-08": { en: "World Red Cross Day",                                      dv: "ދުނިޔޭގެ ރެޑް ކްރޮސް ދުވަސް" },
+  "05-12": { en: "International Nurses Day",                                 dv: "ބައިނަލް އަޤްވާމީ ނަރުހުންގެ ދުވަސް" },
+  "05-15": { en: "International Day of Families",                            dv: "ބައިނަލް އަޤްވާމީ އާއިލާތަކުގެ ދުވަސް" },
+  "05-17": { en: "World Telecommunication Day",                              dv: "ދުނިޔޭގެ ޓެލެކޮމިއުނިކޭޝަން ދުވަސް" },
+  "05-18": { en: "International Museum Day",                                 dv: "ބައިނަލް އަޤްވާމީ މިއުޒިއަމް ދުވަސް" },
+  "05-21": { en: "World Cultural Diversity Day",                             dv: "ދުނިޔޭގެ ސަޤާފީ ތަފާތުވެރިކަމުގެ ދުވަސް" },
+  "05-22": { en: "International Day for Biological Diversity",               dv: "ބައިނަލް އަޤްވާމީ ތިމާވެށީގެ ތަފާތުވެރިކަމުގެ ދުވަސް" },
+  "05-31": { en: "World No Tobacco Day",                                     dv: "ދުނިޔޭގެ ދުންފަތް ނުބޭނުންކުރާ ދުވަސް" },
+  "06-05": { en: "World Environment Day",                                    dv: "ދުނިޔޭގެ ތިމާވެށީގެ ދުވަސް" },
+  "06-08": { en: "World Oceans Day",                                         dv: "ދުނިޔޭގެ ކަނޑުތަކުގެ ދުވަސް" },
+  "06-12": { en: "World Day Against Child Labour",                           dv: "ކުޑަކުދިން ގެންގުޅެ ދިނުން ހުއްޓުވުމުގެ ދުވަސް" },
+  "06-17": { en: "World Day to Combat Desertification",                      dv: "ބިން ހަލާކުވުން ހުއްޓުވުމުގެ ދުވަސް" },
+  "06-20": { en: "World Refugee Day",                                        dv: "ދުނިޔޭގެ ރެފިއުޖީންގެ ދުވަސް" },
+  "06-21": { en: "World Music Day",                                          dv: "ދުނިޔޭގެ މިއުޒިކް ދުވަސް" },
+  "06-26": { en: "International Day Against Drug Abuse",                     dv: "ބައިނަލް އަޤްވާމީ މަސްތުވާތަކެތި ބޭނުންކުރުމާ ދެކޮޅު ދުވަސް" },
+  "07-11": { en: "World Population Day",                                     dv: "ދުނިޔޭގެ އާބާދީގެ ދުވަސް" },
+  "07-18": { en: "Nelson Mandela International Day",                         dv: "ބައިނަލް އަޤްވާމީ ނެލްސަން މަންޑޭލާ ދުވަސް" },
+  "07-30": { en: "World Day Against Trafficking in Persons",                 dv: "މީހުން ޓްރެފިކް ކުރުމާ ދެކޮޅު ދުވަސް" },
+  "08-09": { en: "Int'l Day of the World's Indigenous Peoples",             dv: "ބައިނަލް އަޤްވާމީ ދުނިޔޭގެ އަސްލު ދިރިއުޅޭ ދަރިކޮޅުތަކުގެ ދުވަސް" },
+  "08-12": { en: "International Youth Day",                                  dv: "ބައިނަލް އަޤްވާމީ ޒުވާނުންގެ ދުވަސް" },
+  "08-19": { en: "World Humanitarian Day",                                   dv: "ދުނިޔޭގެ އިންސާނީ އެހީތެރިކަމުގެ ދުވަސް" },
+  "09-05": { en: "International Day of Charity",                             dv: "ބައިނަލް އަޤްވާމީ ޚައިރާތުގެ ދުވަސް" },
+  "09-08": { en: "International Literacy Day",                               dv: "ބައިނަލް އަޤްވާމީ ކިޔަވަން ދެނެގަތުމުގެ ދުވަސް" },
+  "09-10": { en: "World Suicide Prevention Day",                             dv: "ދުނިޔޭގެ މީހުން މަރުނުގަތުމަށް ހޭލުންތެރިކުރުމުގެ ދުވަސް" },
+  "09-15": { en: "International Day of Democracy",                           dv: "ބައިނަލް އަޤްވާމީ ޑިމޮކްރެސީ ދުވަސް" },
+  "09-16": { en: "World Ozone Day",                                          dv: "ދުނިޔޭގެ އޯޒޯން ދުވަސް" },
+  "09-21": { en: "International Day of Peace",                               dv: "ބައިނަލް އަޤްވާމީ ޞުލްޙައިގެ ދުވަސް" },
+  "09-27": { en: "World Tourism Day",                                        dv: "ދުނިޔޭގެ ޓޫރިޒަމް ދުވަސް" },
+  "10-01": { en: "International Day of Older Persons",                       dv: "ބައިނަލް އަޤްވާމީ އުުމުރުން ދުވަސްވީ މީހުންގެ ދުވަސް" },
+  "10-02": { en: "International Day of Non-Violence",                        dv: "ބައިނަލް އަޤްވާމީ އަނިޔާ ނުކުރުމުގެ ދުވަސް" },
+  "10-05": { en: "World Teachers' Day",                                      dv: "ދުނިޔޭގެ މުދައްރިސުންގެ ދުވަސް" },
+  "10-09": { en: "World Post Day",                                           dv: "ދުނިޔޭގެ ޕޯސްޓް ދުވަސް" },
+  "10-10": { en: "World Mental Health Day",                                  dv: "ދުނިޔޭގެ ނަފްސާނީ ޞިއްޙަތުގެ ދުވަސް" },
+  "10-11": { en: "International Day of the Girl Child",                      dv: "ބައިނަލް އަޤްވާމީ އަންހެންކުދިންގެ ދުވަސް" },
+  "10-13": { en: "International Day for Disaster Risk Reduction",            dv: "ބައިނަލް އަޤްވާމީ ގުދުރަތީ ކާރިސާ ކުޑަ ކުރުމުގެ ދުވަސް" },
+  "10-15": { en: "World Students' Day",                                      dv: "ދުނިޔޭގެ ދަރިވަރުންގެ ދުވަސް" },
+  "10-16": { en: "World Food Day",                                           dv: "ދުނިޔޭގެ ކާބޯތަކެތީގެ ދުވަސް" },
+  "10-17": { en: "International Day for the Eradication of Poverty",        dv: "ބައިނަލް އަޤްވާމީ ފަގީރުކަން ނައްތާލުމުގެ ދުވަސް" },
+  "10-24": { en: "United Nations Day",                                       dv: "އދ.ގެ ދުވަސް" },
+  "10-31": { en: "World Cities Day",                                         dv: "ދުނިޔޭގެ ސިޓީތަކުގެ ދުވަސް" },
+  "11-14": { en: "World Diabetes Day",                                       dv: "ދުނިޔޭގެ ހަކުރުބަލީގެ ދުވަސް" },
+  "11-16": { en: "International Day for Tolerance",                          dv: "ބައިނަލް އަޤްވާމީ ތަޙައްމަލްކުރުމުގެ ދުވަސް" },
+  "11-19": { en: "International Men's Day",                                  dv: "ބައިނަލް އަޤްވާމީ ފިރިހެނުންގެ ދުވަސް" },
+  "11-20": { en: "World Children's Day",                                     dv: "ދުނިޔޭގެ ކުޑަކުދިންގެ ދުވަސް" },
+  "11-21": { en: "World Television Day",                                     dv: "ދުނިޔޭގެ ޓެލެވިޝަން ދުވަސް" },
+  "11-25": { en: "Int'l Day for Elimination of Violence Against Women",     dv: "ބައިނަލް އަޤްވާމީ އަންހެނުންނަށް ކުރާ އަނިޔާ ނައްތާލުމުގެ ދުވަސް" },
+  "12-01": { en: "World AIDS Day",                                           dv: "ދުނިޔޭގެ އެއިޑްސް ދުވަސް" },
+  "12-02": { en: "Int'l Day for the Abolition of Slavery",                  dv: "ބައިނަލް އަޤްވާމީ އަޅުވެތިކަން ނައްތާލުމުގެ ދުވަސް" },
+  "12-03": { en: "Int'l Day of Persons with Disabilities",                  dv: "ބައިނަލް އަޤްވާމީ ނުކުޅެދުންތެރިކަން ހުންނަ ފަރާތްތަކުގެ ދުވަސް" },
+  "12-05": { en: "World Soil Day",                                           dv: "ދުނިޔޭގެ ބިމުގެ ދުވަސް" },
+  "12-09": { en: "International Anti-Corruption Day",                        dv: "ބައިނަލް އަޤްވާމީ ކޮރަޕްޝަނާ ދެކޮޅު ދުވަސް" },
+  "12-10": { en: "Human Rights Day",                                         dv: "ދުނިޔޭގެ އިންސާނީ ޙައްޤުތަކުގެ ދުވަސް" },
+  "12-11": { en: "International Mountain Day",                               dv: "ބައިނަލް އަޤްވާމީ ފަރުބަދަތަކުގެ ދުވަސް" },
+  "12-18": { en: "International Migrants Day",                               dv: "ބައިނަލް އަޤްވާމީ ހިޖުރަވެރިންގެ ދުވަސް" },
 };
 
 // ============================================================================
@@ -204,6 +291,31 @@ function buildHolidayMap(targetYear) {
   }
 
   return map;
+}
+
+/** Build a fast lookup map for international observance days keyed by "YYYY-MM-DD". */
+function buildObservanceMap(targetYear) {
+  const map = {};
+  const startYr = targetYear - 1;
+  const endYr = targetYear + 3;
+  for (const [mmdd, names] of Object.entries(INTL_OBSERVANCE_DAYS)) {
+    for (let yr = startYr; yr <= endYr; yr++) {
+      map[`${yr}-${mmdd}`] = { ...names, type: "observance" };
+    }
+  }
+  return map;
+}
+
+let CAL_OBSERVANCE_MAP = buildObservanceMap(new Date().getFullYear());
+let _lastObsMappedYear = new Date().getFullYear();
+
+function getObservanceInfo(year, month1based, day) {
+  if (year !== _lastObsMappedYear) {
+    CAL_OBSERVANCE_MAP = buildObservanceMap(year);
+    _lastObsMappedYear = year;
+  }
+  const key = `${year}-${String(month1based).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
+  return CAL_OBSERVANCE_MAP[key] || null;
 }
 
 // Live map setup
@@ -343,7 +455,8 @@ function calDayCell(year, month1, day, opts = {}) {
   const date  = new Date(year, month1 - 1, day);
   const dow   = date.getDay();
   const weekend = isWeekend(dow);
-  const holiday = getHolidayInfo(year, month1, day);
+  const holiday   = getHolidayInfo(year, month1, day);
+  const observance = !outsideMonth ? getObservanceInfo(year, month1, day) : null;
   const today   = new Date();
   const isToday = date.toDateString() === today.toDateString();
   const dateStr = `${year}-${String(month1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
@@ -366,18 +479,22 @@ function calDayCell(year, month1, day, opts = {}) {
       classes += " cal-day--holiday";
     }
   }
+  if (!holiday && observance) classes += " cal-day--observance";
   if (isToday)      classes += " cal-day--today";
   if (isSelected)   classes += " cal-day--selected";
   if (compact)      classes += " cal-day--compact";
 
-  const holidayLabel = holiday ? `<div class="cal-day-holiday-label">${holiday[_calState.lang]}</div>` : "";
+  const holidayLabel = holiday
+    ? `<div class="cal-day-holiday-label">${holiday[_calState.lang]}</div>`
+    : (observance ? `<div class="cal-day-observance-label">${observance[_calState.lang]}</div>` : "");
+  const observanceDot = observance ? `<span class="cal-observance-dot" title="${observance[_calState.lang]}"></span>` : "";
   const hijriLabel = compact
     ? `<div class="cal-day-hijri">${hijri.day}</div>`
     : `<div class="cal-day-hijri">${hijri.day} ${hijriMonths[hijri.month - 1]}</div>`;
 
   return `
     <div class="${classes}" data-date="${dateStr}" data-year="${year}" data-month="${month1}" data-day="${day}">
-      <div class="cal-day-greg">${day}</div>
+      <div class="cal-day-greg">${day}${observanceDot}</div>
       ${hijriLabel}
       ${holidayLabel}
     </div>
@@ -447,6 +564,7 @@ function renderWeekView(container) {
     const dow    = d.getDay();
     const weekend = isWeekend(dow);
     const holiday = getHolidayInfo(year, month1, day);
+    const observance = getObservanceInfo(year, month1, day);
     const today   = new Date();
     const isToday = d.toDateString() === today.toDateString();
     const dateStr = `${year}-${String(month1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
@@ -463,6 +581,7 @@ function renderWeekView(container) {
         classes += " cal-week-day--holiday";
       }
     }
+    if (!holiday && observance) classes += " cal-week-day--observance";
     if (isToday)    classes += " cal-week-day--today";
     if (isSelected) classes += " cal-week-day--selected";
     const todayMidnightW = new Date(today.getFullYear(), today.getMonth(), today.getDate());
@@ -472,11 +591,12 @@ function renderWeekView(container) {
       <div class="${classes}" data-date="${dateStr}" data-year="${year}" data-month="${month1}" data-day="${day}">
         <div class="cal-week-day-header">
           <span class="cal-week-day-name">${L.dayNamesShort[dow]}</span>
-          <span class="cal-week-day-num">${day}</span>
+          <span class="cal-week-day-num">${day}${observance ? `<span class="cal-observance-dot cal-observance-dot--week" title="${observance[lang]}"></span>` : ""}</span>
           <span class="cal-week-month">${L.monthNames[d.getMonth()].slice(0, _calState.lang === "dv" ? 4 : 3)}</span>
         </div>
         <div class="cal-week-hijri">${hijri.day} ${hijriMonths[hijri.month - 1]} ${hijri.year}</div>
         ${holiday ? `<div class="cal-week-holiday-label">${holiday[lang]}</div>` : ""}
+        ${!holiday && observance ? `<div class="cal-week-observance-label">🌐 ${observance[lang]}</div>` : ""}
         ${weekend && !holiday ? `<div class="cal-week-weekend-label">${t("weekend")}</div>` : ""}
       </div>
     `;
@@ -556,6 +676,7 @@ function renderDayDetail() {
   const dow = date.getDay();
   const L = CAL_I18N[_calState.lang];
   const holiday = getHolidayInfo(year, month1, day);
+  const observance = getObservanceInfo(year, month1, day);
   const hijri = gregorianToHijri(year, month1, day);
   const weekend = isWeekend(dow);
 
@@ -567,9 +688,17 @@ function renderDayDetail() {
       : "cal-badge--holiday";
     badges += `<span class="cal-badge ${typeClass}">${t("publicHoliday")}</span>`;
   }
+  if (!holiday && observance) {
+    const obsLabel = _calState.lang === "en" ? "Int'l Day" : "ބައިނަލް އަޤްވާމީ";
+    badges += `<span class="cal-badge cal-badge--observance">🌐 ${obsLabel}</span>`;
+  }
 
   const gazetteHtml = holiday?.gazette_ref
     ? `<div class="cal-detail-gazette">📋 ${holiday.gazette_ref}</div>`
+    : "";
+
+  const observanceHtml = (!holiday && observance)
+    ? `<div class="cal-detail-observance-name">🌐 ${observance[_calState.lang]}</div>`
     : "";
 
   panel.innerHTML = `
@@ -587,6 +716,7 @@ function renderDayDetail() {
       ${badges ? `<div class="cal-detail-badges">${badges}</div>` : ""}
       ${holiday ? `<div class="cal-detail-holiday-name">${holiday[_calState.lang]}</div>` : ""}
       ${gazetteHtml}
+      ${observanceHtml}
     </div>
   `;
 }
