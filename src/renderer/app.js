@@ -245,6 +245,24 @@ function switchView(view) {
         initWorkLogs();
       }
       break;
+
+    case "randompicker":
+      if (typeof initRandomPicker === "function") {
+        initRandomPicker();
+      }
+      break;
+
+    case "prayer-times":
+      if (typeof initPrayerTimes === "function") {
+        initPrayerTimes();
+      }
+      break;
+
+    case "calendar":
+      if (typeof initCalendar === "function") {
+        initCalendar();
+      }
+      break;
   }
 }
 

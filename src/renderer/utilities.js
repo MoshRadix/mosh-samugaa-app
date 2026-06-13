@@ -692,8 +692,6 @@ function switchUtilitiesTab(tab) {
     renderDateResults();
   } else if (tab === "calculator") {
     calcRenderHistory();
-  } else if (tab === "calendar") {
-    if (typeof initCalendar === "function") initCalendar();
   } else if (tab === "moon-phase") {
     initMoonPhase();
   } else if (tab === "tide-chart") {

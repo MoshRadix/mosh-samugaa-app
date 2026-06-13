@@ -1,6 +1,6 @@
 /**
  * @file help.js
- * @description Help page content and initialization for MTO Document Generator.
+ * @description Help page content and initialization for MTO Samugaa.
  */
 
 window.initHelp = function () {
@@ -13,7 +13,7 @@ window.initHelp = function () {
     <div class="help-hero">
       <div class="help-hero-icon">📄</div>
       <div class="help-hero-text">
-        <h1 class="help-hero-title">MTO Document Generator</h1>
+        <h1 class="help-hero-title">MTO Samugaa</h1>
         <p class="help-hero-sub">Complete user guide — templates, batch generation, tools, placeholders, and more</p>
       </div>
       <div class="help-hero-version" id="help-hero-version"></div>
@@ -40,7 +40,7 @@ window.initHelp = function () {
     <div class="help-section" id="hn-overview">
       <h2 class="help-section-title">📄 Overview</h2>
       <p>
-        <strong>MTO Document Generator</strong> is a desktop application for generating and printing
+        <strong>MTO Samugaa</strong> is a desktop application for generating and printing
         filled Word (<code>.docx</code>) or Excel (<code>.xlsx</code>) documents from reusable
         templates — no manual file editing required.
       </p>

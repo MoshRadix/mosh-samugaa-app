@@ -2,6 +2,7 @@
    Soft Muted Theme – Gentle on the Eyes, Not Too Bright
    ========================================================================== */
 @import url('https://cdn.jsdelivr.net/gh/kudanai/Thaana-OSX@master/Library/Fonts/MV%20Faruma.ttf');
+@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600&display=swap');
 
 :root {
   /* Soft, warm neutrals – no harsh whites */
@@ -2627,7 +2628,7 @@ kbd {
   border: none;
 }
 .btn-danger:hover {
-  background: #c0392b;
+  background: rgba(192, 57, 43, 0.45);
 }
 
 /* ── Work Logs: header actions row ───────────────────────────────────── */
@@ -3012,6 +3013,18 @@ kbd {
   flex: 1;
   overflow-y: auto;
   padding: 20px;
+}
+
+.util-tab-panel[data-panel="prayer-times"] {
+  padding-left: 0;
+  padding-right: 0;
+}
+
+/* Prayer Times standalone view */
+#prayer-times-view.active {
+  display: block;
+  padding: 20px;
+  box-sizing: border-box;
 }
 
 .util-tab-panel.active {
@@ -4112,7 +4125,7 @@ kbd {
 }
 .cal-legend-swatch--today   { background: var(--accent-primary); }
 .cal-legend-swatch--weekend { background: #e8a0a0; }
-.cal-legend-swatch--holiday { background: #c0392b; opacity: 0.75; }
+.cal-legend-swatch--holiday { background: rgba(192, 57, 43, 0.45); opacity: 0.75; }
 
 /* ---- Main area ---- */
 .cal-main-area {
@@ -4184,6 +4197,23 @@ kbd {
   opacity: 0.35;
   pointer-events: none;
 }
+.cal-day--past {
+  position: relative;
+  overflow: hidden;
+}
+.cal-day--past::before {
+  content: "";
+  position: absolute;
+  top: 35%;
+  left: 0;
+  width: 160%;
+  height: 1.5px;
+  background: rgba(192, 57, 43, 0.45);
+  transform-origin: left center;
+  transform: rotate(-52deg);
+  pointer-events: none;
+  border-radius: 2px;
+}
 .cal-day--weekend {
   background: #fdf0ef;
   border-color: #f5cac8;
@@ -4218,8 +4248,9 @@ kbd {
 }
 
 .cal-day-greg {
-  font-size: 13px;
-  font-weight: 600;
+  font-family: 'Oswald', sans-serif;
+  font-size: 16px;
+  font-weight: 500;
   color: var(--text-primary);
   line-height: 1;
   margin-bottom: 3px;
@@ -4251,9 +4282,17 @@ kbd {
   min-height: 38px;
   padding: 3px 4px;
 }
-.cal-day--compact .cal-day-greg  { font-size: 11px; }
+.cal-day--compact .cal-day-greg  { font-size: 13px; }
 .cal-day--compact .cal-day-hijri { font-size: 9px; }
 .cal-day--compact .cal-day-holiday-label { display: none; }
+.cal-day--compact.cal-day--past::before {
+  top: unset;
+  bottom: 0;
+  left: 0;
+  width: 160%;
+  transform-origin: bottom left;
+  transform: rotate(-40deg);
+}
 
 /* ============================================================
    WEEK VIEW
@@ -4288,6 +4327,23 @@ kbd {
 .cal-week-day--today {
   border-color: var(--accent-primary) !important;
   background: var(--accent-primary-light) !important;
+}
+.cal-week-day--past {
+  position: relative;
+  overflow: hidden;
+}
+.cal-week-day--past::before {
+  content: "";
+  position: absolute;
+  top: 35%;
+  left: 0;
+  width: 160%;
+  height: 1.5px;
+  background: rgba(192, 57, 43, 0.45);
+  transform-origin: left center;
+  transform: rotate(-52deg);
+  pointer-events: none;
+  border-radius: 2px;
 }
 .cal-week-day--selected {
   box-shadow: 0 0 0 2px var(--accent-primary);
@@ -4411,7 +4467,7 @@ kbd {
   font-size: 10px;
 }
 .cal-year-days .cal-day-greg {
-  font-size: 10px;
+  font-size: 12px;
   text-align: center;
 }
 .cal-year-days .cal-day-hijri { display: none; }
@@ -4452,8 +4508,9 @@ kbd {
   margin-bottom: 10px;
 }
 .cal-detail-day-num {
+  font-family: 'Oswald', sans-serif;
   font-size: 40px;
-  font-weight: 800;
+  font-weight: 500;
   color: var(--accent-primary);
   line-height: 1;
 }
@@ -4641,7 +4698,6 @@ kbd {
 .cal-lang--dv .cal-title,
 .cal-lang--dv .cal-btn,
 .cal-lang--dv .cal-weekday-label,
-.cal-lang--dv .cal-day-greg,
 .cal-lang--dv .cal-day-hijri,
 .cal-lang--dv .cal-day-holiday-label,
 .cal-lang--dv .cal-week-day-name,
@@ -4663,7 +4719,7 @@ kbd {
 
 /* Font-size bumps for Divehi — MV Faruma renders small at default sizes */
 .cal-lang--dv .cal-weekday-label       { font-size: 13px; }
-.cal-lang--dv .cal-day-greg            { font-size: 15px; }
+.cal-lang--dv .cal-day-greg            { font-family: 'Oswald', sans-serif; font-size: 16px; font-weight: 500; }
 .cal-lang--dv .cal-day-hijri           { font-size: 12px; }
 .cal-lang--dv .cal-day-holiday-label   { font-size: 11px; }
 .cal-lang--dv .cal-week-day-name       { font-size: 13px; }
@@ -4674,7 +4730,7 @@ kbd {
 .cal-lang--dv .cal-week-weekend-label  { font-size: 12px; }
 .cal-lang--dv .cal-year-month-title    { font-size: 14px; }
 .cal-lang--dv .cal-year-weekday-row span { font-size: 11px; }
-.cal-lang--dv .cal-year-days .cal-day-greg { font-size: 12px; }
+.cal-lang--dv .cal-year-days .cal-day-greg { font-family: 'Oswald', sans-serif; font-size: 12px; font-weight: 500; }
 .cal-lang--dv .cal-detail-dow          { font-size: 15px; }
 .cal-lang--dv .cal-detail-monthyear    { font-size: 14px; }
 .cal-lang--dv .cal-detail-hijri        { font-size: 14px; direction: rtl; text-align: right; }
@@ -5763,4 +5819,1126 @@ kbd {
 .btn-batch:hover {
   background: var(--accent-info);
   color: var(--text-on-accent);
+}/* ==========================================================================
+   Random Picker
+   ========================================================================== */
+
+/* ── View shell ── */
+#randompicker-view {
+  display: none;
+}
+#randompicker-view.active {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding-bottom: 40px;
+}
+
+/* ── Page hero ── */
+.rp-hero {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.rp-hero-icon {
+  width: 48px; height: 48px;
+  border-radius: var(--radius-md);
+  background: var(--gradient-primary);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px; flex-shrink: 0;
+  box-shadow: var(--shadow-md);
+}
+.rp-hero-text h2 {
+  font-size: 20px; font-weight: 700;
+  color: var(--text-primary); margin-bottom: 2px;
+}
+.rp-hero-text p { color: var(--text-secondary); font-size: 13px; }
+
+/* ── Two-column input grid ── */
+.rp-input-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+@media (max-width: 760px) {
+  .rp-input-grid { grid-template-columns: 1fr; }
+}
+
+/* ── Panel card ── */
+.rp-panel {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  display: flex; flex-direction: column; gap: 10px;
+  box-shadow: var(--shadow-sm);
+}
+.rp-panel-header {
+  display: flex; align-items: center; justify-content: space-between;
+}
+.rp-panel-title {
+  font-size: 13px; font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase; letter-spacing: 0.5px;
+  display: flex; align-items: center; gap: 6px;
+}
+.rp-count-badge {
+  font-size: 11px; font-weight: 500;
+  color: var(--accent-primary);
+  background: var(--accent-primary-light);
+  padding: 2px 8px; border-radius: 20px;
+  min-height: 20px; display: inline-flex; align-items: center;
+}
+
+.rp-textarea {
+  width: 100%;
+  min-height: 130px;
+  resize: vertical;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  font-family: inherit; font-size: 14px;
+  color: var(--text-primary);
+  line-height: 1.6;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+.rp-textarea:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+  box-shadow: var(--shadow-focus);
+}
+.rp-textarea::placeholder { color: var(--text-tertiary); }
+
+.rp-hint {
+  font-size: 12px; color: var(--text-tertiary);
+}
+
+/* ── Preset chips ── */
+.rp-presets-row {
+  display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+}
+.rp-presets-label {
+  font-size: 12px; color: var(--text-tertiary); flex-shrink: 0;
+}
+.rp-preset-btn {
+  font-size: 12px; font-weight: 500;
+  padding: 3px 10px;
+  border-radius: 20px;
+  border: 1px solid var(--border-medium);
+  background: var(--bg-subtle);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+.rp-preset-btn:hover {
+  background: var(--accent-primary-light);
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+}
+
+/* ── Options row ── */
+.rp-options-row {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  padding: 14px 18px;
+  display: flex; flex-wrap: wrap;
+  align-items: center; gap: 20px;
+  box-shadow: var(--shadow-sm);
+}
+.rp-checkbox-label {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 13px; color: var(--text-secondary);
+  cursor: pointer;
+  user-select: none;
+}
+.rp-checkbox-label input[type="checkbox"] {
+  width: 15px; height: 15px;
+  accent-color: var(--accent-primary);
+  cursor: pointer;
+}
+.rp-view-toggle {
+  display: flex; align-items: center; gap: 6px;
+  margin-left: auto;
+}
+.rp-view-toggle span {
+  font-size: 12px; color: var(--text-tertiary);
+}
+.rp-radio-group {
+  display: flex; border: 1px solid var(--border-medium);
+  border-radius: var(--radius-sm); overflow: hidden;
+}
+.rp-radio-group label {
+  display: flex; align-items: center; gap: 5px;
+  padding: 5px 12px;
+  font-size: 12px; font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  background: var(--bg-subtle);
+  transition: all var(--transition-fast);
+  border-right: 1px solid var(--border-medium);
+}
+.rp-radio-group label:last-child { border-right: none; }
+.rp-radio-group input[type="radio"] { display: none; }
+.rp-radio-group input[type="radio"]:checked + span,
+.rp-radio-group label:has(input:checked) {
+  background: var(--accent-primary);
+  color: #fff;
+}
+
+/* ── Multi-slot hint ── */
+.rp-multislot-hint {
+  display: none;
+  align-items: center; gap: 8px;
+  background: var(--accent-info-light);
+  border: 1px solid #b8d0e0;
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  font-size: 12px; color: #2a5070;
+}
+
+/* ── Action bar ── */
+.rp-actions {
+  display: flex; align-items: center; gap: 10px;
+}
+.rp-actions .btn-primary,
+.rp-actions .btn-outline {
+  gap: 8px; display: flex; align-items: center;
+  font-size: 14px; padding: 10px 22px;
+}
+#rp-error {
+  display: none;
+  font-size: 12px; color: var(--accent-danger);
+  margin-left: 4px;
+}
+
+/* ── Results section ── */
+#rp-results-section {
+  display: none;
+}
+.rp-results-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 16px;
+}
+.rp-results-title {
+  font-size: 15px; font-weight: 700; color: var(--text-primary);
+  display: flex; align-items: center; gap: 8px;
+}
+.rp-results-title svg { color: var(--accent-primary); }
+
+/* ── Results grid (grouped mode) ── */
+#rp-results-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 14px;
+}
+
+/* ── Card ── */
+.rp-card {
+  border-radius: var(--radius-lg);
+  padding: 14px 16px;
+  box-shadow: var(--shadow-sm);
+  opacity: 0;
+  transform: translateY(8px) scale(0.98);
+  transition: none;
+}
+@keyframes rpCardIn {
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.rp-card.rp-card-enter {
+  animation: rpCardIn 280ms ease forwards;
+}
+
+.rp-card-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 10px;
+}
+.rp-choice-label {
+  font-size: 14px; font-weight: 700;
+}
+.rp-badge {
+  font-size: 11px; font-weight: 600;
+  padding: 1px 7px; border-radius: 20px;
+}
+
+.rp-name-tags {
+  display: flex; flex-wrap: wrap; gap: 5px;
+}
+.rp-name-tag {
+  background: rgba(255,255,255,0.55);
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius: 20px;
+  padding: 2px 10px;
+  font-size: 12px; font-weight: 500;
+  color: inherit;
+}
+.rp-empty { font-size: 12px; opacity: 0.5; font-style: italic; }
+
+/* ── List mode ── */
+.rp-list-table {
+  grid-column: 1 / -1;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.rp-list-row {
+  display: flex; align-items: center; gap: 12px;
+  background: var(--bg-elevated) !important;
+  border: 1px solid var(--border-light) !important;
+  padding: 10px 16px;
+}
+.rp-list-name {
+  font-size: 13px; font-weight: 600;
+  color: var(--text-primary);
+  min-width: 140px; flex: 1;
+}
+.rp-choice-pill {
+  font-size: 12px; font-weight: 600;
+  padding: 3px 12px; border-radius: 20px;
+  border: 1.5px solid transparent;
+  white-space: nowrap;
+}
+
+/* ── Countdown toggle ── */
+.rp-countdown-toggle {
+  display: flex; align-items: center; gap: 8px;
+  cursor: pointer; user-select: none;
+  padding: 6px 10px;
+  border-radius: var(--radius-md);
+  transition: background var(--transition-fast);
+}
+.rp-countdown-toggle:hover { background: var(--bg-subtle); }
+.rp-countdown-toggle input[type="checkbox"] { display: none; }
+
+.rp-countdown-toggle-track {
+  position: relative;
+  width: 34px; height: 19px;
+  background: var(--border-medium);
+  border-radius: 20px;
+  transition: background var(--transition-fast);
+  flex-shrink: 0;
+}
+.rp-countdown-toggle input:checked ~ .rp-countdown-toggle-track {
+  background: var(--accent-primary);
+}
+.rp-countdown-toggle-thumb {
+  position: absolute;
+  top: 2.5px; left: 3px;
+  width: 14px; height: 14px;
+  background: #fff;
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0,0,0,.25);
+  transition: left var(--transition-fast);
+}
+.rp-countdown-toggle input:checked ~ .rp-countdown-toggle-track .rp-countdown-toggle-thumb {
+  left: 17px;
+}
+.rp-countdown-toggle-text {
+  font-size: 13px; font-weight: 500;
+  color: var(--text-secondary);
+  display: flex; align-items: center; gap: 5px;
+}
+.rp-countdown-toggle input:checked ~ .rp-countdown-toggle-track ~ .rp-countdown-toggle-text {
+  color: var(--text-primary);
+}
+
+/* ── Countdown overlay ── */
+#rp-countdown-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 24px;
+}
+#rp-countdown-overlay.rp-cd-active {
+  display: flex;
+}
+.rp-cd-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  animation: rp-cd-fade-in 0.3s ease both;
+}
+@keyframes rp-cd-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.rp-cd-stage {
+  position: relative;
+  width: 200px; height: 200px;
+  display: flex; align-items: center; justify-content: center;
+  z-index: 1;
+  filter: drop-shadow(0 8px 40px rgba(0,0,0,0.5));
+}
+
+.rp-cd-ring {
+  position: absolute;
+  inset: 0;
+  width: 100%; height: 100%;
+  transform: rotate(-90deg);
+}
+.rp-cd-ring-track {
+  fill: none;
+  stroke: rgba(255,255,255,0.12);
+  stroke-width: 6;
+}
+.rp-cd-ring-fill {
+  fill: none;
+  stroke: var(--accent-primary, #4a9eff);
+  stroke-width: 6;
+  stroke-linecap: round;
+  stroke-dasharray: 326.7; /* 2π × 52 */
+  stroke-dashoffset: 0;
+  transition: stroke-dashoffset 0.92s linear, stroke 0.3s;
+  filter: drop-shadow(0 0 8px var(--accent-primary, #4a9eff));
+}
+
+.rp-cd-number {
+  font-size: 96px;
+  font-weight: 800;
+  color: #fff;
+  line-height: 1;
+  letter-spacing: -4px;
+  z-index: 1;
+  animation: rp-cd-pop 0.35s cubic-bezier(0.34,1.56,0.64,1) both;
+  text-shadow: 0 4px 24px rgba(0,0,0,0.4);
+}
+@keyframes rp-cd-pop {
+  from { transform: scale(0.55); opacity: 0; }
+  to   { transform: scale(1);    opacity: 1; }
+}
+
+.rp-cd-label {
+  font-size: 16px;
+  font-weight: 500;
+  color: rgba(255,255,255,0.75);
+  letter-spacing: 0.5px;
+  z-index: 1;
+  animation: rp-cd-fade-in 0.4s ease both;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.5);
+}
+
+.rp-cd-skip {
+  z-index: 1;
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: 20px;
+  color: rgba(255,255,255,0.7);
+  font-size: 13px;
+  padding: 6px 20px;
+  cursor: pointer;
+  letter-spacing: 0.3px;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+  animation: rp-cd-fade-in 0.5s ease both;
+}
+.rp-cd-skip:hover {
+  background: rgba(255,255,255,0.2);
+  color: #fff;
+  border-color: rgba(255,255,255,0.5);
+}
+
+/* Number change pulse */
+.rp-cd-number.rp-cd-tick {
+  animation: rp-cd-pop 0.35s cubic-bezier(0.34,1.56,0.64,1) both;
+}
+/* ============================================================================
+   PRAYER TIMES MODULE
+   ============================================================================ */
+
+/* ==========================================================================
+   PRAYER TIMES — Beautiful Redesign
+   ========================================================================== */
+
+.pt-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 20px 0 28px;
+}
+
+/* ── Top row: header + next prayer side by side ── */
+.pt-top-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  align-items: stretch;
+}
+
+/* ── Hero header ── */
+.pt-header-card {
+  background: linear-gradient(150deg, #0f1f3d 0%, #1a3560 35%, #2d5986 65%, #1e4270 100%);
+  border-radius: 20px;
+  padding: 28px 28px 22px;
+  position: relative;
+  overflow: hidden;
+  color: #fff;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  box-shadow: 0 8px 32px rgba(15, 31, 61, 0.35);
+}
+
+/* Geometric Islamic star pattern overlay */
+.pt-header-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(circle at 85% 50%, rgba(255,255,255,0.04) 0%, transparent 60%),
+    radial-gradient(circle at 15% 80%, rgba(255,200,80,0.06) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+/* Mosque silhouette via SVG data URI */
+.pt-header-card::after {
+  content: "";
+  position: absolute;
+  bottom: 0; right: 0;
+  width: 200px; height: 90px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 90'%3E%3Cg fill='rgba(255,255,255,0.05)'%3E%3Crect x='80' y='30' width='40' height='60'/%3E%3Cellipse cx='100' cy='30' rx='20' ry='22'/%3E%3Crect x='10' y='50' width='20' height='40'/%3E%3Cellipse cx='20' cy='50' rx='10' ry='12'/%3E%3Crect x='170' y='50' width='20' height='40'/%3E%3Cellipse cx='180' cy='50' rx='10' ry='12'/%3E%3Crect x='0' y='80' width='200' height='10'/%3E%3Cline x1='100' y1='8' x2='100' y2='0' stroke='rgba(255,255,255,0.07)' stroke-width='2'/%3E%3C/g%3E%3C/svg%3E");
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: bottom right;
+  pointer-events: none;
+}
+
+.pt-header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  position: relative;
+  z-index: 1;
+}
+
+.pt-mosque-icon {
+  font-size: 3rem;
+  line-height: 1;
+  filter: drop-shadow(0 2px 8px rgba(0,0,0,0.3));
+}
+
+.pt-title {
+  font-size: 1.55rem;
+  font-weight: 800;
+  color: #fff;
+  margin: 0;
+  letter-spacing: -0.02em;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.3);
+}
+
+.pt-location {
+  font-size: 0.8rem;
+  color: rgba(255,255,255,0.65);
+  margin-top: 4px;
+  letter-spacing: 0.01em;
+}
+
+.pt-header-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 12px;
+  position: relative;
+  z-index: 1;
+}
+
+.pt-date-nav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pt-nav-btn {
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 8px;
+  color: #fff;
+  cursor: pointer;
+  font-size: 1.05rem;
+  padding: 5px 12px;
+  transition: background 0.15s;
+  backdrop-filter: blur(4px);
+}
+.pt-nav-btn:hover { background: rgba(255,255,255,0.22); }
+
+.pt-today-btn {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 5px 12px;
+  background: rgba(255,200,80,0.25);
+  border-color: rgba(255,200,80,0.4);
+  color: #ffd966;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.pt-today-btn:hover { background: rgba(255,200,80,0.38); }
+
+.pt-display-date {
+  font-size: 0.95rem;
+  color: #fff;
+  font-weight: 700;
+  min-width: 170px;
+  text-align: center;
+  letter-spacing: 0.01em;
+}
+
+.pt-method-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pt-method-label {
+  font-size: 0.73rem;
+  color: rgba(255,255,255,0.55);
+  white-space: nowrap;
+}
+
+.pt-method-source-label {
+  font-size: 0.73rem;
+  color: rgba(255,255,255,0.85);
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 8px;
+  padding: 5px 10px;
+}
+
+/* ── Next prayer card ── */
+/* ── Next prayer card — 3-column layout ── */
+.pt-next-card {
+  background: linear-gradient(120deg, #1a6fbf 0%, #0f4a8a 40%, #0a3366 100%);
+  border-radius: 20px;
+  padding: 18px 22px;
+  color: #fff;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(15,74,138,0.35);
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0 18px;
+}
+
+/* Decorative glows */
+.pt-next-card::before {
+  content: "";
+  position: absolute;
+  right: -50px; top: -50px;
+  width: 200px; height: 200px;
+  background: radial-gradient(circle, rgba(255,255,255,0.07) 0%, transparent 70%);
+  pointer-events: none;
+}
+.pt-next-card::after {
+  content: "";
+  position: absolute;
+  left: -30px; bottom: -40px;
+  width: 160px; height: 160px;
+  background: radial-gradient(circle, rgba(255,200,80,0.09) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+/* Dividers between columns */
+.pt-next-col-left {
+  border-right: 1px solid rgba(255,255,255,0.12);
+  padding-right: 18px;
+}
+.pt-next-col-center {
+  border-right: 1px solid rgba(255,255,255,0.12);
+  padding-right: 18px;
+  padding-left: 2px;
+}
+
+/* ── Left column: prayer identity ── */
+.pt-next-col-left {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  position: relative;
+  z-index: 1;
+  min-width: 110px;
+}
+
+.pt-next-label {
+  font-size: 0.58rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.5);
+  margin-bottom: 5px;
+}
+
+.pt-next-icon {
+  font-size: 1.6rem;
+  line-height: 1;
+  filter: drop-shadow(0 2px 6px rgba(0,0,0,0.3));
+  margin-bottom: 3px;
+}
+
+.pt-next-name {
+  font-size: 1.55rem;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.pt-next-arabic {
+  font-size: 1.1rem;
+  direction: rtl;
+  color: rgba(255,255,255,0.65);
+  font-weight: 500;
+  margin-top: 1px;
+}
+
+.pt-next-desc {
+  font-size: 0.63rem;
+  color: rgba(255,255,255,0.4);
+  margin-top: 4px;
+  font-style: italic;
+}
+
+/* ── Center column: countdown ── */
+.pt-next-col-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  z-index: 1;
+}
+
+.pt-next-countdown-label {
+  font-size: 0.58rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.5);
+  margin-bottom: 6px;
+}
+
+.pt-next-countdown {
+  font-size: 1.75rem;
+  font-weight: 900;
+  color: #ffd966;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  text-shadow: 0 2px 12px rgba(255,200,80,0.4);
+  text-align: center;
+}
+
+.pt-next-progress-wrap {
+  margin-top: 10px;
+  width: 100%;
+  height: 3px;
+  background: rgba(255,255,255,0.15);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.pt-next-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #ffd966, #ffb347);
+  border-radius: 3px;
+  transition: width 1s linear;
+}
+
+.pt-next-progress-ends {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  margin-top: 4px;
+  font-size: 0.82rem;
+  color: rgba(255,255,255,0.6);
+}
+
+/* ── Right column: ring + time ── */
+.pt-next-col-right {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  position: relative;
+  z-index: 1;
+}
+
+.pt-next-ring-wrap {
+  position: relative;
+  width: 74px;
+  height: 74px;
+}
+
+.pt-next-ring-svg {
+  width: 74px;
+  height: 74px;
+  transform: rotate(-90deg);
+}
+
+.pt-next-ring-track {
+  fill: none;
+  stroke: rgba(255,255,255,0.12);
+  stroke-width: 5;
+}
+
+.pt-next-ring-fill {
+  fill: none;
+  stroke: #ffd966;
+  stroke-width: 5;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 1s linear;
+}
+
+.pt-next-ring-inner {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+}
+
+.pt-next-time {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: -0.01em;
+  line-height: 1;
+}
+
+.pt-next-time-label {
+  font-size: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(255,255,255,0.45);
+}
+
+.pt-next-hijri {
+  font-size: 0.6rem;
+  color: rgba(255,255,255,0.45);
+  text-align: center;
+  letter-spacing: 0.01em;
+}
+
+/* ── Prayer grid ── */
+.pt-prayers-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(148px, 1fr));
+  gap: 14px;
+}
+
+.pt-prayer-card {
+  background: var(--bg-elevated);
+  border: 1.5px solid var(--border-light);
+  border-radius: 16px;
+  padding: 0;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.2s, box-shadow 0.2s;
+  cursor: default;
+}
+
+.pt-prayer-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+}
+
+/* Sky gradient banners per prayer */
+.pt-prayer-banner {
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.pt-prayer-card[data-prayer="fajr"] .pt-prayer-banner {
+  background: linear-gradient(135deg, #1a1a3e 0%, #2d3875 50%, #5b4a8e 100%);
+}
+.pt-prayer-card[data-prayer="sunrise"] .pt-prayer-banner {
+  background: linear-gradient(135deg, #f4a56a 0%, #e86c35 40%, #c44b2a 100%);
+}
+.pt-prayer-card[data-prayer="dhuhr"] .pt-prayer-banner {
+  background: linear-gradient(135deg, #1e7fbd 0%, #2b9dd4 50%, #5bbce8 100%);
+}
+.pt-prayer-card[data-prayer="asr"] .pt-prayer-banner {
+  background: linear-gradient(135deg, #e8a830 0%, #d4831c 50%, #b86010 100%);
+}
+.pt-prayer-card[data-prayer="maghrib"] .pt-prayer-banner {
+  background: linear-gradient(135deg, #c04f2a 0%, #8b2e52 50%, #4a1a5e 100%);
+}
+.pt-prayer-card[data-prayer="isha"] .pt-prayer-banner {
+  background: linear-gradient(135deg, #0d1b2e 0%, #1a2e4a 50%, #0a1520 100%);
+}
+
+.pt-prayer-banner-icon {
+  font-size: 1.8rem;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.35));
+  line-height: 1;
+}
+
+.pt-prayer-body {
+  padding: 12px 10px 14px;
+}
+
+.pt-prayer-arabic {
+  font-size: 1.05rem;
+  direction: rtl;
+  font-weight: 600;
+  color: var(--text-secondary);
+  line-height: 1.2;
+}
+
+.pt-prayer-name {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-top: 2px;
+}
+
+.pt-prayer-time {
+  font-size: 1.25rem;
+  font-weight: 900;
+  color: var(--text-primary);
+  margin-top: 8px;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+.pt-prayer-time-24 {
+  font-size: 0.7rem;
+  color: var(--text-tertiary);
+  margin-top: 3px;
+}
+
+.pt-prayer-desc {
+  font-size: 0.66rem;
+  color: var(--text-tertiary);
+  margin-top: 5px;
+  font-style: italic;
+}
+
+/* State: current prayer */
+.pt-prayer-current {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px rgba(108,139,122,0.18), 0 4px 16px rgba(108,139,122,0.12);
+}
+.pt-prayer-current .pt-prayer-time {
+  color: var(--accent-primary);
+}
+
+/* State: next prayer */
+.pt-prayer-next {
+  border-color: var(--accent-warning);
+  box-shadow: 0 0 0 3px rgba(201,168,123,0.2), 0 4px 16px rgba(201,168,123,0.12);
+}
+.pt-prayer-next .pt-prayer-time {
+  color: #b87c1a;
+}
+
+/* Sunrise card slightly muted */
+.pt-prayer-sunrise {
+  opacity: 0.82;
+}
+
+.pt-prayer-badge {
+  position: absolute;
+  top: 8px; right: 8px;
+  font-size: 0.58rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  border-radius: 5px;
+  padding: 3px 6px;
+  z-index: 2;
+}
+.pt-badge-current {
+  background: var(--accent-primary);
+  color: #fff;
+}
+.pt-badge-next {
+  background: var(--accent-warning);
+  color: #fff;
+}
+
+/* ── Bottom row: Qibla + Sun Info ── */
+.pt-info-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+@media (max-width: 620px) {
+  .pt-info-row { grid-template-columns: 1fr; }
+}
+
+.pt-qibla-card {
+  background: var(--bg-elevated);
+  border: 1.5px solid var(--border-light);
+  border-radius: 16px;
+  padding: 20px 22px;
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  box-shadow: var(--shadow-sm);
+}
+
+.pt-sun-card {
+  background: var(--bg-elevated);
+  border: 1.5px solid var(--border-light);
+  border-radius: 16px;
+  padding: 20px 22px;
+  box-shadow: var(--shadow-sm);
+}
+
+.pt-qibla-compass-wrap {
+  flex-shrink: 0;
+  position: relative;
+}
+
+.pt-qibla-compass {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, #1e3a5f 0%, #0d1f3a 100%);
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.2), inset 0 1px 2px rgba(255,255,255,0.05);
+  border: 2px solid rgba(255,255,255,0.08);
+}
+
+/* Cardinal letters */
+.pt-qibla-compass::before {
+  content: "N";
+  position: absolute;
+  top: 5px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.55rem;
+  font-weight: 800;
+  color: rgba(255,255,255,0.5);
+  letter-spacing: 0.05em;
+}
+
+.pt-compass-needle {
+  position: absolute;
+  bottom: 50%;
+  left: 50%;
+  transform-origin: bottom center;
+  transform: translateX(-50%) rotate(0deg);
+  width: 3px;
+  height: 34px;
+  background: linear-gradient(to top, #ef4444 0%, #ef4444 50%, #e8e8e8 50%, #e8e8e8 100%);
+  border-radius: 2px 2px 0 0;
+  transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Center dot */
+.pt-qibla-compass-center {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background: #c8a850;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255,255,255,0.3);
+  z-index: 2;
+}
+
+.pt-compass-kaaba {
+  font-size: 0.9rem;
+  position: absolute;
+  bottom: 7px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.pt-qibla-info {
+  flex: 1;
+}
+
+.pt-qibla-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+.pt-qibla-deg {
+  font-size: 1.65rem;
+  font-weight: 900;
+  color: var(--accent-primary);
+  margin-top: 4px;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+.pt-qibla-note {
+  font-size: 0.72rem;
+  color: var(--text-tertiary);
+  margin-top: 5px;
+}
+
+/* Sun card */
+.pt-sun-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pt-sun-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.pt-sun-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.83rem;
+  color: var(--text-secondary);
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-light);
+}
+.pt-sun-row:last-child { border-bottom: none; }
+
+.pt-sun-row-label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--text-tertiary);
+}
+
+.pt-sun-row-label span:first-child {
+  font-size: 0.95rem;
+}
+
+.pt-sun-row span:last-child {
+  font-weight: 700;
+  color: var(--text-primary);
+  font-size: 0.88rem;
+}
+
+/* ── Method info bar ── */
+.pt-method-info {
+  font-size: 0.7rem;
+  color: var(--text-tertiary);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-light);
+  border-radius: 10px;
+  padding: 10px 16px;
+  line-height: 1.6;
 }

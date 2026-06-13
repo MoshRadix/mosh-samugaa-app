@@ -1,8 +1,8 @@
 {
   "name": "mosh-forms-app",
   "productName": "mosh-forms-app",
-  "version": "1.0.7",
-  "description": "My Electron application description",
+  "version": "1.0.8",
+  "description": "MTO Samugaa is a desktop application for generating and printing filled Word (.docx) or Excel (.xlsx) documents from reusable templates.",
   "main": "src/index.js",
   "private": true,
   "scripts": {

@@ -3,13 +3,13 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>MTO Document Generator</title>
+    <title>MTO Samugaa</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
     <div class="app-container">
       <header class="app-header">
-        <h1>📄 MTO Document Generator</h1>
+        <h1>🧭 MTO Samugaa</h1>
         <nav class="main-nav">
 
           <!-- Documents group -->
@@ -50,6 +50,18 @@
               <button class="nav-dropdown-item" data-view="watermark">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
                 Watermark
+              </button>
+              <button class="nav-dropdown-item" data-view="randompicker">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/></svg>
+                Random Picker
+              </button>
+              <button class="nav-dropdown-item" data-view="prayer-times">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a9 9 0 1 0 0 18A9 9 0 0 0 12 2z"/><path d="M12 6v6l4 2"/></svg>
+                Prayer Times
+              </button>
+              <button class="nav-dropdown-item" data-view="calendar">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><circle cx="8" cy="15" r="1" fill="currentColor" stroke="none"/><circle cx="12" cy="15" r="1" fill="currentColor" stroke="none"/><circle cx="16" cy="15" r="1" fill="currentColor" stroke="none"/></svg>
+                Calendar
               </button>
             </div>
           </div>
@@ -330,7 +342,7 @@
           <div class="settings-container">
             <!-- NEW: About card -->
             <div class="settings-group" style="margin-top: 2rem">
-              <h3>📌 About MTO Document Generator</h3>
+              <h3>📌 About MTO Samugaa</h3>
               <div id="about-content" class="about-content">
                 <p>Loading application info...</p>
               </div>
@@ -649,10 +661,6 @@
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><rect x="8" y="10" width="2" height="2" rx="0.5"/><rect x="11" y="10" width="2" height="2" rx="0.5"/><rect x="14" y="10" width="2" height="2" rx="0.5"/><rect x="8" y="14" width="2" height="2" rx="0.5"/><rect x="11" y="14" width="2" height="2" rx="0.5"/><rect x="14" y="14" width="2" height="2" rx="0.5"/><rect x="8" y="18" width="2" height="2" rx="0.5"/><rect x="11" y="18" width="2" height="2" rx="0.5"/><rect x="14" y="18" width="2" height="2" rx="0.5"/></svg>
               Calculator
             </button>
-            <button class="util-tab-btn" data-tab="calendar">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><circle cx="8" cy="15" r="1" fill="currentColor" stroke="none"/><circle cx="12" cy="15" r="1" fill="currentColor" stroke="none"/><circle cx="16" cy="15" r="1" fill="currentColor" stroke="none"/></svg>
-              Calendar
-            </button>
             <button class="util-tab-btn" data-tab="moon-phase">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
               Moon Phase
@@ -661,6 +669,7 @@
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12c2-4 4-6 6-6s4 4 6 4 4-6 6-6"/><path d="M2 19c2-3 4-5 6-5s4 4 6 4 4-5 6-5"/></svg>
               Tide Chart
             </button>
+
           </div>
 
           <!-- TAB: UNIT CONVERTER -->
@@ -927,51 +936,6 @@
           </div><!-- /calculator panel -->
 
           <!-- TAB: CALENDAR -->
-          <div class="util-tab-panel" data-panel="calendar">
-            <div class="cal-container">
-
-              <!-- Toolbar -->
-              <div class="cal-toolbar">
-                <div class="cal-toolbar-left">
-                  <button id="cal-today-btn" class="cal-btn cal-btn-today">Today</button>
-                  <div class="cal-nav-group">
-                    <button id="cal-prev-btn" class="cal-btn cal-btn-nav" title="Previous">&#8249;</button>
-                    <span id="cal-title" class="cal-title"></span>
-                    <button id="cal-next-btn" class="cal-btn cal-btn-nav" title="Next">&#8250;</button>
-                  </div>
-                </div>
-                <div class="cal-toolbar-right">
-                  <div class="cal-view-group">
-                    <button id="cal-view-week"  class="cal-btn cal-btn-view">Week</button>
-                    <button id="cal-view-month" class="cal-btn cal-btn-view active">Month</button>
-                    <button id="cal-view-year"  class="cal-btn cal-btn-view">Year</button>
-                  </div>
-                  <button id="cal-lang-btn" class="cal-btn cal-btn-lang">ދިވެހި</button>
-                </div>
-              </div>
-
-              <!-- Legend + sync status -->
-              <div class="cal-legend-row">
-                <div class="cal-legend">
-                  <span class="cal-legend-item"><span class="cal-legend-swatch cal-legend-swatch--today"></span>Today</span>
-                  <span class="cal-legend-item"><span class="cal-legend-swatch cal-legend-swatch--weekend"></span>Fri / Sat (Weekend)</span>
-                  <span class="cal-legend-item"><span class="cal-legend-swatch cal-legend-swatch--holiday"></span>Public Holiday</span>
-                  <span class="cal-legend-item"><span class="cal-legend-swatch cal-legend-swatch--declared"></span>Declared Holiday</span>
-                </div>
-                <div id="cal-sync-status" class="cal-sync-status" data-status="idle"></div>
-              </div>
-
-              <!-- Main area -->
-              <div class="cal-main-area">
-                <div id="cal-body" class="cal-body cal-body--month"></div>
-                <div id="cal-detail-panel" class="cal-detail-panel">
-                  <div class="cal-detail-empty">Select a date to see details</div>
-                </div>
-              </div>
-
-            </div>
-          </div><!-- /calendar panel -->
-
           <!-- TAB: MOON PHASE -->
           <div class="util-tab-panel" data-panel="moon-phase">
             <div class="moon-layout">
@@ -1134,6 +1098,266 @@
 
         </div><!-- /#utilities-view -->
 
+        <!-- Random Picker View -->
+        <div id="randompicker-view" class="view">
+
+        <!-- Hero -->
+        <div class="rp-hero">
+        <div class="rp-hero-icon">🎲</div>
+        <div class="rp-hero-text">
+          <h2>Random Picker</h2>
+          <p>Randomly assign a set of choices to a list of names — fair, instant, and beautiful.</p>
+        </div>
+        </div>
+
+        <!-- Two-column inputs -->
+        <div class="rp-input-grid">
+
+        <!-- Names -->
+        <div class="rp-panel">
+          <div class="rp-panel-header">
+            <span class="rp-panel-title">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              Participants
+            </span>
+            <span class="rp-count-badge" id="rp-names-count"></span>
+          </div>
+          <textarea id="rp-names-input" class="rp-textarea"
+            placeholder="Enter names — one per line or comma-separated&#10;&#10;Example:&#10;Ahmed, Mariyam&#10;Fathimath&#10;Ibrahim"></textarea>
+          <span class="rp-hint">Separate names by commas or new lines.</span>
+        </div>
+
+        <!-- Choices -->
+        <div class="rp-panel">
+          <div class="rp-panel-header">
+            <span class="rp-panel-title">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              Choices
+            </span>
+            <span class="rp-count-badge" id="rp-choices-count"></span>
+          </div>
+          <textarea id="rp-choices-input" class="rp-textarea"
+            placeholder="Enter choices — one per line or comma-separated&#10;&#10;Example:&#10;Jan, Feb, Mar&#10;Red, Green, Blue"></textarea>
+          <span class="rp-hint">Separate choices by commas or new lines.</span>
+
+          <!-- Presets -->
+          <div class="rp-presets-row">
+            <span class="rp-presets-label">Quick presets:</span>
+            <div id="rp-presets"></div>
+          </div>
+        </div>
+
+        </div>
+
+        <!-- Options row -->
+        <div class="rp-options-row">
+        <div class="rp-view-toggle">
+          <span>Display:</span>
+          <div class="rp-radio-group">
+            <label>
+              <input type="radio" name="rp-view" value="grouped" checked>
+              <span>Grouped by choice</span>
+            </label>
+            <label>
+              <input type="radio" name="rp-view" value="list">
+              <span>Per-name list</span>
+            </label>
+          </div>
+        </div>
+        <label class="rp-countdown-toggle" id="rp-countdown-toggle-label" title="Show a 5-second countdown before revealing results">
+          <input type="checkbox" id="rp-countdown-checkbox" checked>
+          <span class="rp-countdown-toggle-track">
+            <span class="rp-countdown-toggle-thumb"></span>
+          </span>
+          <span class="rp-countdown-toggle-text">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            Countdown
+          </span>
+        </label>
+        </div>
+
+
+        <!-- Multi-slot hint -->
+        <div class="rp-multislot-hint" id="rp-multislot-hint">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <span></span>
+        </div>
+
+        <!-- Actions -->
+        <div class="rp-actions">
+        <button id="rp-shuffle-btn" class="btn btn-primary" disabled>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/></svg>
+          Shuffle &amp; Assign
+        </button>
+        <button id="rp-clear-btn" class="btn btn-outline">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+          Clear
+        </button>
+        <span id="rp-error"></span>
+        </div>
+
+        <!-- Results -->
+        <div id="rp-results-section">
+        <div class="rp-results-header">
+          <div class="rp-results-title">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="20 6 9 17 4 12"/></svg>
+            Results
+          </div>
+          <button id="rp-copy-btn" class="btn btn-outline" style="font-size:12px;padding:6px 14px">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            Copy
+          </button>
+        </div>
+        <div id="rp-results-container"></div>
+        </div>
+        </div><!-- /#randompicker-view -->
+
+        <!-- Prayer Times View -->
+        <div id="prayer-times-view" class="view">
+          <div class="pt-layout">
+
+            <!-- Top row: header + next prayer side by side -->
+            <div class="pt-top-row">
+
+            <!-- Header card -->
+            <div class="pt-header-card">
+              <div class="pt-header-left">
+                <div class="pt-mosque-icon">🕌</div>
+                <div class="pt-header-info">
+                  <h2 class="pt-title">Prayer Times</h2>
+                  <div class="pt-location">Addu City (Gan) · <span id="pt-hijri-date">—</span></div>
+                </div>
+              </div>
+              <div class="pt-header-right">
+                <div class="pt-date-nav">
+                  <button class="pt-nav-btn" id="pt-prev-day" title="Previous day">&#8249;</button>
+                  <span id="pt-display-date" class="pt-display-date"></span>
+                  <button class="pt-nav-btn" id="pt-next-day" title="Next day">&#8250;</button>
+                  <button class="pt-nav-btn pt-today-btn" id="pt-today-btn" title="Go to today">Today</button>
+                </div>
+
+              </div>
+            </div>
+
+            <!-- Next prayer countdown -->
+            <div class="pt-next-card" id="pt-next-card">
+              <!-- Left col: prayer identity -->
+              <div class="pt-next-col-left">
+                <div class="pt-next-label">Next Prayer</div>
+                <div class="pt-next-icon" id="pt-next-icon">🕌</div>
+                <div class="pt-next-name" id="pt-next-name">—</div>
+                <div class="pt-next-arabic" id="pt-next-arabic">—</div>
+                <div class="pt-next-desc" id="pt-next-desc">—</div>
+              </div>
+              <!-- Center col: countdown -->
+              <div class="pt-next-col-center">
+                <div class="pt-next-countdown-label">Time remaining</div>
+                <div class="pt-next-countdown" id="pt-next-countdown">—</div>
+                <div class="pt-next-progress-wrap">
+                  <div class="pt-next-progress-bar" id="pt-next-progress-bar" style="width:0%"></div>
+                </div>
+                <div class="pt-next-progress-ends">
+                  <span id="pt-next-prev-label">—</span>
+                  <span id="pt-next-next-label">—</span>
+                </div>
+              </div>
+              <!-- Right col: ring + prayer time -->
+              <div class="pt-next-col-right">
+                <div class="pt-next-ring-wrap">
+                  <svg class="pt-next-ring-svg" viewBox="0 0 100 100">
+                    <circle class="pt-next-ring-track" cx="50" cy="50" r="40"/>
+                    <circle class="pt-next-ring-fill" id="pt-next-ring-fill" cx="50" cy="50" r="40"/>
+                  </svg>
+                  <div class="pt-next-ring-inner">
+                    <div class="pt-next-time" id="pt-next-time">—</div>
+                    <div class="pt-next-time-label">prayer at</div>
+                  </div>
+                </div>
+                <div class="pt-next-hijri" id="pt-next-hijri">—</div>
+              </div>
+            </div><!-- /pt-next-card -->
+            </div><!-- /pt-top-row -->
+            <div class="pt-prayers-grid" id="pt-prayers-grid">
+              <!-- filled by JS -->
+            </div>
+
+            <!-- Qibla direction -->
+            <div class="pt-info-row">
+              <div class="pt-qibla-card">
+                <div class="pt-qibla-compass-wrap">
+                  <div class="pt-qibla-compass" id="pt-qibla-compass">
+                    <div class="pt-compass-needle" id="pt-compass-needle"></div>
+                    <div class="pt-compass-kaaba">🕋</div>
+                  </div>
+                </div>
+                <div class="pt-qibla-info">
+                  <div class="pt-qibla-title">Qibla Direction</div>
+                  <div class="pt-qibla-deg" id="pt-qibla-deg">—</div>
+                  <div class="pt-qibla-note">from Addu City (Gan)</div>
+                </div>
+              </div>
+
+              <div class="pt-sun-card">
+                <div class="pt-sun-title">☀️ Sun Info — Addu City</div>
+                <div class="pt-sun-rows" id="pt-sun-rows">—</div>
+              </div>
+            </div>
+
+            <!-- Method info -->
+            <div class="pt-method-info" id="pt-method-info">—</div>
+
+          </div><!-- /pt-layout -->
+        </div><!-- /#prayer-times-view -->
+
+        <!-- Calendar View -->
+        <div id="calendar-view" class="view">
+          <div class="view-header">
+            <h2>📅 Calendar</h2>
+          </div>
+          <div class="cal-container">
+
+            <!-- Toolbar -->
+            <div class="cal-toolbar">
+              <div class="cal-toolbar-left">
+                <button id="cal-today-btn" class="cal-btn cal-btn-today">Today</button>
+                <div class="cal-nav-group">
+                  <button id="cal-prev-btn" class="cal-btn cal-btn-nav" title="Previous">&#8249;</button>
+                  <span id="cal-title" class="cal-title"></span>
+                  <button id="cal-next-btn" class="cal-btn cal-btn-nav" title="Next">&#8250;</button>
+                </div>
+              </div>
+              <div class="cal-toolbar-right">
+                <div class="cal-view-group">
+                  <button id="cal-view-week"  class="cal-btn cal-btn-view">Week</button>
+                  <button id="cal-view-month" class="cal-btn cal-btn-view active">Month</button>
+                  <button id="cal-view-year"  class="cal-btn cal-btn-view">Year</button>
+                </div>
+                <button id="cal-lang-btn" class="cal-btn cal-btn-lang">ދިވެހި</button>
+              </div>
+            </div>
+
+            <!-- Legend + sync status -->
+            <div class="cal-legend-row">
+              <div class="cal-legend">
+                <span class="cal-legend-item"><span class="cal-legend-swatch cal-legend-swatch--today"></span>Today</span>
+                <span class="cal-legend-item"><span class="cal-legend-swatch cal-legend-swatch--weekend"></span>Fri / Sat (Weekend)</span>
+                <span class="cal-legend-item"><span class="cal-legend-swatch cal-legend-swatch--holiday"></span>Public Holiday</span>
+                <span class="cal-legend-item"><span class="cal-legend-swatch cal-legend-swatch--declared"></span>Declared Holiday</span>
+              </div>
+              <div id="cal-sync-status" class="cal-sync-status" data-status="idle"></div>
+            </div>
+
+            <!-- Main area -->
+            <div class="cal-main-area">
+              <div id="cal-body" class="cal-body cal-body--month"></div>
+              <div id="cal-detail-panel" class="cal-detail-panel">
+                <div class="cal-detail-empty">Select a date to see details</div>
+              </div>
+            </div>
+
+          </div>
+        </div><!-- /#calendar-view -->
+
       </main>
       <!-- Settings View -->
 
@@ -1242,6 +1466,8 @@
       </div>
     </div>
 
+    </div>
+
     <!-- Shared confirmation dialog (used by all pages) -->
     <div id="app-confirm-overlay" class="wl-confirm-overlay" style="display:none" aria-modal="true" role="dialog">
       <div class="wl-confirm-box">
@@ -1256,6 +1482,7 @@
     <script src="utilities.js"></script>
     <script src="calendar.js"></script>
     <script src="watermark.js"></script>
+    <script src="randompicker.js"></script>
     <script src="templates.js"></script>
     <script src="fields.js"></script>
     <script src="form.js"></script>
@@ -1264,6 +1491,22 @@
     <script src="help.js"></script>
     <script src="worklogs.js"></script>
     <script src="tidechart.js"></script>
+    <script src="prayertimes.js"></script>
     <script src="app.js"></script>
+
+  <!-- Random Picker countdown overlay (must be direct child of body to escape .view transform stacking context) -->
+  <div id="rp-countdown-overlay" aria-hidden="true">
+    <div class="rp-cd-backdrop"></div>
+    <div class="rp-cd-stage">
+      <svg class="rp-cd-ring" viewBox="0 0 120 120">
+        <circle class="rp-cd-ring-track" cx="60" cy="60" r="52"/>
+        <circle class="rp-cd-ring-fill" id="rp-cd-ring-fill" cx="60" cy="60" r="52"/>
+      </svg>
+      <div class="rp-cd-number" id="rp-cd-number">5</div>
+    </div>
+    <div class="rp-cd-label">Getting ready…</div>
+    <button class="rp-cd-skip" id="rp-cd-skip">Skip</button>
+  </div>
+
   </body>
 </html>
