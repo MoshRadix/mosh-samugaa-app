@@ -1270,17 +1270,23 @@ function computeMoonData(date) {
   const illum = (1 - Math.cos(2 * Math.PI * phase)) / 2;
 
   // Phase name & emoji
+  // New Moon wraps around the 0/1 boundary (≈ ±1 day = ±0.0339 of cycle).
+  // Check it first before the linear range scan.
+  const NEW_MOON_HALF = 0.0334; // ~1 day on each side of exact new moon
   const phases = [
-    { min: 0,    max: 0.0334, name: "New Moon",        emoji: "🌑" },
-    { min: 0.0334,max: 0.2166,name: "Waxing Crescent", emoji: "🌒" },
-    { min: 0.2166,max: 0.2834,name: "First Quarter",   emoji: "🌓" },
-    { min: 0.2834,max: 0.4666,name: "Waxing Gibbous",  emoji: "🌔" },
-    { min: 0.4666,max: 0.5334,name: "Full Moon",        emoji: "🌕" },
-    { min: 0.5334,max: 0.7166,name: "Waning Gibbous",  emoji: "🌖" },
-    { min: 0.7166,max: 0.7834,name: "Last Quarter",    emoji: "🌗" },
-    { min: 0.7834,max: 1,     name: "Waning Crescent", emoji: "🌘" },
+    { min: 0.0334, max: 0.2166, name: "Waxing Crescent", emoji: "🌒" },
+    { min: 0.2166, max: 0.2834, name: "First Quarter",   emoji: "🌓" },
+    { min: 0.2834, max: 0.4666, name: "Waxing Gibbous",  emoji: "🌔" },
+    { min: 0.4666, max: 0.5334, name: "Full Moon",        emoji: "🌕" },
+    { min: 0.5334, max: 0.7166, name: "Waning Gibbous",  emoji: "🌖" },
+    { min: 0.7166, max: 0.7834, name: "Last Quarter",    emoji: "🌗" },
+    { min: 0.7834, max: 1 - NEW_MOON_HALF, name: "Waning Crescent", emoji: "🌘" },
   ];
-  const p = phases.find(p => phase >= p.min && phase < p.max) || phases[0];
+  // New Moon: phase near 0 OR near 1 (wraps around)
+  const isNewMoon = phase < NEW_MOON_HALF || phase >= (1 - NEW_MOON_HALF);
+  const p = isNewMoon
+    ? { name: "New Moon", emoji: "🌑" }
+    : (phases.find(p => phase >= p.min && phase < p.max) || { name: "Waning Crescent", emoji: "🌘" });
 
   // Approximate distance (km) using simple model
   const anomaly = moonToRad((daysSinceNew / SYNODIC) * 360 - 2.5);
@@ -1369,6 +1375,13 @@ function computeMoonRiseSet(date, moon) {
  *      So: termSign = -1 → bows RIGHT, termSign = +1 → bows LEFT.
  */
 function drawMoonCanvas(canvas, phase, illumination) {
+  // Clamp near-new-moon phases to 0 so the canvas renders a clean dark disc
+  // rather than a barely-visible sliver (avoids the waning-crescent visual artifact).
+  const NEW_MOON_HALF = 0.0334;
+  if (phase >= (1 - NEW_MOON_HALF) || phase < NEW_MOON_HALF) {
+    phase = 0;
+    illumination = 0;
+  }
   const dpr = window.devicePixelRatio || 1;
   const cssW = parseInt(canvas.style.width  || canvas.getAttribute("width"))  || canvas.width;
   const cssH = parseInt(canvas.style.height || canvas.getAttribute("height")) || canvas.height;

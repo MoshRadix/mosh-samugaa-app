@@ -1195,7 +1195,7 @@ ipcMain.handle("get-app-info", () => ({
   email: "shaamil.is@gmail.com",
   phone: "+960 999-0166",
   repo: "https://github.com/MoshRadix/mosh-forms-app",
-  quote: "Simplify document generation, one form at a time.",
+  quote: "Guiding Addu City Council's work with precision — from documents to the tides.",
   electronVersion: process.versions.electron,
   nodeVersion: process.versions.node,
   chromeVersion: process.versions.chrome,

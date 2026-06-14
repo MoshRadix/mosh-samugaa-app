@@ -14,7 +14,7 @@ window.initHelp = function () {
       <div class="help-hero-icon">📄</div>
       <div class="help-hero-text">
         <h1 class="help-hero-title">MTO Samugaa</h1>
-        <p class="help-hero-sub">Complete user guide — templates, batch generation, tools, prayer times, placeholders, and more</p>
+        <p class="help-hero-sub">Complete user guide — templates, batch generation, notes, tools, prayer times, placeholders, and more</p>
       </div>
       <div class="help-hero-version" id="help-hero-version"></div>
     </div>
@@ -29,6 +29,7 @@ window.initHelp = function () {
       <a href="#hn-fillform"     class="help-pill">Fill Form</a>
       <a href="#hn-batch"        class="help-pill">⚡ Batch Generate</a>
       <a href="#hn-placeholders" class="help-pill">Placeholders</a>
+      <a href="#hn-notes"        class="help-pill">📓 Notes</a>
       <a href="#hn-watermark"    class="help-pill">Watermark</a>
       <a href="#hn-worklogs"     class="help-pill">Work Logs</a>
       <a href="#hn-utilities"    class="help-pill">Utilities</a>
@@ -68,6 +69,11 @@ window.initHelp = function () {
           <span class="help-feature-icon">🌐</span>
           <strong>Bilingual</strong>
           <span>Dhivehi &amp; English dates and text</span>
+        </div>
+        <div class="help-feature-card">
+          <span class="help-feature-icon">📓</span>
+          <strong>Notes</strong>
+          <span>Rich-text notebook with optional Notion sync</span>
         </div>
         <div class="help-feature-card">
           <span class="help-feature-icon">🖼️</span>
@@ -121,6 +127,7 @@ window.initHelp = function () {
             <tr><td><strong>🔧 Utilities</strong></td><td>Unit Converter, Date Calculator, Scientific Calculator, Maldives Calendar, Moon Phase, and Tide Chart — all in one place.</td></tr>
             <tr><td><strong>🕌 Prayer Times</strong></td><td>Daily prayer schedule for Addu City (Gan), live countdown to the next prayer, sun times, Qibla compass, and Hijri date.</td></tr>
             <tr><td><strong>🎲 Random Picker</strong></td><td>Assign a shuffled list of choices to a list of names — with animated countdown, grouped or list view, and copy-to-clipboard.</td></tr>
+            <tr><td><strong>📓 Notes</strong></td><td>A personal notebook with bilingual (English / Dhivehi) support, rich-text editing, search, and optional Notion workspace sync.</td></tr>
             <tr><td><strong>🖼️ Watermark</strong></td><td>Batch-apply a watermark image to multiple photos — corner placement or full-width overlay.</td></tr>
             <tr><td><strong>📋 Work Logs</strong></td><td>Record, search, filter, and export a timestamped log of tasks and work activities.</td></tr>
             <tr><td><strong>⚙️ Settings</strong></td><td>Change storage directories and view app information.</td></tr>
@@ -700,6 +707,75 @@ window.initHelp = function () {
       </div>
     </div>
 
+    <!-- ══ NOTES ══════════════════════════════════════════════════ -->
+    <div class="help-section" id="hn-notes">
+      <h2 class="help-section-title">📓 Notes</h2>
+      <p>
+        The <strong>Notes</strong> page is a personal notebook built into the app.
+        Notes support both <strong>English</strong> and <strong>Dhivehi (Thaana)</strong> text,
+        are saved locally to the device, and can optionally be synced to a
+        <strong>Notion</strong> database in the background.
+      </p>
+
+      <h3 class="help-subsection-title">Creating &amp; Editing Notes</h3>
+      <ol class="help-list">
+        <li>Click <strong>+ New Note</strong> in the left sidebar to create a blank note.</li>
+        <li>Click the note title at the top of the editor to rename it.</li>
+        <li>Type your content in the editor area. Changes are saved automatically as you type.</li>
+        <li>Use the language toggle in the editor toolbar to switch between <strong>English (LTR)</strong> and <strong>Dhivehi (RTL)</strong> typing modes.</li>
+      </ol>
+
+      <h3 class="help-subsection-title">Sidebar</h3>
+      <ul class="help-list">
+        <li>All your notes are listed in the left sidebar, sorted by most recently modified.</li>
+        <li>Use the <strong>Search notes…</strong> box to filter the list by title or content in real time.</li>
+        <li>The sidebar shows each note's title and a short preview of its content.</li>
+        <li>Click any note in the list to open it in the editor. The active note is highlighted.</li>
+      </ul>
+
+      <h3 class="help-subsection-title">Deleting Notes</h3>
+      <p>
+        Hover over a note in the sidebar to reveal the <strong>🗑 delete</strong> button.
+        Click it and confirm the prompt to permanently remove the note. Deletion cannot be undone.
+      </p>
+
+      <h3 class="help-subsection-title">📓 → Notion Sync</h3>
+      <p>
+        Notes can be synchronised to a <strong>Notion database</strong>, keeping a backup in
+        your workspace and making them accessible from any device. To enable sync:
+      </p>
+      <ol class="help-list">
+        <li>Go to <strong>⚙️ Settings</strong> and open the <strong>Notion Integration</strong> section.</li>
+        <li>Paste your <strong>Notion Internal Integration Token</strong> (starts with <code>secret_…</code>).</li>
+        <li>Paste the <strong>Database ID</strong> of the Notion database where notes should be written.</li>
+        <li>Click <strong>Save Notion Settings</strong>.</li>
+      </ol>
+      <div class="help-table-wrapper">
+        <table class="help-table">
+          <thead><tr><th>Button</th><th>Action</th></tr></thead>
+          <tbody>
+            <tr><td><strong>⇅ Sync</strong> (per note)</td><td>Push the currently open note to Notion immediately. Creates a new page if it hasn't been synced before, or updates the existing page.</td></tr>
+            <tr><td><strong>⇅ Sync All</strong></td><td>Push every note in the sidebar to Notion in one operation.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="help-note-info">
+        ℹ️ Notion sync is one-way — changes made in Notion are not pulled back into the app.
+        Your Notion integration token is stored locally and never transmitted to any server
+        other than Notion's own API.
+      </p>
+
+      <h3 class="help-subsection-title">Setting Up a Notion Integration</h3>
+      <ol class="help-list">
+        <li>Go to <a href="https://www.notion.so/my-integrations" target="_blank">notion.so/my-integrations</a> and click <strong>+ New integration</strong>.</li>
+        <li>Give it a name (e.g. <em>MTO Samugaa</em>), select your workspace, and click <strong>Submit</strong>.</li>
+        <li>Copy the <strong>Internal Integration Token</strong> shown on the integration page.</li>
+        <li>In Notion, open or create a database you want notes pushed to. Click <strong>⋯ Share</strong> → <strong>Invite</strong> → select your integration.</li>
+        <li>Copy the Database ID from the database URL: <code>notion.so/&lt;workspace&gt;/<strong>DATABASE_ID</strong>?…</code></li>
+        <li>Paste both values into <strong>Settings → Notion Integration</strong> in the app.</li>
+      </ol>
+    </div>
+
     <!-- ══ WATERMARK TOOL ════════════════════════════════════════ -->
     <div class="help-section" id="hn-watermark">
       <h2 class="help-section-title">🖼️ Watermark Tool</h2>
@@ -882,6 +958,12 @@ window.initHelp = function () {
         constants (π, e). The display shows the current expression and result simultaneously.
         Press <kbd>Enter</kbd> or click <strong>=</strong> to evaluate.
       </p>
+      <ul class="help-list">
+        <li>Click <strong>SCI</strong> to toggle the scientific function panel.</li>
+        <li>Every evaluated result is added to the <strong>History</strong> panel on the right — hover over an entry to reveal <strong>Copy</strong> and <strong>Delete</strong> buttons.</li>
+        <li>Click any history result to paste it back into the display for further calculation.</li>
+        <li>Press <kbd>Escape</kbd> or click <strong>AC</strong> to clear the current expression.</li>
+      </ul>
 
       <h3 class="help-subsection-title">🗓️ Maldives Calendar</h3>
       <p>
@@ -904,9 +986,10 @@ window.initHelp = function () {
 
       <h3 class="help-subsection-title">🌙 Moon Phase</h3>
       <p>
-        Shows the current lunar phase with an illustrated moon graphic, phase name, illumination
-        percentage, age of the moon in days, and dates of the next major phases (New Moon,
-        First Quarter, Full Moon, Last Quarter). The display updates automatically each day.
+        Shows the current lunar phase with a rendered moon graphic (using the terminator method
+        for accurate waxing/waning geometry), phase name, illumination percentage, and the
+        moon's age in days and hours. Dates of the next major phases — New Moon, First Quarter,
+        Full Moon, and Last Quarter — are listed below. The age counter ticks live every second.
       </p>
       <p class="help-note">
         ℹ️ Spring tides (higher highs and lower lows) occur around Full Moon and New Moon.
@@ -1154,6 +1237,14 @@ window.initHelp = function () {
         <li>Use <strong>Dropdown</strong> type fields to enforce consistent values (e.g. department names) and prevent typos.</li>
         <li>Click <strong>Save Record</strong> before generating to keep a log of form data you can reload later.</li>
         <li>The <strong>print count</strong> (🖨️) on each template card updates every time you open the Templates or Search page.</li>
+      </ul>
+
+      <h3 class="help-subsection-title">Notes &amp; Notion Sync</h3>
+      <ul class="help-list">
+        <li>Notes are auto-saved as you type — there is no save button to press.</li>
+        <li>Switch the editor to <strong>Dhivehi mode</strong> before typing Thaana to get correct RTL layout and cursor behaviour.</li>
+        <li>Before running <strong>Sync All</strong>, make sure your Notion database has a <strong>Name</strong> (title) property and a <strong>Content</strong> text property — the app writes to these by convention.</li>
+        <li>If sync fails, check that your Notion integration has been <strong>shared</strong> with the target database (Notion → Share → Invite).</li>
       </ul>
 
       <h3 class="help-subsection-title">Watermark Tool</h3>

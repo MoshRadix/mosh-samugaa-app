@@ -178,6 +178,12 @@ function switchView(view) {
     targetView.classList.add("active");
   }
 
+  // Remove padding/scroll from main-content for views that manage their own layout
+  const mainContent = document.querySelector(".main-content");
+  if (mainContent) {
+    mainContent.classList.toggle("main-content--flush", view === "notes");
+  }
+
   // 4. Trigger isolated component updates contextually depending on selected pathway targets
   switch (view) {
     case "templates":
@@ -261,6 +267,12 @@ function switchView(view) {
     case "calendar":
       if (typeof initCalendar === "function") {
         initCalendar();
+      }
+      break;
+
+    case "notes":
+      if (typeof initNotes === "function") {
+        initNotes();
       }
       break;
   }

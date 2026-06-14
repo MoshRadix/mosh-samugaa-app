@@ -117,5 +117,96 @@ async function loadAboutInfo() {
 window.initSettings = () => {
   loadSettings();
   setupSettings();
-   loadAboutInfo();   // ← add this line
+  loadAboutInfo();
+  loadNotionSettings();
+  setupNotionSettings();
 };
+
+// ============================================================================
+// NOTION INTEGRATION SETTINGS
+// ============================================================================
+
+let _notionSettingsAttached = false;
+
+function loadNotionSettings() {
+  const token = localStorage.getItem('mto_notion_token') || '';
+  const dbId  = localStorage.getItem('mto_notion_db_id') || '';
+  const tokenEl = document.getElementById('notion-token');
+  const dbEl    = document.getElementById('notion-db-id');
+  if (tokenEl) tokenEl.value = token;
+  if (dbEl)    dbEl.value = dbId;
+  _updateNotionStatusBadge(!!token && !!dbId);
+}
+
+function _updateNotionStatusBadge(connected) {
+  const badge = document.getElementById('notion-connect-status');
+  const text  = document.getElementById('notion-status-text');
+  if (!badge || !text) return;
+  if (connected) {
+    badge.className = 'notion-connect-status connected';
+    badge.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> <span>Connected</span>`;
+  } else {
+    badge.className = 'notion-connect-status disconnected';
+    badge.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg> <span>Not connected</span>`;
+  }
+}
+
+function setupNotionSettings() {
+  if (_notionSettingsAttached) return;
+  _notionSettingsAttached = true;
+
+  const saveBtn = document.getElementById('save-notion-settings');
+  if (saveBtn) {
+    saveBtn.addEventListener('click', () => {
+      const token = (document.getElementById('notion-token')?.value || '').trim();
+      const dbId  = (document.getElementById('notion-db-id')?.value || '').trim();
+      localStorage.setItem('mto_notion_token', token);
+      localStorage.setItem('mto_notion_db_id', dbId);
+      // Notify notes module if loaded
+      if (typeof window.saveNotionSettings === 'function') {
+        window.saveNotionSettings(token, dbId);
+      }
+      _updateNotionStatusBadge(!!token && !!dbId);
+      if (window.showToast) window.showToast('Notion settings saved.', 'success');
+    });
+  }
+
+  const testBtn = document.getElementById('test-notion-btn');
+  if (testBtn) {
+    testBtn.addEventListener('click', async () => {
+      const token = (document.getElementById('notion-token')?.value || '').trim();
+      const dbId  = (document.getElementById('notion-db-id')?.value || '').trim();
+      if (!token || !dbId) {
+        if (window.showToast) window.showToast('Enter both token and database ID first.', 'warning');
+        return;
+      }
+
+      testBtn.disabled = true;
+      testBtn.textContent = 'Testing…';
+      try {
+        const res = await fetch(`https://api.notion.com/v1/databases/${dbId}`, {
+          headers: {
+            'Authorization': 'Bearer ' + token,
+            'Notion-Version': '2022-06-28'
+          }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const title = data?.title?.[0]?.plain_text || 'Untitled';
+          _updateNotionStatusBadge(true);
+          if (window.showToast) window.showToast(`✓ Connected! Database: "${title}"`, 'success');
+        } else {
+          const err = await res.json().catch(() => ({}));
+          _updateNotionStatusBadge(false);
+          if (window.showToast) window.showToast('Connection failed: ' + (err.message || `HTTP ${res.status}`), 'error');
+        }
+      } catch (e) {
+        _updateNotionStatusBadge(false);
+        if (window.showToast) window.showToast('Connection error: ' + e.message, 'error');
+      } finally {
+        testBtn.disabled = false;
+        testBtn.textContent = 'Test Connection';
+      }
+    });
+  }
+}

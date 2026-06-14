@@ -729,10 +729,20 @@ function initPrayerTimes() {
 
   // Live countdown tick every second
   if (_ptTimer) clearInterval(_ptTimer);
+  let _ptLastDay = new Date().getDate();
   _ptTimer = setInterval(() => {
-    // Only tick the countdown+grid highlight, not the full grid rebuild every second
+    const now = new Date();
+    // Handle midnight rollover — reset to new day and do a full refresh
+    if (now.getDate() !== _ptLastDay) {
+      _ptLastDay = now.getDate();
+      _ptDate = new Date(); _ptDate.setHours(0,0,0,0);
+      ptRefresh();
+      return;
+    }
     const times = computePrayerTimes(_ptDate, _ptMethod);
     if (!times) return;
-    ptRenderNextCard(times, new Date());
+    const nowH = now.getHours() + now.getMinutes()/60 + now.getSeconds()/3600;
+    ptRenderGrid(times, nowH);
+    ptRenderNextCard(times, now);
   }, 1000);
 }
