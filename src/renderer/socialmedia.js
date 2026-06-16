@@ -1006,7 +1006,7 @@ async function smOpenGenerate(id) {
         data-field-id="${f.id}"
         placeholder="${smEscape(f.label || f.placeholder)}"
         dir="${isDh ? "rtl" : "ltr"}"
-        rows="3"></textarea>`;
+        rows="11"></textarea>`;
     } else if (type === "autocomplete") {
       inputHtml = `
         <div class="sm-ac-wrap" dir="${isDh ? "rtl" : "ltr"}">
@@ -1063,7 +1063,12 @@ async function smOpenGenerate(id) {
     }
   });
 
+  const fieldCount = (tpl.fields || []).length;
   document.getElementById("sm-generate-title").textContent = tpl.name;
+
+  // Show field count badge next to title
+  const titleEl = document.getElementById("sm-generate-title");
+  titleEl.innerHTML = `${smEscape(tpl.name)} <span class="sm-gen-field-count">${fieldCount} field${fieldCount !== 1 ? "s" : ""}</span>`;
 
   // Attach live-preview listener to each input (debounced)
   form.querySelectorAll(".sm-gen-input").forEach(el => {
@@ -1075,6 +1080,11 @@ async function smOpenGenerate(id) {
   });
 
   // Reset preview area
+  const hintEl = document.getElementById("sm-gen-hint");
+  if (hintEl) hintEl.textContent = fieldCount > 3
+    ? "Fill in the fields below (scroll for more) — preview updates live."
+    : "Fill in the fields below — preview updates live.";
+
   const wrap = document.getElementById("sm-preview-canvas-wrap");
   wrap.innerHTML = "";
   delete wrap.dataset.dataUrl;
