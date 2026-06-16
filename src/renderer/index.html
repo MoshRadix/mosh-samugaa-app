@@ -547,6 +547,82 @@
               </div>
             </div>
 
+            <!-- Notes Backup -->
+            <div class="settings-group" style="margin-top: 2rem">
+              <h3>📝 Notes</h3>
+              <p style="font-size:13px;color:var(--text-tertiary);margin-bottom:14px;">
+                Export all Notes to a JSON file, or restore from a previous backup. Restoring will replace all current notes.
+              </p>
+              <div id="notes-backup-status" style="display:none;font-size:13px;margin-bottom:10px;"></div>
+              <div class="form-actions">
+                <button id="notes-backup-btn" class="btn btn-primary">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="margin-right:6px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  Backup Notes
+                </button>
+                <button id="notes-restore-btn" class="btn btn-outline">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="margin-right:6px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                  Restore from Backup
+                </button>
+              </div>
+            </div>
+
+            <!-- Work Logs Backup -->
+            <div class="settings-group" style="margin-top: 2rem">
+              <h3>📋 Work Logs</h3>
+              <p style="font-size:13px;color:var(--text-tertiary);margin-bottom:14px;">
+                Export all Work Logs (including attached photos) into a ZIP archive, or restore from a previous backup. Restoring will replace all current work log data.
+              </p>
+              <div id="wl-backup-status" style="display:none;font-size:13px;margin-bottom:10px;"></div>
+              <div class="form-actions">
+                <button id="wl-backup-btn" class="btn btn-primary">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="margin-right:6px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  Backup Work Logs
+                </button>
+                <button id="wl-restore-btn" class="btn btn-outline">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="margin-right:6px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                  Restore from Backup
+                </button>
+              </div>
+            </div>
+
+            <!-- Document Templates Backup -->
+            <div class="settings-group" style="margin-top: 2rem">
+              <h3>📄 Document Templates</h3>
+              <p style="font-size:13px;color:var(--text-tertiary);margin-bottom:14px;">
+                Export all document templates (.docx, .xlsx, .pdf) and their metadata into a ZIP archive, or restore from a previous backup.
+              </p>
+              <div id="docs-backup-status" style="display:none;font-size:13px;margin-bottom:10px;"></div>
+              <div class="form-actions">
+                <button id="docs-backup-btn" class="btn btn-primary">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="margin-right:6px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  Backup Templates
+                </button>
+                <button id="docs-restore-btn" class="btn btn-outline">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="margin-right:6px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                  Restore from Backup
+                </button>
+              </div>
+            </div>
+
+            <!-- Full Backup -->
+            <div class="settings-group" style="margin-top: 2rem; border: 1px solid var(--border-color); border-radius: 8px; padding: 1.25rem 1.5rem; background: var(--bg-secondary, rgba(0,0,0,0.03));">
+              <h3 style="margin-top:0">🗄️ Full Backup</h3>
+              <p style="font-size:13px;color:var(--text-tertiary);margin-bottom:14px;">
+                Create a single archive containing <strong>all</strong> data — Document Templates, Social Media Templates, Work Logs, and Notes. Ideal for migrating to a new machine or full disaster recovery.
+              </p>
+              <div id="full-backup-status" style="display:none;font-size:13px;margin-bottom:10px;"></div>
+              <div class="form-actions">
+                <button id="full-backup-btn" class="btn btn-primary">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="margin-right:6px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  Backup Everything
+                </button>
+                <button id="full-restore-btn" class="btn btn-outline">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="margin-right:6px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                  Restore Everything
+                </button>
+              </div>
+            </div>
+
           </div>
         </div>
         <div id="help-view" class="view">

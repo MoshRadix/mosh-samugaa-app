@@ -291,6 +291,14 @@ contextBridge.exposeInMainWorld("electronAPI", {
   smExportImage: (data) => ipcRenderer.invoke("sm-export-image", data),
   smBackup:  ()   => ipcRenderer.invoke("sm-backup"),
   smRestore: ()   => ipcRenderer.invoke("sm-restore"),
+  notesBackup:  (json) => ipcRenderer.invoke("notes-backup", json),
+  notesRestore: ()     => ipcRenderer.invoke("notes-restore"),
+  wlBackup:  ()   => ipcRenderer.invoke("wl-backup"),
+  wlRestore: ()   => ipcRenderer.invoke("wl-restore"),
+  docsBackup:  ()   => ipcRenderer.invoke("docs-backup"),
+  docsRestore: ()   => ipcRenderer.invoke("docs-restore"),
+  fullBackup:  (notesJson) => ipcRenderer.invoke("full-backup", notesJson),
+  fullRestore: ()   => ipcRenderer.invoke("full-restore"),
 });
 
 

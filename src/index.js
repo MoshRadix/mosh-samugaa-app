@@ -2139,6 +2139,406 @@ ipcMain.handle("sm-restore", async () => {
   return { success: true, count: restored };
 });
 
+// ========== Notes Backup & Restore ==========
+
+/**
+ * Backup notes — receives the JSON string from the renderer (localStorage)
+ * and writes it to a user-chosen file.
+ */
+ipcMain.handle("notes-backup", async (event, jsonString) => {
+  const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
+    title: "Backup Notes",
+    defaultPath: path.join(
+      app.getPath("documents"),
+      `notes-backup-${new Date().toISOString().slice(0, 10)}.json`
+    ),
+    filters: [{ name: "JSON File", extensions: ["json"] }],
+  });
+  if (canceled || !filePath) return { canceled: true };
+  await fs.writeFile(filePath, jsonString, "utf8");
+  let count = 0;
+  try { count = JSON.parse(jsonString).length; } catch (_) {}
+  return { success: true, path: filePath, count };
+});
+
+/**
+ * Restore notes — opens a JSON file and returns its contents to the renderer,
+ * which writes it back into localStorage.
+ */
+ipcMain.handle("notes-restore", async () => {
+  const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
+    title: "Restore Notes",
+    filters: [{ name: "JSON File", extensions: ["json"] }],
+    properties: ["openFile"],
+  });
+  if (canceled || !filePaths || !filePaths[0]) return { canceled: true };
+  const raw = await fs.readFile(filePaths[0], "utf8");
+  // Validate it's an array of notes
+  let notes;
+  try { notes = JSON.parse(raw); } catch (_) { throw new Error("Invalid backup file — could not parse JSON."); }
+  if (!Array.isArray(notes)) throw new Error("Invalid backup file — expected an array of notes.");
+  return { success: true, data: JSON.stringify(notes), count: notes.length };
+});
+
+// ========== Work Logs Backup & Restore ==========
+
+/**
+ * Backup work logs — zips the worklogs.db file and all photos into one archive.
+ */
+ipcMain.handle("wl-backup", async () => {
+  const photosDir = path.join(app.getPath("userData"), "worklog_photos");
+
+  const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
+    title: "Backup Work Logs",
+    defaultPath: path.join(
+      app.getPath("documents"),
+      `worklogs-backup-${new Date().toISOString().slice(0, 10)}.zip`
+    ),
+    filters: [{ name: "ZIP Archive", extensions: ["zip"] }],
+  });
+  if (canceled || !filePath) return { canceled: true };
+
+  // Flush current wlDb to disk before reading
+  await saveWorkLogsDB();
+
+  const zip = new PizZip();
+
+  // Add the SQLite DB file
+  try {
+    const dbBuf = await fs.readFile(WL_DB_PATH);
+    zip.file("worklogs.db", dbBuf);
+  } catch (e) {
+    throw new Error("Could not read worklogs database: " + e.message);
+  }
+
+  // Add all photos
+  let photoEntries = [];
+  try { photoEntries = await fs.readdir(photosDir); } catch (_) {}
+  for (const entry of photoEntries) {
+    try {
+      const buf = await fs.readFile(path.join(photosDir, entry));
+      zip.file(`photos/${entry}`, buf);
+    } catch (_) {}
+  }
+
+  const zipBuf = zip.generate({ type: "nodebuffer", compression: "DEFLATE" });
+  await fs.writeFile(filePath, zipBuf);
+  return { success: true, path: filePath, photos: photoEntries.length };
+});
+
+/**
+ * Restore work logs — extracts worklogs.db and photos from a zip.
+ * Closes and reinitialises wlDb after writing the new DB file.
+ */
+ipcMain.handle("wl-restore", async () => {
+  const photosDir = path.join(app.getPath("userData"), "worklog_photos");
+
+  const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
+    title: "Restore Work Logs",
+    filters: [{ name: "ZIP Archive", extensions: ["zip"] }],
+    properties: ["openFile"],
+  });
+  if (canceled || !filePaths || !filePaths[0]) return { canceled: true };
+
+  const zipBuf = await fs.readFile(filePaths[0]);
+  let zip;
+  try { zip = new PizZip(zipBuf); } catch (_) { throw new Error("Invalid or corrupted ZIP file."); }
+
+  if (!zip.files["worklogs.db"]) throw new Error("ZIP does not contain a worklogs.db — is this a valid work logs backup?");
+
+  // Write the DB file
+  const dbContent = zip.files["worklogs.db"].asNodeBuffer
+    ? zip.files["worklogs.db"].asNodeBuffer()
+    : Buffer.from(zip.files["worklogs.db"].asBinary(), "binary");
+
+  if (wlDb) { try { wlDb.close(); } catch (_) {} wlDb = null; }
+  await fs.writeFile(WL_DB_PATH, dbContent);
+
+  // Restore photos
+  await fs.mkdir(photosDir, { recursive: true });
+  let photoCount = 0;
+  for (const [relPath, zipObj] of Object.entries(zip.files)) {
+    if (zipObj.dir || !relPath.startsWith("photos/")) continue;
+    const content = zipObj.asNodeBuffer ? zipObj.asNodeBuffer() : Buffer.from(zipObj.asBinary(), "binary");
+    const dest = path.join(photosDir, path.basename(relPath));
+    await fs.writeFile(dest, content);
+    photoCount++;
+  }
+
+  // Reinitialise the work logs DB from the restored file
+  await initWorkLogsDB();
+
+  return { success: true, photos: photoCount };
+});
+
+// ========== Document Templates Backup & Restore ==========
+
+/**
+ * Zip mto_forms.db + every file in templatesDir (excluding social-media/ subdir).
+ * Archive layout:
+ *   mto_forms.db
+ *   files/<uuid>_originalname.docx  (etc.)
+ */
+ipcMain.handle("docs-backup", async () => {
+  await saveDatabase();
+
+  const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
+    title: "Backup Document Templates",
+    defaultPath: path.join(
+      app.getPath("documents"),
+      `doc-templates-backup-${new Date().toISOString().slice(0, 10)}.zip`
+    ),
+    filters: [{ name: "ZIP Archive", extensions: ["zip"] }],
+  });
+  if (canceled || !filePath) return { canceled: true };
+
+  const zip = new PizZip();
+
+  // Add the SQLite DB
+  const dbBuf = await fs.readFile(settings.dbPath);
+  zip.file("mto_forms.db", dbBuf);
+
+  // Add template files (skip social-media/ subdir)
+  let entries = [];
+  try { entries = await fs.readdir(settings.templatesDir); } catch (_) {}
+  let count = 0;
+  for (const entry of entries) {
+    if (entry === SM_SUBDIR) continue; // skip social-media folder
+    const fullPath = path.join(settings.templatesDir, entry);
+    try {
+      const stat = await fs.stat(fullPath);
+      if (stat.isFile()) {
+        const buf = await fs.readFile(fullPath);
+        zip.file(`files/${entry}`, buf);
+        count++;
+      }
+    } catch (_) {}
+  }
+
+  const zipBuf = zip.generate({ type: "nodebuffer", compression: "DEFLATE" });
+  await fs.writeFile(filePath, zipBuf);
+  return { success: true, path: filePath, count };
+});
+
+/**
+ * Restore document templates from a backup zip.
+ * Writes template files to current templatesDir and updates the DB filePath
+ * column so every record points to the correct location on this machine.
+ */
+ipcMain.handle("docs-restore", async () => {
+  const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
+    title: "Restore Document Templates",
+    filters: [{ name: "ZIP Archive", extensions: ["zip"] }],
+    properties: ["openFile"],
+  });
+  if (canceled || !filePaths || !filePaths[0]) return { canceled: true };
+
+  const zipBuf = await fs.readFile(filePaths[0]);
+  let zip;
+  try { zip = new PizZip(zipBuf); } catch (_) { throw new Error("Invalid or corrupted ZIP file."); }
+  if (!zip.files["mto_forms.db"]) throw new Error("ZIP does not contain mto_forms.db — is this a valid document templates backup?");
+
+  // Restore template files first
+  await fs.mkdir(settings.templatesDir, { recursive: true });
+  let count = 0;
+  for (const [relPath, zipObj] of Object.entries(zip.files)) {
+    if (zipObj.dir || !relPath.startsWith("files/")) continue;
+    const content = zipObj.asNodeBuffer ? zipObj.asNodeBuffer() : Buffer.from(zipObj.asBinary(), "binary");
+    const dest = path.join(settings.templatesDir, path.basename(relPath));
+    await fs.writeFile(dest, content);
+    count++;
+  }
+
+  // Write the DB and reinitialise
+  const dbContent = zip.files["mto_forms.db"].asNodeBuffer
+    ? zip.files["mto_forms.db"].asNodeBuffer()
+    : Buffer.from(zip.files["mto_forms.db"].asBinary(), "binary");
+
+  if (db) { try { db.close(); } catch (_) {} db = null; }
+  await fs.writeFile(settings.dbPath, dbContent);
+  await initSQLite(settings.dbPath);
+
+  // Fix filePath column — repoint every template to the current templatesDir
+  const rows = db.exec("SELECT id, filePath FROM templates");
+  if (rows.length && rows[0].values.length) {
+    for (const [id, oldPath] of rows[0].values) {
+      const fileName = path.basename(oldPath);
+      const newPath  = path.join(settings.templatesDir, fileName);
+      db.run("UPDATE templates SET filePath = ? WHERE id = ?", [newPath, id]);
+    }
+    await saveDatabase();
+  }
+
+  return { success: true, count };
+});
+
+// ========== Full Backup & Restore (everything) ==========
+
+/**
+ * Archive layout:
+ *   docs/mto_forms.db
+ *   docs/files/<template files>
+ *   social-media/templates/<id>.json
+ *   social-media/images/<id>.<ext>
+ *   worklogs/worklogs.db
+ *   worklogs/photos/<photo files>
+ *   notes.json          (notes array from renderer, passed in)
+ */
+ipcMain.handle("full-backup", async (event, notesJson) => {
+  // Flush all databases
+  await saveDatabase();
+  await saveWorkLogsDB();
+
+  const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
+    title: "Backup Everything",
+    defaultPath: path.join(
+      app.getPath("documents"),
+      `mto-full-backup-${new Date().toISOString().slice(0, 10)}.zip`
+    ),
+    filters: [{ name: "ZIP Archive", extensions: ["zip"] }],
+  });
+  if (canceled || !filePath) return { canceled: true };
+
+  const zip = new PizZip();
+
+  // ── Document templates ──
+  const dbBuf = await fs.readFile(settings.dbPath);
+  zip.file("docs/mto_forms.db", dbBuf);
+  let docEntries = [];
+  try { docEntries = await fs.readdir(settings.templatesDir); } catch (_) {}
+  for (const entry of docEntries) {
+    if (entry === SM_SUBDIR) continue;
+    const fullPath = path.join(settings.templatesDir, entry);
+    try {
+      const stat = await fs.stat(fullPath);
+      if (stat.isFile()) {
+        zip.file(`docs/files/${entry}`, await fs.readFile(fullPath));
+      }
+    } catch (_) {}
+  }
+
+  // ── Social Media templates ──
+  await ensureSmDirs();
+  let smEntries = [];
+  try { smEntries = await fs.readdir(smDir()); } catch (_) {}
+  for (const entry of smEntries) {
+    if (!entry.endsWith(".json")) continue;
+    try { zip.file(`social-media/templates/${entry}`, await fs.readFile(path.join(smDir(), entry))); } catch (_) {}
+  }
+  let smImgEntries = [];
+  try { smImgEntries = await fs.readdir(smImagesDir()); } catch (_) {}
+  for (const entry of smImgEntries) {
+    try { zip.file(`social-media/images/${entry}`, await fs.readFile(path.join(smImagesDir(), entry))); } catch (_) {}
+  }
+
+  // ── Work Logs ──
+  try { zip.file("worklogs/worklogs.db", await fs.readFile(WL_DB_PATH)); } catch (_) {}
+  const photosDir = path.join(app.getPath("userData"), "worklog_photos");
+  let photoEntries = [];
+  try { photoEntries = await fs.readdir(photosDir); } catch (_) {}
+  for (const entry of photoEntries) {
+    try { zip.file(`worklogs/photos/${entry}`, await fs.readFile(path.join(photosDir, entry))); } catch (_) {}
+  }
+
+  // ── Notes (passed from renderer) ──
+  try { zip.file("notes.json", notesJson || "[]"); } catch (_) {}
+
+  const zipBuf = zip.generate({ type: "nodebuffer", compression: "DEFLATE" });
+  await fs.writeFile(filePath, zipBuf);
+  return { success: true, path: filePath };
+});
+
+/**
+ * Restore everything from a full backup zip.
+ * Returns { success, notes } where notes is the raw JSON string for the
+ * renderer to write back into localStorage.
+ */
+ipcMain.handle("full-restore", async () => {
+  const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
+    title: "Restore Full Backup",
+    filters: [{ name: "ZIP Archive", extensions: ["zip"] }],
+    properties: ["openFile"],
+  });
+  if (canceled || !filePaths || !filePaths[0]) return { canceled: true };
+
+  const zipBuf = await fs.readFile(filePaths[0]);
+  let zip;
+  try { zip = new PizZip(zipBuf); } catch (_) { throw new Error("Invalid or corrupted ZIP file."); }
+
+  const hasAny = Object.keys(zip.files).some(k =>
+    k.startsWith("docs/") || k.startsWith("social-media/") ||
+    k.startsWith("worklogs/") || k === "notes.json"
+  );
+  if (!hasAny) throw new Error("This does not appear to be a valid full backup ZIP.");
+
+  const readZipFile = (key) => {
+    const f = zip.files[key];
+    if (!f) return null;
+    return f.asNodeBuffer ? f.asNodeBuffer() : Buffer.from(f.asBinary(), "binary");
+  };
+
+  // ── Document templates ──
+  await fs.mkdir(settings.templatesDir, { recursive: true });
+  for (const [relPath, zipObj] of Object.entries(zip.files)) {
+    if (zipObj.dir || !relPath.startsWith("docs/files/")) continue;
+    const content = zipObj.asNodeBuffer ? zipObj.asNodeBuffer() : Buffer.from(zipObj.asBinary(), "binary");
+    await fs.writeFile(path.join(settings.templatesDir, path.basename(relPath)), content);
+  }
+  const docDbBuf = readZipFile("docs/mto_forms.db");
+  if (docDbBuf) {
+    if (db) { try { db.close(); } catch (_) {} db = null; }
+    await fs.writeFile(settings.dbPath, docDbBuf);
+    await initSQLite(settings.dbPath);
+    const rows = db.exec("SELECT id, filePath FROM templates");
+    if (rows.length && rows[0].values.length) {
+      for (const [id, oldPath] of rows[0].values) {
+        db.run("UPDATE templates SET filePath = ? WHERE id = ?",
+          [path.join(settings.templatesDir, path.basename(oldPath)), id]);
+      }
+      await saveDatabase();
+    }
+  }
+
+  // ── Social Media templates ──
+  await ensureSmDirs();
+  for (const [relPath, zipObj] of Object.entries(zip.files)) {
+    if (zipObj.dir) continue;
+    const content = zipObj.asNodeBuffer ? zipObj.asNodeBuffer() : Buffer.from(zipObj.asBinary(), "binary");
+    if (relPath.startsWith("social-media/templates/") && relPath.endsWith(".json")) {
+      const dest = path.join(smDir(), path.basename(relPath));
+      try {
+        const tpl = JSON.parse(content.toString("utf8"));
+        if (tpl.imagePath) tpl.imagePath = path.join(smImagesDir(), path.basename(tpl.imagePath));
+        await fs.writeFile(dest, JSON.stringify(tpl, null, 2), "utf8");
+      } catch (_) { await fs.writeFile(dest, content); }
+    } else if (relPath.startsWith("social-media/images/")) {
+      await fs.writeFile(path.join(smImagesDir(), path.basename(relPath)), content);
+    }
+  }
+
+  // ── Work Logs ──
+  const wlDbBuf = readZipFile("worklogs/worklogs.db");
+  if (wlDbBuf) {
+    if (wlDb) { try { wlDb.close(); } catch (_) {} wlDb = null; }
+    await fs.writeFile(WL_DB_PATH, wlDbBuf);
+    const photosDir = path.join(app.getPath("userData"), "worklog_photos");
+    await fs.mkdir(photosDir, { recursive: true });
+    for (const [relPath, zipObj] of Object.entries(zip.files)) {
+      if (zipObj.dir || !relPath.startsWith("worklogs/photos/")) continue;
+      const content = zipObj.asNodeBuffer ? zipObj.asNodeBuffer() : Buffer.from(zipObj.asBinary(), "binary");
+      await fs.writeFile(path.join(photosDir, path.basename(relPath)), content);
+    }
+    await initWorkLogsDB();
+  }
+
+  // ── Notes ──
+  let notesJson = null;
+  const notesBuf = readZipFile("notes.json");
+  if (notesBuf) notesJson = notesBuf.toString("utf8");
+
+  return { success: true, notes: notesJson };
+});
+
 // ========== App Lifecycle ==========
 function createWindow() {
   mainWindow = new BrowserWindow({
