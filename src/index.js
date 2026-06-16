@@ -2042,6 +2042,103 @@ ipcMain.handle("sm-export-image", async (event, { base64Data, fileName }) => {
   return { success: true, path: filePath };
 });
 
+/**
+ * Backup all SM templates (JSON + images) into a single .zip file.
+ * The zip contains:
+ *   templates/<id>.json   — one per template
+ *   images/<id>.<ext>     — one per background image
+ */
+ipcMain.handle("sm-backup", async () => {
+  await ensureSmDirs();
+
+  // Pick save location
+  const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
+    title: "Backup Social Media Templates",
+    defaultPath: path.join(
+      app.getPath("documents"),
+      `sm-templates-backup-${new Date().toISOString().slice(0, 10)}.zip`
+    ),
+    filters: [{ name: "ZIP Archive", extensions: ["zip"] }],
+  });
+  if (canceled || !filePath) return { canceled: true };
+
+  const zip = new PizZip();
+
+  // Add every .json template
+  let entries;
+  try { entries = await fs.readdir(smDir()); } catch (_) { entries = []; }
+  for (const entry of entries) {
+    if (!entry.endsWith(".json")) continue;
+    try {
+      const buf = await fs.readFile(path.join(smDir(), entry));
+      zip.file(`templates/${entry}`, buf);
+    } catch (_) {}
+  }
+
+  // Add every image file
+  let imgEntries;
+  try { imgEntries = await fs.readdir(smImagesDir()); } catch (_) { imgEntries = []; }
+  for (const entry of imgEntries) {
+    try {
+      const buf = await fs.readFile(path.join(smImagesDir(), entry));
+      zip.file(`images/${entry}`, buf);
+    } catch (_) {}
+  }
+
+  const zipBuf = zip.generate({ type: "nodebuffer", compression: "DEFLATE" });
+  await fs.writeFile(filePath, zipBuf);
+  return { success: true, path: filePath, count: entries.filter(e => e.endsWith(".json")).length };
+});
+
+/**
+ * Restore SM templates from a .zip backup.
+ * Overwrites existing templates and images.
+ */
+ipcMain.handle("sm-restore", async () => {
+  await ensureSmDirs();
+
+  const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
+    title: "Restore Social Media Templates",
+    filters: [{ name: "ZIP Archive", extensions: ["zip"] }],
+    properties: ["openFile"],
+  });
+  if (canceled || !filePaths || !filePaths[0]) return { canceled: true };
+
+  const zipBuf = await fs.readFile(filePaths[0]);
+  let zip;
+  try {
+    zip = new PizZip(zipBuf);
+  } catch (e) {
+    throw new Error("Invalid or corrupted ZIP file.");
+  }
+
+  let restored = 0;
+  for (const [relPath, zipObj] of Object.entries(zip.files)) {
+    if (zipObj.dir) continue;
+    const content = zipObj.asNodeBuffer ? zipObj.asNodeBuffer() : Buffer.from(zipObj.asBinary(), "binary");
+    if (relPath.startsWith("templates/") && relPath.endsWith(".json")) {
+      const dest = path.join(smDir(), path.basename(relPath));
+      // Fix imagePath to use current smImagesDir
+      try {
+        const tpl = JSON.parse(content.toString("utf8"));
+        if (tpl.imagePath) {
+          tpl.imagePath = path.join(smImagesDir(), path.basename(tpl.imagePath));
+        }
+        await fs.writeFile(dest, JSON.stringify(tpl, null, 2), "utf8");
+        restored++;
+      } catch (_) {
+        await fs.writeFile(dest, content);
+        restored++;
+      }
+    } else if (relPath.startsWith("images/")) {
+      const dest = path.join(smImagesDir(), path.basename(relPath));
+      await fs.writeFile(dest, content);
+    }
+  }
+
+  return { success: true, count: restored };
+});
+
 // ========== App Lifecycle ==========
 function createWindow() {
   mainWindow = new BrowserWindow({

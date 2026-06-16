@@ -120,6 +120,7 @@ window.initSettings = () => {
   loadAboutInfo();
   loadNotionSettings();
   setupNotionSettings();
+  setupSmBackup();
 };
 
 // ============================================================================
@@ -148,6 +149,78 @@ function _updateNotionStatusBadge(connected) {
   } else {
     badge.className = 'notion-connect-status disconnected';
     badge.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg> <span>Not connected</span>`;
+  }
+}
+
+// ============================================================================
+// SOCIAL MEDIA TEMPLATES — BACKUP & RESTORE
+// ============================================================================
+
+let _smBackupAttached = false;
+
+function _smStatus(msg, type) {
+  const el = document.getElementById("sm-backup-status");
+  if (!el) return;
+  el.style.display = "block";
+  el.style.color = type === "error" ? "var(--danger)" : type === "success" ? "var(--success, #3a9e6e)" : "var(--text-secondary)";
+  el.textContent = msg;
+}
+
+function setupSmBackup() {
+  if (_smBackupAttached) return;
+  _smBackupAttached = true;
+
+  const backupBtn  = document.getElementById("sm-backup-btn");
+  const restoreBtn = document.getElementById("sm-restore-btn");
+
+  if (backupBtn) {
+    backupBtn.addEventListener("click", async () => {
+      backupBtn.disabled = true;
+      backupBtn.textContent = "Backing up…";
+      try {
+        const result = await window.electronAPI.smBackup();
+        if (result && result.canceled) {
+          _smStatus("Backup cancelled.", "info");
+        } else if (result && result.success) {
+          _smStatus(`✓ Backed up ${result.count} template${result.count !== 1 ? "s" : ""} to: ${result.path}`, "success");
+          if (window.showToast) window.showToast(`Backup saved — ${result.count} template${result.count !== 1 ? "s" : ""}`, "success");
+        }
+      } catch (err) {
+        _smStatus("Backup failed: " + err.message, "error");
+        if (window.showToast) window.showToast("Backup failed: " + err.message, "error");
+      } finally {
+        backupBtn.disabled = false;
+        backupBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="margin-right:6px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Backup Templates`;
+      }
+    });
+  }
+
+  if (restoreBtn) {
+    restoreBtn.addEventListener("click", async () => {
+      const confirmed = await showConfirm(
+        "Restore from backup? Existing templates with the same IDs will be overwritten.",
+        "Restore"
+      );
+      if (!confirmed) return;
+
+      restoreBtn.disabled = true;
+      restoreBtn.textContent = "Restoring…";
+      try {
+        const result = await window.electronAPI.smRestore();
+        if (result && result.canceled) {
+          _smStatus("Restore cancelled.", "info");
+        } else if (result && result.success) {
+          _smStatus(`✓ Restored ${result.count} template${result.count !== 1 ? "s" : ""} successfully.`, "success");
+          if (window.showToast) window.showToast(`Restored ${result.count} template${result.count !== 1 ? "s" : ""}`, "success");
+        }
+      } catch (err) {
+        _smStatus("Restore failed: " + err.message, "error");
+        if (window.showToast) window.showToast("Restore failed: " + err.message, "error");
+      } finally {
+        restoreBtn.disabled = false;
+        restoreBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="margin-right:6px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>Restore from Backup`;
+      }
+    });
   }
 }
 

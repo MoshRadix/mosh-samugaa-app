@@ -289,6 +289,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
   /** Export a generated image — opens native save dialog and writes the file. */
   smExportImage: (data) => ipcRenderer.invoke("sm-export-image", data),
+  smBackup:  ()   => ipcRenderer.invoke("sm-backup"),
+  smRestore: ()   => ipcRenderer.invoke("sm-restore"),
 });
 
 
