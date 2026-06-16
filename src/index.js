@@ -1918,6 +1918,130 @@ ipcMain.handle("export-work-logs-monthly-excel", async (event, { rows, month, of
   return { success: true, path: filePath };
 });
 
+// ========== Social Media Templates ==========
+
+const SM_SUBDIR = "social-media";
+
+function smDir() {
+  return path.join(settings.templatesDir, SM_SUBDIR);
+}
+function smImagesDir() {
+  return path.join(smDir(), "images");
+}
+
+/** Ensure the subdirectories exist. */
+async function ensureSmDirs() {
+  await fs.mkdir(smDir(),       { recursive: true });
+  await fs.mkdir(smImagesDir(), { recursive: true });
+}
+
+/**
+ * List all SM templates — reads every *.json in the social-media/ subdir.
+ * Returns array of parsed template objects (without embedded imageDataUrl;
+ * that is loaded separately on demand).
+ */
+ipcMain.handle("sm-list-templates", async () => {
+  await ensureSmDirs();
+  let entries;
+  try {
+    entries = await fs.readdir(smDir());
+  } catch (_) { return []; }
+
+  const templates = [];
+  for (const entry of entries) {
+    if (!entry.endsWith(".json")) continue;
+    try {
+      const raw = await fs.readFile(path.join(smDir(), entry), "utf8");
+      const tpl = JSON.parse(raw);
+      templates.push(tpl);
+    } catch (_) { /* skip corrupt files */ }
+  }
+  // Sort newest first
+  templates.sort((a, b) => (b.savedAt || "").localeCompare(a.savedAt || ""));
+  return templates;
+});
+
+/**
+ * Save (create or update) a SM template.
+ * data: { id, name, fields, imageName, imageDataUrl, savedAt }
+ * The imageDataUrl (if provided) is stripped from the JSON and written as a
+ * separate file under social-media/images/<id>.<ext>.
+ */
+ipcMain.handle("sm-save-template", async (event, data) => {
+  await ensureSmDirs();
+  const id = data.id || uuidv4();
+  const tpl = { ...data, id };
+
+  // Persist image separately
+  if (tpl.imageDataUrl) {
+    const match = tpl.imageDataUrl.match(/^data:(image\/[a-z+]+);base64,(.+)$/s);
+    if (match) {
+      const mime = match[1];
+      const ext  = mime === "image/png" ? ".png" : mime === "image/gif" ? ".gif" : mime === "image/webp" ? ".webp" : ".jpg";
+      const imgPath = path.join(smImagesDir(), `${id}${ext}`);
+      await fs.writeFile(imgPath, Buffer.from(match[2], "base64"));
+      tpl.imagePath = imgPath;
+    }
+    delete tpl.imageDataUrl; // don't store in JSON
+  }
+
+  // Thumbnail stays embedded (it's tiny — 240px JPEG ~15 KB)
+  const jsonPath = path.join(smDir(), `${id}.json`);
+  await fs.writeFile(jsonPath, JSON.stringify(tpl, null, 2), "utf8");
+  return tpl;
+});
+
+/**
+ * Load a single template including its image as a data URL.
+ */
+ipcMain.handle("sm-load-template", async (event, id) => {
+  const jsonPath = path.join(smDir(), `${id}.json`);
+  const raw = await fs.readFile(jsonPath, "utf8");
+  const tpl = JSON.parse(raw);
+
+  if (tpl.imagePath) {
+    try {
+      const buf = await fs.readFile(tpl.imagePath);
+      const ext  = path.extname(tpl.imagePath).toLowerCase().replace(".", "");
+      const mime = ext === "png" ? "image/png" : ext === "gif" ? "image/gif" : ext === "webp" ? "image/webp" : "image/jpeg";
+      tpl.imageDataUrl = `data:${mime};base64,${buf.toString("base64")}`;
+    } catch (_) { tpl.imageDataUrl = null; }
+  }
+  return tpl;
+});
+
+/**
+ * Delete a SM template and its associated image file.
+ */
+ipcMain.handle("sm-delete-template", async (event, id) => {
+  const jsonPath = path.join(smDir(), `${id}.json`);
+  try {
+    const raw = await fs.readFile(jsonPath, "utf8");
+    const tpl = JSON.parse(raw);
+    if (tpl.imagePath) {
+      try { await fs.unlink(tpl.imagePath); } catch (_) {}
+    }
+  } catch (_) {}
+  try { await fs.unlink(jsonPath); } catch (_) {}
+  return true;
+});
+
+/**
+ * Export a generated image (PNG) — saves to social-media/images/ and returns the path.
+ * data: { base64Data, fileName }
+ */
+ipcMain.handle("sm-export-image", async (event, { base64Data, fileName }) => {
+  await ensureSmDirs();
+  const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
+    title: "Export Social Media Image",
+    defaultPath: path.join(app.getPath("pictures"), fileName || "social_media_export.png"),
+    filters: [{ name: "PNG Image", extensions: ["png"] }],
+  });
+  if (canceled || !filePath) return null;
+  await fs.writeFile(filePath, Buffer.from(base64Data, "base64"));
+  return { success: true, path: filePath };
+});
+
 // ========== App Lifecycle ==========
 function createWindow() {
   mainWindow = new BrowserWindow({

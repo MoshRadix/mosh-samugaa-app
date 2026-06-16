@@ -75,6 +75,10 @@
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
                 Templates
               </button>
+              <button class="nav-dropdown-item" data-view="social-media">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                Social Media
+              </button>
             </div>
           </div>
 
@@ -1494,6 +1498,210 @@
           </div>
         </div><!-- /#calendar-view -->
 
+
+    <!-- =====================================================================
+         Social Media Templates View
+         ===================================================================== -->
+    <div id="social-media-view" class="view">
+
+      <!-- Hidden image input -->
+      <input type="file" id="sm-image-input" accept="image/*" style="display:none">
+
+      <!-- Notification -->
+      <div id="sm-notification" class="sm-notification" aria-live="polite"></div>
+
+      <!-- ── LIST PANEL ────────────────────────────────────────────────── -->
+      <div id="sm-list-panel" class="sm-panel sm-panel-active">
+        <div class="view-header">
+          <div>
+            <h2>Social Media Templates</h2>
+            <p class="sm-subtitle">Design image templates with bilingual text overlays</p>
+          </div>
+          <button id="sm-new-template-btn" class="btn btn-primary">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            New Template
+          </button>
+        </div>
+        <div id="sm-template-grid" class="sm-template-grid">
+          <!-- cards rendered by JS -->
+        </div>
+        <div id="sm-list-loading" class="sm-list-loading" style="display:none">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="sm-spinner"><circle cx="12" cy="12" r="10" stroke-opacity="0.25"/><path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round"/></svg>
+          Loading…
+        </div>
+      </div>
+
+      <!-- ── EDITOR PANEL ──────────────────────────────────────────────── -->
+      <div id="sm-editor-panel" class="sm-panel">
+        <div class="sm-editor-layout">
+
+          <!-- Left sidebar -->
+          <div class="sm-sidebar">
+            <div class="sm-sidebar-header">
+              <button id="sm-back-to-list-btn" class="btn btn-sm btn-outline">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="15 18 9 12 15 6"/></svg>
+                Back
+              </button>
+              <h3 class="sm-sidebar-title">Editor</h3>
+            </div>
+
+            <div class="sm-sidebar-section">
+              <label class="sm-label">Template Name</label>
+              <input type="text" id="sm-template-name-input" class="sm-input" placeholder="e.g. Event Announcement">
+            </div>
+
+            <div class="sm-sidebar-section">
+              <label class="sm-label">Background Image</label>
+              <div class="sm-image-row">
+                <button id="sm-upload-image-btn" class="btn btn-sm btn-outline">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
+                  Upload Image
+                </button>
+                <span id="sm-image-status" class="sm-image-status">No image selected</span>
+              </div>
+            </div>
+
+            <div class="sm-sidebar-section sm-fields-section">
+              <div class="sm-fields-header">
+                <label class="sm-label">Text Fields</label>
+                <button id="sm-add-field-btn" class="btn btn-sm btn-primary">+ Add Field</button>
+              </div>
+              <div id="sm-field-list" class="sm-field-list">
+                <div class="sm-field-list-empty">No fields yet. Click "Add Field" to begin.</div>
+              </div>
+            </div>
+
+            <!-- Field properties editor -->
+            <div id="sm-field-editor" class="sm-field-editor sm-field-editor-hidden">
+              <div class="sm-field-editor-title">Field Properties</div>
+
+              <label class="sm-label">Field Type</label>
+              <select id="sm-fe-type" class="sm-select sm-select-sm">
+                <option value="text">Text (single line)</option>
+                <option value="textarea">Text Area (multi-line)</option>
+                <option value="dropdown">Dropdown (select)</option>
+                <option value="autocomplete">Text + Auto Suggestions</option>
+              </select>
+
+              <label class="sm-label">Placeholder Key</label>
+              <input type="text" id="sm-fe-placeholder" class="sm-input sm-input-sm" placeholder="{Title}">
+
+              <label class="sm-label">Label (shown to user)</label>
+              <input type="text" id="sm-fe-label" class="sm-input sm-input-sm" placeholder="e.g. Presenter Name">
+
+              <div id="sm-fe-text-row" style="display:flex; flex-direction:column; gap:4px;">
+                <label class="sm-label">Preview Text (optional)</label>
+                <input type="text" id="sm-fe-text" class="sm-input sm-input-sm" placeholder="Leave blank to use key">
+              </div>
+
+              <div id="sm-fe-options-row" style="display:none; flex-direction:column; gap:4px;">
+                <label class="sm-label">Options (comma-separated)</label>
+                <input type="text" id="sm-fe-options" class="sm-input sm-input-sm" placeholder="Option 1, Option 2, Option 3">
+              </div>
+
+              <div class="sm-fe-row">
+                <div class="sm-fe-col">
+                  <label class="sm-label">Language</label>
+                  <select id="sm-fe-lang" class="sm-select sm-select-sm">
+                    <option value="english">English</option>
+                    <option value="dhivehi">Dhivehi (ދިވެހި)</option>
+                  </select>
+                </div>
+                <div class="sm-fe-col">
+                  <label class="sm-label">Alignment</label>
+                  <select id="sm-fe-align" class="sm-select sm-select-sm">
+                    <option value="left">Left</option>
+                    <option value="center">Center</option>
+                    <option value="right">Right</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="sm-fe-row">
+                <div class="sm-fe-col">
+                  <label class="sm-label">Font Size</label>
+                  <input type="number" id="sm-fe-size" class="sm-input sm-input-sm" min="8" max="200" value="24">
+                </div>
+                <div class="sm-fe-col">
+                  <label class="sm-label">Color</label>
+                  <input type="color" id="sm-fe-color" class="sm-color-input" value="#ffffff">
+                </div>
+                <div class="sm-fe-col sm-col-checkbox">
+                  <label class="sm-label">Bold</label>
+                  <input type="checkbox" id="sm-fe-bold" class="sm-checkbox">
+                </div>
+              </div>
+
+              <label class="sm-label">Font Family</label>
+              <select id="sm-fe-font" class="sm-select sm-select-sm">
+                <option value="Inter, sans-serif">Inter (Default)</option>
+              </select>
+
+              <div class="sm-label sm-label-pos">Position &amp; Size (px)</div>
+              <div class="sm-fe-row sm-fe-pos-row">
+                <div class="sm-fe-col">
+                  <label class="sm-label">X</label>
+                  <input type="number" id="sm-fe-x" class="sm-input sm-input-sm">
+                </div>
+                <div class="sm-fe-col">
+                  <label class="sm-label">Y</label>
+                  <input type="number" id="sm-fe-y" class="sm-input sm-input-sm">
+                </div>
+                <div class="sm-fe-col">
+                  <label class="sm-label">W</label>
+                  <input type="number" id="sm-fe-w" class="sm-input sm-input-sm">
+                </div>
+                <div class="sm-fe-col">
+                  <label class="sm-label">H</label>
+                  <input type="number" id="sm-fe-h" class="sm-input sm-input-sm">
+                </div>
+              </div>
+            </div>
+
+            <div class="sm-sidebar-footer">
+              <button id="sm-save-template-btn" class="btn btn-primary sm-save-btn">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                Save Template
+              </button>
+            </div>
+          </div>
+
+          <!-- Canvas area -->
+          <div class="sm-canvas-area" id="sm-canvas-wrapper">
+            <div class="sm-canvas-hint">Click a field to select · Drag to move · Corner handles to resize</div>
+            <canvas id="sm-canvas" class="sm-canvas"></canvas>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ── GENERATE PANEL ────────────────────────────────────────────── -->
+      <div id="sm-generate-panel" class="sm-panel">
+        <div class="sm-generate-layout">
+          <div class="sm-gen-sidebar">
+            <div class="sm-sidebar-header">
+              <button id="sm-gen-back-btn" class="btn btn-sm btn-outline">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="15 18 9 12 15 6"/></svg>
+                Back
+              </button>
+              <h3 class="sm-sidebar-title" id="sm-generate-title">Generate Image</h3>
+            </div>
+            <input type="hidden" id="sm-gen-template-index">
+            <p class="sm-gen-hint">Fill in values below — the preview updates live.</p>
+            <div id="sm-generate-form" class="sm-generate-form"></div>
+            <div class="sm-gen-actions">
+              <button id="sm-export-btn" class="btn btn-primary" disabled>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Export PNG
+              </button>
+            </div>
+          </div>
+          <div class="sm-gen-preview" id="sm-preview-canvas-wrap"></div>
+        </div>
+      </div>
+
+    </div><!-- /#social-media-view -->
+
       </main>
       <!-- Settings View -->
 
@@ -1603,7 +1811,6 @@
     </div>
 
     </div>
-
     <!-- Shared confirmation dialog (used by all pages) -->
     <div id="app-confirm-overlay" class="wl-confirm-overlay" style="display:none" aria-modal="true" role="dialog">
       <div class="wl-confirm-box">
@@ -1629,6 +1836,7 @@
     <script src="tidechart.js"></script>
     <script src="prayertimes.js"></script>
     <script src="notes.js"></script>
+    <script src="socialmedia.js"></script>
     <script src="app.js"></script>
 
   <!-- Random Picker countdown overlay (must be direct child of body to escape .view transform stacking context) -->

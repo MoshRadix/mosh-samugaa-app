@@ -270,6 +270,25 @@ contextBridge.exposeInMainWorld("electronAPI", {
    */
   batchGenerateDocuments: (data) => ipcRenderer.invoke("batch-generate-documents", data),
   batchMergeToPdf: (data) => ipcRenderer.invoke("batch-merge-to-pdf", data),
+
+  // ==========================================
+  // SOCIAL MEDIA TEMPLATES
+  // ==========================================
+
+  /** List all saved SM templates (metadata + thumbnail, no imageDataUrl). */
+  smListTemplates: () => ipcRenderer.invoke("sm-list-templates"),
+
+  /** Save (create or update) a SM template. Image stored as a file; JSON stored as metadata. */
+  smSaveTemplate: (data) => ipcRenderer.invoke("sm-save-template", data),
+
+  /** Load a single SM template by id, with imageDataUrl rehydrated from disk. */
+  smLoadTemplate: (id) => ipcRenderer.invoke("sm-load-template", id),
+
+  /** Delete a SM template and its associated image file. */
+  smDeleteTemplate: (id) => ipcRenderer.invoke("sm-delete-template", id),
+
+  /** Export a generated image — opens native save dialog and writes the file. */
+  smExportImage: (data) => ipcRenderer.invoke("sm-export-image", data),
 });
 
 

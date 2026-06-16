@@ -181,7 +181,7 @@ function switchView(view) {
   // Remove padding/scroll from main-content for views that manage their own layout
   const mainContent = document.querySelector(".main-content");
   if (mainContent) {
-    mainContent.classList.toggle("main-content--flush", view === "notes");
+    mainContent.classList.toggle("main-content--flush", view === "notes" || view === "social-media");
   }
 
   // 4. Trigger isolated component updates contextually depending on selected pathway targets
@@ -273,6 +273,12 @@ function switchView(view) {
     case "notes":
       if (typeof initNotes === "function") {
         initNotes();
+      }
+      break;
+
+    case "social-media":
+      if (typeof initSocialMedia === "function") {
+        initSocialMedia();
       }
       break;
   }
