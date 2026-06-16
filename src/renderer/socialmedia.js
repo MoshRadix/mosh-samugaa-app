@@ -217,7 +217,7 @@ async function smOpenEditor(id) {
       : "No image selected";
   }
 
-  smClearFieldEditor();
+  
   smUpdateFieldList();
   smInitCanvas();
 }
@@ -623,8 +623,6 @@ function smAddField() {
 
 function smSelectField(field) {
   smSelectedField = field;
-  smUpdateFieldList();
-  smPopulateFieldEditor(field);
   smDrawCanvas();
 }
 
@@ -636,112 +634,171 @@ function smUpdateFieldList() {
     return;
   }
   list.innerHTML = smFields.map(f => {
-    const typeIcon = f.type === "dropdown"
+    const isOpen   = smSelectedField && smSelectedField.id === f.id;
+    const isDh     = f.language === "dhivehi";
+    const type     = f.type || "text";
+    const typeIcon = type === "dropdown"
       ? `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>`
-      : f.type === "textarea"
+      : type === "textarea"
       ? `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="15" y2="18"/></svg>`
-      : f.type === "autocomplete"
+      : type === "autocomplete"
       ? `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>`
       : `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="3" y1="12" x2="21" y2="12"/></svg>`;
-    return `
-    <div class="sm-field-item ${smSelectedField && smSelectedField.id === f.id ? "sm-field-selected" : ""}" data-id="${f.id}">
-      <span class="sm-field-lang-badge ${f.language === "dhivehi" ? "sm-badge-dhivehi" : ""}">${f.language === "dhivehi" ? "ދި" : "EN"}</span>
-      <span class="sm-field-type-icon" title="${f.type || "text"}">${typeIcon}</span>
-      <span class="sm-field-label">${smEscape(f.label || f.placeholder)}</span>
-      <button class="sm-field-delete-btn" data-id="${f.id}" title="Remove field">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      </button>
-    </div>`; }).join("");
+    const showOptions = type === "dropdown" || type === "autocomplete";
+    const showPreview = type !== "dropdown";
+    const fontOpts = (isDh ? SM_FONTS_DHIVEHI : SM_FONTS_ENGLISH)
+      .map(fo => `<option value="${fo.value}" ${f.font===fo.value?"selected":""}>${fo.label}</option>`).join("");
 
-  list.querySelectorAll(".sm-field-item").forEach(item => {
-    item.addEventListener("click", e => {
+    return `
+    <div class="sm-field-accordion ${isOpen ? "sm-field-accordion--open" : ""}" data-id="${f.id}">
+      <div class="sm-field-accordion-header">
+        <span class="sm-field-lang-badge ${isDh ? "sm-badge-dhivehi" : ""}">${isDh ? "\u062Fި" : "EN"}</span>
+        <span class="sm-field-type-icon">${typeIcon}</span>
+        <span class="sm-field-label">${smEscape(f.label || f.placeholder)}</span>
+        <svg class="sm-accordion-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+        <button class="sm-field-delete-btn" data-id="${f.id}" title="Remove field">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="sm-field-accordion-body">
+
+        <label class="sm-fe-label-small">Type</label>
+        <select class="sm-fe-ctrl sm-select sm-select-sm" data-prop="type">
+          <option value="text"         ${type==="text"         ?"selected":""}>Text</option>
+          <option value="textarea"     ${type==="textarea"     ?"selected":""}>Text Area</option>
+          <option value="dropdown"     ${type==="dropdown"     ?"selected":""}>Dropdown</option>
+          <option value="autocomplete" ${type==="autocomplete" ?"selected":""}>Auto Suggest</option>
+        </select>
+
+        <label class="sm-fe-label-small">Label</label>
+        <input class="sm-fe-ctrl sm-input sm-input-sm" data-prop="label" value="${smEscape(f.label||"")}" placeholder="Shown to user">
+
+        <label class="sm-fe-label-small">Placeholder Key</label>
+        <input class="sm-fe-ctrl sm-input sm-input-sm" data-prop="placeholder" value="${smEscape(f.placeholder)}">
+
+        ${showPreview ? `<label class="sm-fe-label-small">Preview Text</label>
+        <input class="sm-fe-ctrl sm-input sm-input-sm" data-prop="text" value="${smEscape(f.text===f.placeholder?"":(f.text||""))}" placeholder="Leave blank to use key">` : ""}
+
+        ${showOptions ? `<label class="sm-fe-label-small">${type==="autocomplete"?"Suggestions":"Options"}</label>
+        <input class="sm-fe-ctrl sm-input sm-input-sm" data-prop="options" value="${smEscape((f.options||[]).join("\u060C "))}" placeholder="A\u060C B\u060C C">` : ""}
+
+        <div class="sm-fe-row">
+          <div class="sm-fe-col">
+            <label class="sm-fe-label-small">Language</label>
+            <select class="sm-fe-ctrl sm-select sm-select-sm" data-prop="language">
+              <option value="english" ${!isDh?"selected":""}>English</option>
+              <option value="dhivehi" ${isDh?"selected":""}>\u062Fިވެހި</option>
+            </select>
+          </div>
+          <div class="sm-fe-col">
+            <label class="sm-fe-label-small">Align</label>
+            <select class="sm-fe-ctrl sm-select sm-select-sm" data-prop="align">
+              <option value="left"   ${f.align==="left"  ?"selected":""}>Left</option>
+              <option value="center" ${f.align==="center"?"selected":""}>Center</option>
+              <option value="right"  ${f.align==="right" ?"selected":""}>Right</option>
+            </select>
+          </div>
+        </div>
+
+        <label class="sm-fe-label-small">Font</label>
+        <select class="sm-fe-ctrl sm-select sm-select-sm" data-prop="font">${fontOpts}</select>
+
+        <div class="sm-fe-row">
+          <div class="sm-fe-col">
+            <label class="sm-fe-label-small">Size</label>
+            <input type="number" class="sm-fe-ctrl sm-input sm-input-sm" data-prop="size" value="${f.size||20}" min="8" max="200">
+          </div>
+          <div class="sm-fe-col">
+            <label class="sm-fe-label-small">Color</label>
+            <input type="color" class="sm-fe-ctrl sm-color-input" data-prop="color" value="${f.color||"#ffffff"}">
+          </div>
+          <div class="sm-fe-col sm-col-checkbox">
+            <label class="sm-fe-label-small">Bold</label>
+            <input type="checkbox" class="sm-fe-ctrl sm-checkbox" data-prop="bold" ${f.bold?"checked":""}>
+          </div>
+        </div>
+
+        <label class="sm-fe-label-small">Position &amp; Size (px)</label>
+        <div class="sm-fe-row">
+          <div class="sm-fe-col"><label class="sm-fe-label-small">X</label><input type="number" class="sm-fe-ctrl sm-input sm-input-sm" data-prop="x" value="${Math.round(f.x)}"></div>
+          <div class="sm-fe-col"><label class="sm-fe-label-small">Y</label><input type="number" class="sm-fe-ctrl sm-input sm-input-sm" data-prop="y" value="${Math.round(f.y)}"></div>
+          <div class="sm-fe-col"><label class="sm-fe-label-small">W</label><input type="number" class="sm-fe-ctrl sm-input sm-input-sm" data-prop="w" value="${Math.round(f.w)}"></div>
+          <div class="sm-fe-col"><label class="sm-fe-label-small">H</label><input type="number" class="sm-fe-ctrl sm-input sm-input-sm" data-prop="h" value="${Math.round(f.h)}"></div>
+        </div>
+
+      </div>
+    </div>`;
+  }).join("");
+
+  // Accordion toggle
+  list.querySelectorAll(".sm-field-accordion-header").forEach(header => {
+    header.addEventListener("click", e => {
       if (e.target.closest(".sm-field-delete-btn")) return;
-      const f = smFields.find(f => f.id === item.dataset.id);
-      if (f) smSelectField(f);
+      const acc  = header.closest(".sm-field-accordion");
+      const id   = acc.dataset.id;
+      const f    = smFields.find(f => f.id === id);
+      if (!f) return;
+      const isOpen = acc.classList.contains("sm-field-accordion--open");
+      list.querySelectorAll(".sm-field-accordion--open").forEach(a => a.classList.remove("sm-field-accordion--open"));
+      if (!isOpen) {
+        acc.classList.add("sm-field-accordion--open");
+        smSelectField(f);
+        setTimeout(() => acc.scrollIntoView({ behavior: "smooth", block: "nearest" }), 50);
+      } else {
+        smSelectedField = null;
+        smDrawCanvas();
+      }
     });
   });
-  list.querySelectorAll(".sm-field-delete-btn").forEach(btn => {
-    btn.addEventListener("click", () => {
-      smFields = smFields.filter(f => f.id !== btn.dataset.id);
-      if (smSelectedField && smSelectedField.id === btn.dataset.id) {
-        smSelectedField = null;
-        smClearFieldEditor();
+
+  // Live-edit controls inside each accordion
+  list.querySelectorAll(".sm-fe-ctrl").forEach(ctrl => {
+    const evt = (ctrl.type === "checkbox" || ctrl.tagName === "SELECT") ? "change" : "input";
+    ctrl.addEventListener(evt, e => {
+      e.stopPropagation();
+      const acc = ctrl.closest(".sm-field-accordion");
+      const f   = smFields.find(f => f.id === acc?.dataset.id);
+      if (!f) return;
+      const prop = ctrl.dataset.prop;
+      if (ctrl.type === "checkbox")              f[prop] = ctrl.checked;
+      else if (prop === "size")                  f[prop] = parseInt(ctrl.value) || 20;
+      else if (["x","y","w","h"].includes(prop)) f[prop] = parseFloat(ctrl.value) || f[prop];
+      else if (prop === "options")               f[prop] = ctrl.value.split(/[,\u060C]/).map(s => s.trim()).filter(Boolean);
+      else if (prop === "text")                  f[prop] = ctrl.value.trim() || f.placeholder;
+      else if (prop === "language") {
+        f[prop] = ctrl.value;
+        // Swap font dropdown
+        const fontSel = acc.querySelector("[data-prop='font']");
+        if (fontSel) {
+          const fonts = ctrl.value === "dhivehi" ? SM_FONTS_DHIVEHI : SM_FONTS_ENGLISH;
+          fontSel.innerHTML = fonts.map(fo =>
+            `<option value="${fo.value}">${fo.label}</option>`).join("");
+          f.font = fonts[0].value;
+          fontSel.value = fonts[0].value;
+        }
       }
+      else f[prop] = ctrl.value;
+
+      // Update header label if label/placeholder changed
+      if (prop === "label" || prop === "placeholder") {
+        const lbl = acc.querySelector(".sm-field-label");
+        if (lbl) lbl.textContent = f.label || f.placeholder;
+      }
+      if (smSelectedField && smSelectedField.id === f.id) smSelectedField = f;
+      smDrawCanvas();
+    });
+  });
+
+  // Delete buttons
+  list.querySelectorAll(".sm-field-delete-btn").forEach(btn => {
+    btn.addEventListener("click", e => {
+      e.stopPropagation();
+      smFields = smFields.filter(f => f.id !== btn.dataset.id);
+      if (smSelectedField && smSelectedField.id === btn.dataset.id) smSelectedField = null;
       smUpdateFieldList();
       smDrawCanvas();
     });
   });
-}
-
-function smPopulateFieldEditor(f) {
-  if (!f) { smClearFieldEditor(); return; }
-  document.getElementById("sm-field-editor")?.classList.remove("sm-field-editor-hidden");
-  const setVal = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
-  const setChk = (id, v) => { const el = document.getElementById(id); if (el) el.checked = v; };
-  setVal("sm-fe-type",        f.type || "text");
-  setVal("sm-fe-label",       f.label || "");
-  setVal("sm-fe-placeholder", f.placeholder);
-  setVal("sm-fe-text",        f.text === f.placeholder ? "" : f.text);
-  setVal("sm-fe-options",     (f.options || []).join(", "));
-  setVal("sm-fe-lang",        f.language);
-  smUpdateFontOptions(f.language);   // swap font list before setting font value
-  setVal("sm-fe-font",        f.font);
-  setChk("sm-fe-bold",        f.bold);
-  setVal("sm-fe-x",           Math.round(f.x));
-  setVal("sm-fe-y",           Math.round(f.y));
-  setVal("sm-fe-w",           Math.round(f.w));
-  setVal("sm-fe-h",           Math.round(f.h));
-  smToggleOptionsRow(f.type || "text");
-}
-
-function smClearFieldEditor() {
-  document.getElementById("sm-field-editor")?.classList.add("sm-field-editor-hidden");
-}
-
-function smApplyFieldEditor() {
-  if (!smSelectedField) return;
-  const getVal = id => { const el = document.getElementById(id); return el ? el.value : ""; };
-  const getChk = id => { const el = document.getElementById(id); return el ? el.checked : false; };
-
-  const placeholder = getVal("sm-fe-placeholder") || smSelectedField.placeholder;
-  const type = getVal("sm-fe-type") || "text";
-  smSelectedField.type      = type;
-  smSelectedField.label     = getVal("sm-fe-label").trim();
-  smSelectedField.placeholder = placeholder;
-  smSelectedField.text      = getVal("sm-fe-text").trim() || placeholder;
-  smSelectedField.options   = getVal("sm-fe-options").split(/[,،]/).map(s => s.trim()).filter(Boolean);
-  const language = getVal("sm-fe-lang") || "english";
-  smSelectedField.language  = language;
-  smUpdateFontOptions(language);
-  smSelectedField.font      = getVal("sm-fe-font")  || (language === "dhivehi" ? "'MV Faruma', serif" : "Inter, sans-serif");
-  smSelectedField.size      = parseInt(getVal("sm-fe-size"))  || 20;
-  smSelectedField.color     = getVal("sm-fe-color") || "#ffffff";
-  smSelectedField.align     = getVal("sm-fe-align") || "left";
-  smSelectedField.bold      = getChk("sm-fe-bold");
-  smSelectedField.x = parseFloat(getVal("sm-fe-x")) || smSelectedField.x;
-  smSelectedField.y = parseFloat(getVal("sm-fe-y")) || smSelectedField.y;
-  smSelectedField.w = parseFloat(getVal("sm-fe-w")) || smSelectedField.w;
-  smSelectedField.h = parseFloat(getVal("sm-fe-h")) || smSelectedField.h;
-
-  smToggleOptionsRow(type);
-
-  const idx = smFields.findIndex(f => f.id === smSelectedField.id);
-  if (idx !== -1) { smFields[idx] = { ...smSelectedField }; smSelectedField = smFields[idx]; }
-
-  smUpdateFieldList();
-  smDrawCanvas();
-}
-
-function smToggleOptionsRow(type) {
-  const row = document.getElementById("sm-fe-options-row");
-  if (row) row.style.display = (type === "dropdown" || type === "autocomplete") ? "flex" : "none";
-  const previewRow = document.getElementById("sm-fe-text-row");
-  if (previewRow) previewRow.style.display = type === "dropdown" ? "none" : "flex";
-  // Update options label to match context
-  const optLabel = row ? row.querySelector(".sm-label") : null;
-  if (optLabel) {
-    optLabel.textContent = type === "autocomplete" ? "Suggestions (comma-separated)" : "Options (comma-separated)";
-  }
 }
 
 // ============================================================================
@@ -770,7 +827,7 @@ function smCanvasMousedown(e) {
       return;
     }
   }
-  smSelectedField = null; smDragState = null; smClearFieldEditor(); smUpdateFieldList(); smDrawCanvas();
+  smSelectedField = null; smDragState = null;  smUpdateFieldList(); smDrawCanvas();
 }
 
 function smCanvasMousemove(e) {
@@ -793,7 +850,7 @@ function smCanvasMousemove(e) {
 
   if (smSelectedField && smSelectedField.id === f.id) smSelectedField = f;
   smDrawCanvas();
-  smPopulateFieldEditor(smSelectedField);
+  
 }
 
 function smCanvasMouseup() { smDragState = null; }
@@ -1185,8 +1242,6 @@ function smBindStaticEvents() {
     });
   }
 
-  document.getElementById("sm-field-editor")?.addEventListener("change", smApplyFieldEditor);
-  document.getElementById("sm-field-editor")?.addEventListener("input",  smApplyFieldEditor);
 
   const canvas = document.getElementById("sm-canvas");
   if (canvas) {
