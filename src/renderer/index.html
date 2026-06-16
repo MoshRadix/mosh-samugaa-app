@@ -1517,10 +1517,15 @@
             <h2>Social Media Templates</h2>
             <p class="sm-subtitle">Design image templates with bilingual text overlays</p>
           </div>
-          <button id="sm-new-template-btn" class="btn btn-primary">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            New Template
-          </button>
+          <div class="sm-list-header-actions">
+            <div class="sm-search-wrap">
+              <input type="text" id="sm-search-input" class="sm-search-input" placeholder="Search templates…">
+            </div>
+            <button id="sm-new-template-btn" class="btn btn-primary">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              New Template
+            </button>
+          </div>
         </div>
         <div id="sm-template-grid" class="sm-template-grid">
           <!-- cards rendered by JS -->
@@ -1576,13 +1581,15 @@
               <button id="sm-save-template-btn" class="btn btn-primary sm-save-btn">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
                 Save Template
+                <span id="sm-unsaved-dot" class="sm-unsaved-dot" style="display:none" title="Unsaved changes"></span>
               </button>
+              <p class="sm-save-hint">Ctrl+S to save quickly</p>
             </div>
           </div>
 
           <!-- Canvas area -->
           <div class="sm-canvas-area" id="sm-canvas-wrapper">
-            <div class="sm-canvas-hint">Click a field to select · Drag to move · Corner handles to resize</div>
+            <div class="sm-canvas-hint">Click field to select · Drag to move · Corner handles to resize · Drop image here to change</div>
             <canvas id="sm-canvas" class="sm-canvas"></canvas>
           </div>
 
@@ -1604,6 +1611,10 @@
             <p class="sm-gen-hint" id="sm-gen-hint">Fill in the fields below — preview updates live.</p>
             <div id="sm-generate-form" class="sm-generate-form"></div>
             <div class="sm-gen-actions">
+              <button id="sm-clear-fields-btn" class="btn btn-outline">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.67"/></svg>
+                Clear
+              </button>
               <button id="sm-export-btn" class="btn btn-primary" disabled>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                 Export PNG

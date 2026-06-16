@@ -22,6 +22,7 @@ let smImageDataUrl  = null;        // data URL of background
 
 // drag / resize state
 let smDragState = null;
+let smUnsaved   = false;   // tracks unsaved changes in editor
 
 // resize handle hit radius (px)
 const SM_HANDLE = 10;
@@ -35,13 +36,28 @@ let smCtx    = null;
 // ============================================================================
 
 function initSocialMedia() {
-  console.log("SM: initSocialMedia called, smInitialized=", smInitialized);
   if (!smInitialized) {
     smBindStaticEvents();
     smInitialized = true;
   }
   smLoadAndRenderList();
   smShowPanel("sm-list-panel");
+}
+
+// ============================================================================
+// UNSAVED CHANGES
+// ============================================================================
+
+function smMarkDirty() {
+  smUnsaved = true;
+  smUpdateUnsavedIndicator(true);
+}
+
+function smUpdateUnsavedIndicator(dirty) {
+  const btn = document.getElementById("sm-save-template-btn");
+  const dot = document.getElementById("sm-unsaved-dot");
+  if (dot) dot.style.display = dirty ? "inline-block" : "none";
+  if (btn) btn.classList.toggle("sm-save-btn--dirty", dirty);
 }
 
 // ============================================================================
@@ -115,16 +131,22 @@ function smRenderTemplateList() {
   const grid = document.getElementById("sm-template-grid");
   if (!grid) return;
 
-  if (!smTemplates || smTemplates.length === 0) {
+  const searchEl = document.getElementById("sm-search-input");
+  const query = (searchEl ? searchEl.value.trim().toLowerCase() : "");
+  const filtered = query
+    ? smTemplates.filter(t => (t.name || "").toLowerCase().includes(query))
+    : smTemplates;
+
+  if (!filtered || filtered.length === 0) {
     grid.innerHTML = `
       <div class="sm-empty-state">
         <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.35"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-        <p>No templates yet. Click <strong>New Template</strong> to create one.</p>
+        <p>${query ? `No templates matching "<strong>${smEscape(query)}</strong>"` : "No templates yet. Click <strong>New Template</strong> to create one."}</p>
       </div>`;
     return;
   }
 
-  grid.innerHTML = smTemplates.map((t) => `
+  grid.innerHTML = filtered.map((t) => `
     <div class="sm-template-card" data-id="${smEscape(t.id)}">
       <div class="sm-card-thumb">
         ${t.imageThumbnail
@@ -142,7 +164,7 @@ function smRenderTemplateList() {
       </div>
       <div class="sm-card-info">
         <div class="sm-card-name">${smEscape(t.name)}</div>
-        <div class="sm-card-meta">${(t.fields || []).length} field${(t.fields || []).length !== 1 ? "s" : ""}${t.imageName ? " · " + smEscape(t.imageName) : ""}</div>
+        <div class="sm-card-meta">${(t.fields || []).length} field${(t.fields || []).length !== 1 ? "s" : ""} · ${t.savedAt ? new Date(t.savedAt).toLocaleDateString() : "—"}</div>
       </div>
       <div class="sm-card-actions">
         <button class="btn btn-primary sm-generate-btn sm-generate-btn--full" data-id="${smEscape(t.id)}">
@@ -187,12 +209,12 @@ function smConfirmDelete(id) {
 // ============================================================================
 
 async function smOpenEditor(id) {
-  console.log("SM: smOpenEditor called, id=", id);
   smActiveTemplate = null;
   smFields = [];
   smImage = null;
   smImageDataUrl = null;
   smSelectedField = null;
+  smUnsaved = false;
 
   if (id) {
     try {
@@ -209,6 +231,7 @@ async function smOpenEditor(id) {
 
   smShowPanel("sm-editor-panel");
   document.getElementById("sm-template-name-input").value = smActiveTemplate.name || "";
+  smUpdateUnsavedIndicator(false);
 
   const imgStatus = document.getElementById("sm-image-status");
   if (imgStatus) {
@@ -217,7 +240,6 @@ async function smOpenEditor(id) {
       : "No image selected";
   }
 
-  
   smUpdateFieldList();
   smInitCanvas();
 }
@@ -617,6 +639,7 @@ function smAddField() {
   };
   smFields.push(field);
   smSelectField(field);
+  smMarkDirty();
   smUpdateFieldList();
   smDrawCanvas();
 }
@@ -785,6 +808,7 @@ function smUpdateFieldList() {
         if (lbl) lbl.textContent = f.label || f.placeholder;
       }
       if (smSelectedField && smSelectedField.id === f.id) smSelectedField = f;
+      smMarkDirty();
       smDrawCanvas();
     });
   });
@@ -795,6 +819,7 @@ function smUpdateFieldList() {
       e.stopPropagation();
       smFields = smFields.filter(f => f.id !== btn.dataset.id);
       if (smSelectedField && smSelectedField.id === btn.dataset.id) smSelectedField = null;
+      smMarkDirty();
       smUpdateFieldList();
       smDrawCanvas();
     });
@@ -882,6 +907,7 @@ function smHandleImageUpload(file) {
     if (smActiveTemplate) smActiveTemplate.imageName = file.name;
     const el = document.getElementById("sm-image-status");
     if (el) el.textContent = `Image: ${file.name}`;
+    smMarkDirty();
     smInitCanvas();
   };
   reader.readAsDataURL(file);
@@ -925,6 +951,8 @@ async function smSaveCurrentTemplate() {
     const saved = await smIPC("smSaveTemplate", payload);
     if (smActiveTemplate) smActiveTemplate.id = saved.id;
     smNotify(`Template "${name}" saved.`, "success");
+    smUnsaved = false;
+    smUpdateUnsavedIndicator(false);
     smTemplates = await smIPC("smListTemplates").catch(() => smTemplates);
   } catch (e) {
     smNotify("Save failed: " + e.message, "error");
@@ -1027,7 +1055,7 @@ async function smOpenGenerate(id) {
     }
 
     const displayLabel = f.label || f.placeholder;
-    const typeLabel = type === "dropdown" ? "▾" : type === "textarea" ? "¶" : type === "autocomplete" ? "⌕" : "T";
+    const typeLabel = type === "dropdown" ? "Select" : type === "textarea" ? "Text area" : type === "autocomplete" ? "Suggest" : "Text";
     row.innerHTML = `
       <label class="sm-gen-label">
         <span class="sm-field-lang-badge ${isDh ? "sm-badge-dhivehi" : ""}">${isDh ? "ދި" : "EN"}</span>
@@ -1195,6 +1223,16 @@ function smRefreshAllChips() {
   });
 }
 
+function smClearAllFields() {
+  document.querySelectorAll("#sm-generate-form .sm-gen-input").forEach(inp => {
+    if (inp.tagName === "SELECT") inp.selectedIndex = 0;
+    else inp.value = "";
+    inp.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+  clearTimeout(smGenPreviewDebounce);
+  smGenPreviewDebounce = setTimeout(smRenderLivePreview, 120);
+}
+
 async function smExportGenerated() {
   const wrap    = document.getElementById("sm-preview-canvas-wrap");
   const dataUrl = wrap ? wrap.dataset.dataUrl : null;
@@ -1228,6 +1266,37 @@ function smBindStaticEvents() {
   document.getElementById("sm-upload-image-btn")
     ?.addEventListener("click", () => document.getElementById("sm-image-input")?.click());
 
+  // Drag-drop image onto canvas area
+  const canvasArea = document.getElementById("sm-canvas-wrapper");
+  if (canvasArea) {
+    canvasArea.addEventListener("dragover", e => {
+      e.preventDefault();
+      canvasArea.classList.add("sm-canvas-area--dragover");
+    });
+    canvasArea.addEventListener("dragleave", () => canvasArea.classList.remove("sm-canvas-area--dragover"));
+    canvasArea.addEventListener("drop", e => {
+      e.preventDefault();
+      canvasArea.classList.remove("sm-canvas-area--dragover");
+      const file = e.dataTransfer.files[0];
+      if (file && file.type.startsWith("image/")) smHandleImageUpload(file);
+    });
+  }
+
+  // Template name marks dirty
+  document.getElementById("sm-template-name-input")
+    ?.addEventListener("input", smMarkDirty);
+
+  // Ctrl+S saves in editor
+  document.addEventListener("keydown", e => {
+    if ((e.ctrlKey || e.metaKey) && e.key === "s") {
+      const editorPanel = document.getElementById("sm-editor-panel");
+      if (editorPanel && editorPanel.classList.contains("sm-panel-active")) {
+        e.preventDefault();
+        smSaveCurrentTemplate();
+      }
+    }
+  });
+
   document.getElementById("sm-add-field-btn")
     ?.addEventListener("click", smAddField);
 
@@ -1243,14 +1312,11 @@ function smBindStaticEvents() {
       smShowPanel("sm-list-panel");
     });
 
-  const newTplBtn = document.getElementById("sm-new-template-btn");
-  console.log("SM: #sm-new-template-btn element:", newTplBtn);
-  if (newTplBtn) {
-    newTplBtn.addEventListener("click", () => {
-      console.log("SM: New Template button clicked");
-      smOpenEditor(null);
-    });
-  }
+  document.getElementById("sm-new-template-btn")
+    ?.addEventListener("click", () => smOpenEditor(null));
+
+  document.getElementById("sm-search-input")
+    ?.addEventListener("input", smRenderTemplateList);
 
 
   const canvas = document.getElementById("sm-canvas");
@@ -1263,6 +1329,9 @@ function smBindStaticEvents() {
 
   document.getElementById("sm-export-btn")
     ?.addEventListener("click", smExportGenerated);
+
+  document.getElementById("sm-clear-fields-btn")
+    ?.addEventListener("click", smClearAllFields);
 }
 
 // ============================================================================
@@ -1270,15 +1339,8 @@ function smBindStaticEvents() {
 // ============================================================================
 
 function smShowPanel(id) {
-  console.log("SM: smShowPanel →", id);
   document.querySelectorAll(".sm-panel").forEach(p => p.classList.remove("sm-panel-active"));
-  const target = document.getElementById(id);
-  if (target) {
-    target.classList.add("sm-panel-active");
-    console.log("SM: panel activated", id, target);
-  } else {
-    console.error("SM: panel element not found:", id);
-  }
+  document.getElementById(id)?.classList.add("sm-panel-active");
 }
 
 // ============================================================================

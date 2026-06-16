@@ -7565,3 +7565,65 @@ kbd {
   border-radius: 10px; padding: 1px 7px;
   vertical-align: middle; margin-left: 6px;
 }
+
+/* ── SM List header actions ────────────────────────────────────── */
+.sm-list-header-actions { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+
+.sm-search-wrap { display: flex; }
+
+.sm-search-input {
+  height: 34px; box-sizing: border-box;
+  padding: 0 12px 0 32px;
+  border: 1px solid var(--border-light); border-radius: var(--radius-md);
+  background-color: var(--bg-elevated);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='13' height='13' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2.2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: 10px center;
+  color: var(--text-primary);
+  font-size: 0.75rem;
+  width: 200px;
+  transition: border-color var(--transition-fast), width var(--transition-fast);
+}
+.sm-search-input:focus {
+  outline: none; border-color: var(--accent-primary);
+  box-shadow: var(--shadow-focus); width: 240px;
+}
+#sm-new-template-btn {
+  height: 34px; box-sizing: border-box; padding-top: 0; padding-bottom: 0;
+}
+
+/* ── SM Unsaved dot & save hint ───────────────────────────────── */
+.sm-unsaved-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: #f0a020; margin-left: 6px;
+  display: inline-block; flex-shrink: 0;
+  animation: sm-dot-pulse 1.6s ease-in-out infinite;
+}
+@keyframes sm-dot-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.35; }
+}
+.sm-save-btn--dirty { box-shadow: 0 0 0 2px rgba(240,160,32,0.35); }
+
+.sm-save-hint {
+  font-size: 11px; color: var(--text-tertiary);
+  text-align: center; margin-top: 5px; margin-bottom: 0;
+}
+
+/* ── SM Canvas drag-over state ────────────────────────────────── */
+.sm-canvas-area--dragover {
+  background: var(--accent-primary-light);
+  outline: 2px dashed var(--accent-primary);
+  outline-offset: -8px;
+}
+
+/* ── SM Generate type badge (readable labels) ─────────────────── */
+.sm-gen-type-badge {
+  font-size: 10px; font-weight: 600; color: var(--text-tertiary);
+  background: var(--bg-secondary); border-radius: 3px; padding: 1px 5px;
+  flex-shrink: 0; white-space: nowrap;
+}
+
+/* ── SM Gen actions (Clear + Export side by side) ─────────────── */
+.sm-gen-actions .btn-outline { flex-shrink: 0; }
+.sm-gen-actions .btn-primary { flex: 1; justify-content: center; }
