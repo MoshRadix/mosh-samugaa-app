@@ -228,6 +228,12 @@ function switchView(view) {
       }
       break;
 
+    case "backup":
+      if (typeof initSettings === "function") {
+        initSettings();
+      }
+      break;
+
     case "help":
       if (typeof initHelp === "function") {
         initHelp();
