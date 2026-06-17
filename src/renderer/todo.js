@@ -225,16 +225,13 @@ function _tdRender() {
     let dateLabel = _tdPrettyDate(date);
     let dateBadge = "";
     if (isToday)
-      dateBadge =
-        '<span class="td-date-badge td-date-badge--today">Today</span>';
+      dateBadge = '<span class="td-date-badge td-date-badge--today">Today</span>';
     else if (isTomorrow)
-      dateBadge =
-        '<span class="td-date-badge td-date-badge--tomorrow">Tomorrow</span>';
+      dateBadge = '<span class="td-date-badge td-date-badge--tomorrow">Tomorrow</span>';
     else if (isYesterday)
       dateBadge = '<span class="td-date-badge">Yesterday</span>';
     else if (isOverdue)
-      dateBadge =
-        '<span class="td-date-badge td-date-badge--overdue">Overdue</span>';
+      dateBadge = '<span class="td-date-badge td-date-badge--overdue">Overdue</span>';
 
     const doneCount = dateItems.filter((i) => i.done).length;
     const progress =
@@ -250,7 +247,7 @@ function _tdRender() {
             ${dateBadge}
           </div>
           <div class="td-group-meta">
-            <div class="td-progress-bar">
+            <div class="td-progress-track" title="${progress}% complete">
               <div class="td-progress-fill" style="width:${progress}%"></div>
             </div>
             <span class="td-group-count">${doneCount}/${dateItems.length}</span>
@@ -279,27 +276,22 @@ function _tdRenderItem(item) {
   return `
     <div class="td-item${item.done ? " td-item--done" : ""}${isOverdue ? " td-item--overdue" : ""}" data-id="${item.id}" data-date="${item.date}">
       <button class="td-check" data-id="${item.id}" data-done="${item.done}" title="${item.done ? "Mark pending" : "Mark done"}">
-        <svg class="td-check-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-          ${
-            item.done
-              ? '<polyline points="20 6 9 17 4 12"/>'
-              : '<rect x="3" y="3" width="18" height="18" rx="3"/>'
-          }
+        <svg class="td-check-icon" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+          <polyline points="20 6 9 17 4 12"/>
         </svg>
       </button>
       <span class="td-item-text">${_tdEscape(item.text)}</span>
       <div class="td-item-actions">
         <button class="td-action-btn td-edit-btn" data-id="${item.id}" title="Edit">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
         </button>
         <button class="td-action-btn td-date-btn" data-id="${item.id}" data-date="${item.date}" title="Change due date">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
         </button>
         <button class="td-action-btn td-delete-btn" data-id="${item.id}" title="Delete">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
         </button>
       </div>
-      <!-- Inline date picker (hidden, shown on date-btn click) -->
       <input type="date" class="td-inline-date-input" id="td-date-input-${item.id}" value="${item.date}" style="display:none" />
     </div>
   `;
@@ -447,8 +439,20 @@ function _tdBindYearNav() {
 
 function _tdBindAddButton() {
   const btn = document.getElementById("td-add-btn");
-  if (!btn) return;
-  btn.addEventListener("click", () => _tdOpenModal(null, null));
+  if (btn) btn.addEventListener("click", () => _tdOpenModal(null, null));
+  const btn2 = document.getElementById("td-new-btn-main");
+  if (btn2) btn2.addEventListener("click", () => _tdOpenModal(null, null));
+  // Keyboard shortcut: N to open new todo (when not in an input)
+  document.addEventListener("keydown", (e) => {
+    if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA" || e.target.isContentEditable) return;
+    if (e.key === "n" || e.key === "N") {
+      const todoView = document.getElementById("todo-view");
+      if (todoView && todoView.classList.contains("active")) {
+        e.preventDefault();
+        _tdOpenModal(null, null);
+      }
+    }
+  });
 }
 
 function _tdBindModal() {
@@ -465,13 +469,26 @@ function _tdBindModal() {
     });
   if (saveBtn) saveBtn.addEventListener("click", _tdSaveModal);
 
-  // Enter in textarea = save (Shift+Enter = newline)
+  // Enter in textarea = save (Shift+Enter = newline), Esc = close
   const textarea = document.getElementById("td-modal-text");
   if (textarea) {
     textarea.addEventListener("keydown", (e) => {
       if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
         _tdSaveModal();
+      }
+      if (e.key === "Escape") {
+        e.preventDefault();
+        _tdCloseModal();
+      }
+    });
+    // Char count
+    textarea.addEventListener("input", () => {
+      const remaining = 500 - textarea.value.length;
+      const counter = document.getElementById("td-char-count");
+      if (counter) {
+        counter.textContent = `${remaining} remaining`;
+        counter.classList.toggle("td-char-count--warn", remaining < 50);
       }
     });
   }

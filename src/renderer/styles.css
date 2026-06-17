@@ -8126,6 +8126,21 @@ kbd {
   padding: 0;
   flex-shrink: 0;
 }
+.td-sidebar-section {
+  padding: 14px 18px 12px;   /* ← increase left/right to 18px */
+  border-bottom: 1px solid var(--border-light);
+}
+
+.td-section-label {
+  display: block;
+  font-size: 0.66rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-tertiary);
+  margin-bottom: 8px;
+  padding-left: 2px;        /* ← tiny extra nudge for the label itself */
+}
 
 .td-sidebar-header {
   display: flex;
@@ -8199,6 +8214,74 @@ kbd {
   color: var(--text-tertiary);
   text-transform: uppercase;
   letter-spacing: 0.06em;
+}
+/* ── Stats strip (four‑column layout) ─────────────────────────────────── */
+.td-stats-strip {
+  display: flex;
+  align-items: stretch;
+  border-bottom: 1px solid var(--border-light);
+  background: var(--bg-surface);
+}
+
+.td-stat-chip {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px 4px 9px;
+  gap: 2px;
+}
+
+.td-stat-divider {
+  width: 1px;
+  background: var(--border-light);
+  margin: 8px 0;
+}
+
+.td-stat-num {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.td-stat-num--done    { color: var(--accent-primary); }
+.td-stat-num--pending { color: var(--accent-warning); }
+.td-stat-num--overdue { color: var(--accent-danger); }
+
+.td-stat-label {
+  font-size: 0.63rem;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+/* ── "+New" button in toolbar ─────────────────────────────────────────── */
+.td-new-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 14px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  border: none;
+  background: var(--accent-primary);
+  color: #fff;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  font-family: inherit;
+  white-space: nowrap;
+  letter-spacing: 0.01em;
+}
+.td-new-btn:hover {
+  background: #5a7667;
+  box-shadow: 0 2px 8px rgba(108,139,122,0.35);
+  transform: translateY(-1px);
+}
+.td-new-btn:active {
+  transform: translateY(0);
 }
 
 /* Filter section */
@@ -8279,6 +8362,10 @@ kbd {
 .td-status-tabs {
   display: flex;
   gap: 4px;
+  margin-top: 10px;
+  margin-bottom: 4px;
+  margin-left: 5px;
+  margin-right: 5px;
 }
 
 .td-status-tab {
@@ -8293,6 +8380,7 @@ kbd {
   transition: all var(--transition-fast);
   font-family: inherit;
   text-align: center;
+  
 }
 .td-status-tab:hover { border-color: var(--accent-primary); color: var(--accent-primary); }
 .td-status-tab.active {
