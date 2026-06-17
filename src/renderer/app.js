@@ -1,6 +1,6 @@
 /**
  * @file app.js
- * @description Optimized Renderer Controller and UI Engine managing view states, 
+ * @description Optimized Renderer Controller and UI Engine managing view states,
  * modal layouts, dynamic template indexing, and direct IPC bridge handlers.
  */
 
@@ -58,7 +58,9 @@ async function loadInitialData() {
   if (typeof loadTemplates === "function") {
     await loadTemplates();
   } else {
-    console.warn("loadTemplates function not found initially. Retrying layout fallback mechanism...");
+    console.warn(
+      "loadTemplates function not found initially. Retrying layout fallback mechanism...",
+    );
     await new Promise((resolve) => setTimeout(resolve, 300));
     if (typeof loadTemplates === "function") await loadTemplates();
   }
@@ -144,8 +146,12 @@ function setupNavigation() {
 }
 
 function closeAllDropdowns() {
-  document.querySelectorAll(".nav-dropdown").forEach((d) => d.classList.remove("nav-dropdown-open"));
-  document.querySelectorAll(".nav-group-trigger").forEach((t) => t.classList.remove("nav-trigger-open"));
+  document
+    .querySelectorAll(".nav-dropdown")
+    .forEach((d) => d.classList.remove("nav-dropdown-open"));
+  document
+    .querySelectorAll(".nav-group-trigger")
+    .forEach((t) => t.classList.remove("nav-trigger-open"));
 }
 
 /**
@@ -164,7 +170,9 @@ function switchView(view) {
   // 2. Highlight parent group trigger if an item inside it is active
   document.querySelectorAll(".nav-group").forEach((group) => {
     const hasActiveChild = group.querySelector(`.nav-dropdown-item.active`);
-    group.querySelector(".nav-group-trigger")?.classList.toggle("nav-trigger-active", !!hasActiveChild);
+    group
+      .querySelector(".nav-group-trigger")
+      ?.classList.toggle("nav-trigger-active", !!hasActiveChild);
   });
 
   // 2. Hide active visibility across all available viewport layer containers
@@ -181,7 +189,10 @@ function switchView(view) {
   // Remove padding/scroll from main-content for views that manage their own layout
   const mainContent = document.querySelector(".main-content");
   if (mainContent) {
-    mainContent.classList.toggle("main-content--flush", view === "notes" || view === "social-media");
+    mainContent.classList.toggle(
+      "main-content--flush",
+      view === "notes" || view === "social-media",
+    );
   }
 
   // 4. Trigger isolated component updates contextually depending on selected pathway targets
@@ -207,7 +218,9 @@ function switchView(view) {
       if (typeof renderFillForm === "function") {
         renderFillForm();
       } else {
-        console.error("renderFillForm utility is currently unavailable inside rendering dependencies.");
+        console.error(
+          "renderFillForm utility is currently unavailable inside rendering dependencies.",
+        );
       }
       break;
 
@@ -217,7 +230,9 @@ function switchView(view) {
       } else if (typeof loadSearchResults === "function") {
         loadSearchResults();
       } else {
-        console.error("Search module indexing pathways could not resolve successfully.");
+        console.error(
+          "Search module indexing pathways could not resolve successfully.",
+        );
       }
       setTimeout(() => document.getElementById("document-search")?.focus(), 50);
       break;
@@ -279,6 +294,12 @@ function switchView(view) {
     case "notes":
       if (typeof initNotes === "function") {
         initNotes();
+      }
+      break;
+
+    case "todo":
+      if (typeof initTodo === "function") {
+        initTodo();
       }
       break;
 
@@ -380,7 +401,10 @@ async function openUploadDialog() {
     if (!filePath) return; // User cancelled file picker selection
     showUploadMetadataForm(filePath);
   } catch (error) {
-    console.error("Error launching OS upload interaction dialog pathways:", error);
+    console.error(
+      "Error launching OS upload interaction dialog pathways:",
+      error,
+    );
     showToast("Error opening file dialog", "error");
   }
 }
@@ -430,32 +454,38 @@ function showUploadMetadataForm(filePath) {
   `;
 
   // Process data submissions directly from template metadata setup controls
-  document.getElementById("upload-form").addEventListener("submit", async (e) => {
-    e.preventDefault();
+  document
+    .getElementById("upload-form")
+    .addEventListener("submit", async (e) => {
+      e.preventDefault();
 
-    const metadata = {
-      name: document.getElementById("template-name").value.trim(),
-      description: document.getElementById("template-description").value.trim(),
-      category: document.getElementById("template-category").value,
-    };
+      const metadata = {
+        name: document.getElementById("template-name").value.trim(),
+        description: document
+          .getElementById("template-description")
+          .value.trim(),
+        category: document.getElementById("template-category").value,
+      };
 
-    try {
-      // Dispatches file ingestion sequences via pre-exposed runtime window bridges securely
-      await window.electronAPI.uploadTemplate({ filePath, metadata });
-      closeModal("template-modal");
+      try {
+        // Dispatches file ingestion sequences via pre-exposed runtime window bridges securely
+        await window.electronAPI.uploadTemplate({ filePath, metadata });
+        closeModal("template-modal");
 
-      if (typeof loadTemplates === "function") {
-        await loadTemplates();
-      } else {
-        console.warn("Storage syncing methods missing. Forcing local navigation layout fallback refreshing cycle...");
-        window.location.reload();
+        if (typeof loadTemplates === "function") {
+          await loadTemplates();
+        } else {
+          console.warn(
+            "Storage syncing methods missing. Forcing local navigation layout fallback refreshing cycle...",
+          );
+          window.location.reload();
+        }
+
+        showToast("Template uploaded successfully!", "success");
+      } catch (error) {
+        showToast("Error processing upload: " + error.message, "error");
       }
-
-      showToast("Template uploaded successfully!", "success");
-    } catch (error) {
-      showToast("Error processing upload: " + error.message, "error");
-    }
-  });
+    });
 
   openModal("template-modal");
 }
@@ -502,14 +532,17 @@ function showToast(message, type = "success") {
  */
 function showConfirm(message, okLabel = "Confirm") {
   return new Promise((resolve) => {
-    const overlay   = document.getElementById("app-confirm-overlay");
-    const msgEl     = document.getElementById("app-confirm-msg");
-    const okBtn     = document.getElementById("app-confirm-ok");
+    const overlay = document.getElementById("app-confirm-overlay");
+    const msgEl = document.getElementById("app-confirm-msg");
+    const okBtn = document.getElementById("app-confirm-ok");
     const cancelBtn = document.getElementById("app-confirm-cancel");
-    if (!overlay) { resolve(false); return; }
+    if (!overlay) {
+      resolve(false);
+      return;
+    }
 
-    msgEl.textContent  = message;
-    okBtn.textContent  = okLabel;
+    msgEl.textContent = message;
+    okBtn.textContent = okLabel;
     overlay.style.display = "flex";
 
     function cleanup(result) {
@@ -519,9 +552,15 @@ function showConfirm(message, okLabel = "Confirm") {
       overlay.removeEventListener("click", onBackdrop);
       resolve(result);
     }
-    function onOk()      { cleanup(true);  }
-    function onCancel()  { cleanup(false); }
-    function onBackdrop(e) { if (e.target === overlay) cleanup(false); }
+    function onOk() {
+      cleanup(true);
+    }
+    function onCancel() {
+      cleanup(false);
+    }
+    function onBackdrop(e) {
+      if (e.target === overlay) cleanup(false);
+    }
 
     okBtn.addEventListener("click", onOk);
     cancelBtn.addEventListener("click", onCancel);

@@ -4336,15 +4336,27 @@ kbd {
   height: 6px;
   background: #16a34a;
   border-radius: 50%;
-  vertical-align: super;
-  margin-left: 2px;
   flex-shrink: 0;
 }
-.cal-observance-dot--week {
-  width: 7px;
-  height: 7px;
-  vertical-align: middle;
-  margin-left: 3px;
+
+/* Dot group containers */
+.cal-day-dots,
+.cal-week-dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+}
+
+/* To-do indicator dot — blue */
+.cal-todo-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  background: #2563eb;
+  border-radius: 50%;
+  flex-shrink: 0;
+  cursor: pointer;
 }
 .cal-day-observance-label {
   font-size: 9px;
@@ -4360,7 +4372,7 @@ kbd {
   border-color: var(--accent-primary) !important;
   background: var(--accent-primary-light) !important;
 }
-.cal-day--today .cal-day-greg {
+.cal-day--today .cal-day-num {
   background: var(--accent-primary);
   color: var(--text-on-accent);
   border-radius: 50%;
@@ -4382,6 +4394,9 @@ kbd {
   color: var(--text-primary);
   line-height: 1;
   margin-bottom: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 .cal-day--weekend .cal-day-greg { color: #c0392b; }
 
@@ -4497,7 +4512,11 @@ kbd {
   font-weight: 700;
   color: var(--text-primary);
   line-height: 1;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
+.cal-week-day-num-val { line-height: 1; }
 .cal-week-day--weekend .cal-week-day-num { color: #c0392b; }
 
 .cal-week-month {
@@ -4599,23 +4618,38 @@ kbd {
   grid-template-columns: repeat(7, 1fr);
   gap: 1px;
 }
-
-/* Year-view day cells reuse .cal-day--compact */
 .cal-year-days .cal-day {
   min-height: 28px;
-  padding: 2px 2px;
+  padding: 2px 3px;
   font-size: 10px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
 }
 .cal-year-days .cal-day-greg {
   font-size: 12px;
-  text-align: center;
+  justify-content: flex-start;
+  margin-bottom: 0;
+  flex: 1;
+}
+.cal-year-days .cal-day-dots {
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+  margin-left: 2px;
+}
+.cal-year-days .cal-observance-dot,
+.cal-year-days .cal-todo-dot {
+  width: 4px;
+  height: 4px;
 }
 .cal-year-days .cal-day-hijri { display: none; }
-.cal-year-days .cal-day--today .cal-day-greg {
+.cal-year-days .cal-day--today .cal-day-num {
   width: 18px;
   height: 18px;
   font-size: 10px;
-  margin: 0 auto;
 }
 
 /* ============================================================
@@ -4738,6 +4772,308 @@ kbd {
   background: #f0fdf4;
   border-left: 3px solid #86efac;
   border-radius: 4px;
+}
+
+/* ── Todo trigger button in sidebar ── */
+.cal-detail-todo-row {
+  margin-top: 14px;
+  border-top: 1px solid var(--border-light);
+  padding-top: 10px;
+}
+.cal-detail-todo-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 7px 10px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  background: var(--bg-subtle);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  position: relative;
+}
+.cal-detail-todo-btn:hover {
+  background: #eff6ff;
+  border-color: #93c5fd;
+  color: #1d4ed8;
+}
+.cal-detail-todo-badge {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  background: #2563eb;
+  border-radius: 50%;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+/* ── Todo popover ── */
+.cal-todo-popover {
+  position: fixed;
+  z-index: 9999;
+  width: 520px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.14), 0 2px 6px rgba(0,0,0,0.08);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: cal-popover-in 0.12s ease;
+}
+
+/* Panel mode: overlays cal-body, stretches to fill its height */
+.cal-todo-popover--panel {
+  width: auto; /* overridden by JS to match cal-body width */
+  border-radius: var(--radius-md);
+}
+.cal-todo-popover--panel .cal-todo-list {
+  flex: 1;
+  max-height: none;
+  overflow-y: auto;
+}
+@keyframes cal-popover-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.cal-todo-popover-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px 8px;
+  border-bottom: 1px solid var(--border-light);
+  background: var(--bg-subtle);
+}
+.cal-todo-popover-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: 0.01em;
+}
+.cal-todo-popover-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: none;
+  background: transparent;
+  color: var(--text-tertiary);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  padding: 0;
+}
+.cal-todo-popover-close:hover {
+  background: var(--bg-hover, rgba(0,0,0,0.06));
+  color: var(--text-primary);
+}
+
+/* Shared todo list styles (used inside popover) */
+.cal-todo-list {
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+.cal-todo-empty {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  text-align: center;
+  padding: 12px 0 6px;
+}
+.cal-todo-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.cal-todo-item--done .cal-todo-text {
+  text-decoration: line-through;
+  color: var(--text-tertiary);
+}
+.cal-todo-check {
+  flex-shrink: 0;
+  margin-top: 1px;
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  border: 1.5px solid #2563eb;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  color: #2563eb;
+}
+.cal-todo-item--done .cal-todo-check {
+  background: #2563eb;
+  color: #fff;
+}
+.cal-todo-text {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  color: var(--text-primary);
+  line-height: 1.5;
+  word-break: break-word;
+}
+.cal-todo-delete {
+  flex-shrink: 0;
+  margin-top: 1px;
+  width: 18px;
+  height: 18px;
+  border: none;
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  opacity: 0;
+  border-radius: 3px;
+  transition: opacity 0.12s;
+}
+.cal-todo-item:hover .cal-todo-delete { opacity: 0.5; }
+.cal-todo-item:hover .cal-todo-delete:hover { opacity: 1; background: var(--bg-subtle); }
+
+.cal-todo-add-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  padding: 8px 12px 10px;
+  border-top: 1px solid var(--border-light);
+}
+.cal-todo-input {
+  flex: 1;
+  font-size: 12px;
+  padding: 5px 8px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  background: var(--bg-input, var(--bg-subtle));
+  color: var(--text-primary);
+  outline: none;
+  min-width: 0;
+}
+.cal-todo-input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37,99,235,0.15);
+}
+.cal-todo-add-btn {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border: none;
+  background: #2563eb;
+  color: #fff;
+  border-radius: var(--radius-sm);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.cal-todo-add-btn:hover { background: #1d4ed8; }
+
+/* ── Todo hover tooltip (read-only preview) ── */
+.cal-todo-tooltip {
+  position: fixed;
+  z-index: 9998; /* just below editable popover */
+  width: 460px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.12), 0 2px 6px rgba(0,0,0,0.07);
+  pointer-events: auto;
+  animation: cal-popover-in 0.1s ease;
+}
+.cal-todo-tooltip-header {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  padding: 8px 10px 5px;
+  border-bottom: 1px solid var(--border-light);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cal-todo-tooltip-progress {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 10px 4px;
+  border-bottom: 1px solid var(--border-light);
+}
+.cal-todo-tooltip-bar {
+  flex: 1;
+  height: 4px;
+  background: var(--border-light);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.cal-todo-tooltip-fill {
+  height: 100%;
+  background: #2563eb;
+  border-radius: 2px;
+  transition: width 0.2s;
+}
+.cal-todo-tooltip-count {
+  font-size: 10px;
+  color: var(--text-tertiary);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.cal-todo-tooltip-list {
+  list-style: none;
+  margin: 0;
+  padding: 5px 0 6px;
+  max-height: 180px;
+  overflow-y: auto;
+}
+.cal-todo-tooltip-item {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 3px 10px;
+  font-size: 11.5px;
+  color: var(--text-primary);
+  line-height: 1.4;
+}
+.cal-todo-tooltip-item--done {
+  color: var(--text-tertiary);
+}
+.cal-todo-tooltip-item--done .cal-todo-tooltip-text {
+  text-decoration: line-through;
+}
+.cal-todo-tooltip-check {
+  flex-shrink: 0;
+  width: 13px;
+  height: 13px;
+  border-radius: 2px;
+  border: 1.5px solid #2563eb;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #2563eb;
+  margin-top: 1px;
+}
+.cal-todo-tooltip-item--done .cal-todo-tooltip-check {
+  background: #2563eb;
+  color: #fff;
+  border-color: #2563eb;
+}
+.cal-todo-tooltip-text {
+  flex: 1;
+  word-break: break-word;
 }
 
 /* ── Legend row (legend + sync pill side by side) ── */

@@ -133,11 +133,20 @@ async function initWorkLogsDB() {
       photoPath TEXT
     );
     CREATE INDEX IF NOT EXISTS idx_work_logs_createdAt ON work_logs(createdAt);
+    CREATE TABLE IF NOT EXISTS cal_todos (
+      id TEXT PRIMARY KEY,
+      date TEXT NOT NULL,
+      text TEXT NOT NULL,
+      done INTEGER NOT NULL DEFAULT 0,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      notionPageId TEXT
+    );
+    CREATE INDEX IF NOT EXISTS idx_cal_todos_date ON cal_todos(date);
   `);
 
   // Schema migrations for existing databases
   const wlCols = wlDb.exec("PRAGMA table_info(work_logs)");
-  const wlColNames = wlCols.length ? wlCols[0].values.map(r => r[1]) : [];
+  const wlColNames = wlCols.length ? wlCols[0].values.map((r) => r[1]) : [];
   if (!wlColNames.includes("tags")) {
     wlDb.exec("ALTER TABLE work_logs ADD COLUMN tags TEXT DEFAULT '[]'");
     console.log("[WorkLogs DB] Added 'tags' column");
@@ -149,7 +158,9 @@ async function initWorkLogsDB() {
 
   // Ensure photos directory exists
   const photosDir = path.join(app.getPath("userData"), "worklog_photos");
-  try { await fs.mkdir(photosDir, { recursive: true }); } catch (_) {}
+  try {
+    await fs.mkdir(photosDir, { recursive: true });
+  } catch (_) {}
 
   await saveWorkLogsDB();
   console.log("[WorkLogs DB] Initialized at:", WL_DB_PATH);
@@ -468,7 +479,12 @@ function inferFieldFromKey(key) {
 
   // ── Images: img_ prefix ──────────────────────────────────────────────────
   if (k.startsWith("img_")) {
-    return { type: "image", isRTL: false, autoComputed: false, paragraphMode: false };
+    return {
+      type: "image",
+      isRTL: false,
+      autoComputed: false,
+      paragraphMode: false,
+    };
   }
 
   // ── Paragraph text: text_ prefix ─────────────────────────────────────────
@@ -483,12 +499,22 @@ function inferFieldFromKey(key) {
 
   // ── Numbers: num_ prefix (serial stays string) ───────────────────────────
   if (k.startsWith("num_") && !k.includes("serial")) {
-    return { type: "number", isRTL: false, autoComputed: false, paragraphMode: false };
+    return {
+      type: "number",
+      isRTL: false,
+      autoComputed: false,
+      paragraphMode: false,
+    };
   }
 
   // ── Boolean: bool_ prefix ────────────────────────────────────────────────
   if (k.startsWith("bool_")) {
-    return { type: "boolean", isRTL: false, autoComputed: false, paragraphMode: false };
+    return {
+      type: "boolean",
+      isRTL: false,
+      autoComputed: false,
+      paragraphMode: false,
+    };
   }
 
   // ── Dates: date_ prefix exactly ──────────────────────────────────────────
@@ -499,15 +525,30 @@ function inferFieldFromKey(key) {
 
   // ── Ranges: range_ prefix ────────────────────────────────────────────────
   if (k === "range_start_date") {
-    return { type: "date", isRTL: false, autoComputed: false, paragraphMode: false };
+    return {
+      type: "date",
+      isRTL: false,
+      autoComputed: false,
+      paragraphMode: false,
+    };
   }
   if (k.startsWith("range_")) {
-    return { type: "string", isRTL: false, autoComputed: true, paragraphMode: false };
+    return {
+      type: "string",
+      isRTL: false,
+      autoComputed: true,
+      paragraphMode: false,
+    };
   }
 
   // ── Metadata: meta_ prefix — always auto-computed ────────────────────────
   if (k.startsWith("meta_")) {
-    return { type: "string", isRTL: false, autoComputed: true, paragraphMode: false };
+    return {
+      type: "string",
+      isRTL: false,
+      autoComputed: true,
+      paragraphMode: false,
+    };
   }
 
   // ── Person: person_ prefix ───────────────────────────────────────────────
@@ -534,7 +575,8 @@ function inferFieldFromKey(key) {
   const isLegacyDivehi = /divehi/i.test(key);
   // Only flag as date if the key starts with date_ or ends with _date — not if
   // "date" appears in the middle (e.g. "update_notes").
-  const isLegacyDate = /^date[_.]/.test(k) || /[_.]date$/.test(k) || /[_.]date[_.]/.test(k);
+  const isLegacyDate =
+    /^date[_.]/.test(k) || /[_.]date$/.test(k) || /[_.]date[_.]/.test(k);
   return {
     type: isLegacyDate ? "date" : "string",
     isRTL: isLegacyDivehi,
@@ -554,7 +596,15 @@ function buildFieldFromKey(key, existingField = {}) {
 
   // Generate a human-readable label from the key, stripping category prefix
   const CATEGORY_PREFIXES = [
-    "person_", "org_", "date_", "range_", "text_", "num_", "bool_", "img_", "meta_",
+    "person_",
+    "org_",
+    "date_",
+    "range_",
+    "text_",
+    "num_",
+    "bool_",
+    "img_",
+    "meta_",
   ];
   let cleanKey = key;
   for (const prefix of CATEGORY_PREFIXES) {
@@ -576,7 +626,8 @@ function buildFieldFromKey(key, existingField = {}) {
     label_divehi: existingField.label_divehi || "",
     type: existingField.type || inferred.type,
     required: existingField.required || false,
-    isRTL: existingField.isRTL !== undefined ? existingField.isRTL : inferred.isRTL,
+    isRTL:
+      existingField.isRTL !== undefined ? existingField.isRTL : inferred.isRTL,
     autoComputed: inferred.autoComputed, // always re-infer — not user-editable
     paragraphMode: existingField.paragraphMode || false,
     rows: existingField.rows || (inferred.type === "textarea" ? 4 : undefined),
@@ -594,7 +645,8 @@ function processDateRangePlaceholders(fields) {
   // Match both legacy (date_range_N) and new taxonomy (range_english_N / range_divehi_N etc.)
   const legacyPattern = /^date_range_(\d+)$/i;
   const newRangeSeriesPattern = /^range_(?:english|divehi)(?:_short)?_(\d+)$/i;
-  const newRangeWeekdayPattern = /^range_weekday_(?:english|divehi)(?:_short)?(?:_[a-z]{3})?_(\d+)$/i;
+  const newRangeWeekdayPattern =
+    /^range_weekday_(?:english|divehi)(?:_short)?(?:_[a-z]{3})?_(\d+)$/i;
 
   const rangeSeriesFields = [];
   const otherFields = [];
@@ -1105,21 +1157,46 @@ ipcMain.handle(
 
       // Use the same formatters from form.js (duplicated here since index.js runs in main process)
       const DIVEHI_MONTHS_META = [
-        "ޖެނުއަރީ","ފެބްރުއަރީ","މާރޗް","އެޕްރީލް","މެއި","ޖޫން",
-        "ޖުލައި","އޯގަސްޓް","ސެޕްޓެމްބަރ","އޮކްޓޯބަރ","ނޮވެމްބަރ","ޑިސެމްބަރ",
+        "ޖެނުއަރީ",
+        "ފެބްރުއަރީ",
+        "މާރޗް",
+        "އެޕްރީލް",
+        "މެއި",
+        "ޖޫން",
+        "ޖުލައި",
+        "އޯގަސްޓް",
+        "ސެޕްޓެމްބަރ",
+        "އޮކްޓޯބަރ",
+        "ނޮވެމްބަރ",
+        "ޑިސެމްބަރ",
       ];
       const ENGLISH_MONTHS_META = [
-        "January","February","March","April","May","June",
-        "July","August","September","October","November","December",
+        "January",
+        "February",
+        "March",
+        "April",
+        "May",
+        "June",
+        "July",
+        "August",
+        "September",
+        "October",
+        "November",
+        "December",
       ];
       const [yr, mo, dy] = mvtDateStr.split("-").map(Number);
       const metaEn = `${dy} ${ENGLISH_MONTHS_META[mo - 1]} ${yr}`;
       const metaDv = `${dy} ${DIVEHI_MONTHS_META[mo - 1]} ${yr}`;
 
-      formData["meta_generated_date"]        = formData["meta_generated_date"]        || metaEn;
-      formData["meta_generated_date_divehi"] = formData["meta_generated_date_divehi"] || metaDv;
-      formData["meta_generated_time"]        = formData["meta_generated_time"]        || `${pad(mvtNow.getHours())}:${pad(mvtNow.getMinutes())}`;
-      formData["meta_template_name"]         = formData["meta_template_name"]         || template.name || "";
+      formData["meta_generated_date"] =
+        formData["meta_generated_date"] || metaEn;
+      formData["meta_generated_date_divehi"] =
+        formData["meta_generated_date_divehi"] || metaDv;
+      formData["meta_generated_time"] =
+        formData["meta_generated_time"] ||
+        `${pad(mvtNow.getHours())}:${pad(mvtNow.getMinutes())}`;
+      formData["meta_template_name"] =
+        formData["meta_template_name"] || template.name || "";
     } catch (_metaErr) {
       // Non-critical — generation continues without meta fields
       console.warn("[meta] Failed to populate meta_ fields:", _metaErr.message);
@@ -1195,7 +1272,8 @@ ipcMain.handle("get-app-info", () => ({
   email: "shaamil.is@gmail.com",
   phone: "+960 999-0166",
   repo: "https://github.com/MoshRadix/mosh-samugaa-app",
-  quote: "Guiding Addu City Council's work with precision — from documents to the tides.",
+  quote:
+    "Guiding Addu City Council's work with precision — from documents to the tides.",
   electronVersion: process.versions.electron,
   nodeVersion: process.versions.node,
   chromeVersion: process.versions.chrome,
@@ -1294,9 +1372,7 @@ ipcMain.handle("open-csv-xlsx-dialog", async () => {
   const result = await dialog.showOpenDialog(mainWindow, {
     title: "Select data file for batch generation",
     properties: ["openFile"],
-    filters: [
-      { name: "CSV / Excel files", extensions: ["csv", "xlsx"] },
-    ],
+    filters: [{ name: "CSV / Excel files", extensions: ["csv", "xlsx"] }],
   });
   return result.canceled ? null : result.filePaths[0];
 });
@@ -1315,8 +1391,10 @@ ipcMain.handle("parse-spreadsheet-buffer", async (event, { base64 }) => {
     row.eachCell({ includeEmpty: true }, (cell) => {
       let v = cell.value;
       if (v === null || v === undefined) v = "";
-      else if (typeof v === "object" && v.text) v = v.text; // rich text
-      else if (typeof v === "object" && v.result !== undefined) v = v.result; // formula
+      else if (typeof v === "object" && v.text)
+        v = v.text; // rich text
+      else if (typeof v === "object" && v.result !== undefined)
+        v = v.result; // formula
       else v = String(v);
       vals.push(v);
     });
@@ -1326,10 +1404,14 @@ ipcMain.handle("parse-spreadsheet-buffer", async (event, { base64 }) => {
   if (rawRows.length < 2) return { columns: [], rows: [] };
 
   const maxCols = Math.max(...rawRows.map((r) => r.length));
-  const columns = rawRows[0].map((h, i) => (h !== "" ? String(h) : `Column${i + 1}`));
+  const columns = rawRows[0].map((h, i) =>
+    h !== "" ? String(h) : `Column${i + 1}`,
+  );
   const rows = rawRows.slice(1).map((vals) => {
     const obj = {};
-    columns.forEach((col, i) => { obj[col] = i < vals.length ? String(vals[i] || "") : ""; });
+    columns.forEach((col, i) => {
+      obj[col] = i < vals.length ? String(vals[i] || "") : "";
+    });
     return obj;
   });
 
@@ -1342,7 +1424,9 @@ ipcMain.handle("parse-spreadsheet-buffer", async (event, { base64 }) => {
 async function convertDocxToPdf(docxPath) {
   const pdfPath = docxPath.replace(/\.docx$/i, ".pdf");
   if (process.platform !== "win32") {
-    throw new Error("DOCX→PDF conversion requires Windows with Microsoft Word installed.");
+    throw new Error(
+      "DOCX→PDF conversion requires Windows with Microsoft Word installed.",
+    );
   }
   const { exec } = require("child_process");
   // Use Word COM via PowerShell. wdFormatPDF = 17.
@@ -1356,12 +1440,19 @@ $doc.SaveAs([ref]'${pdfEscaped}', [ref]17);
 $doc.Close();
 $w.Quit();
 [System.Runtime.Interopservices.Marshal]::ReleaseComObject($w) | Out-Null;
-`.trim().replace(/\n/g, " ");
+`
+    .trim()
+    .replace(/\n/g, " ");
   await new Promise((resolve, reject) => {
-    exec(`powershell -NoProfile -NonInteractive -Command "${ps}"`, { timeout: 60000 }, (err) => {
-      if (err) reject(new Error(`Word COM conversion failed: ${err.message}`));
-      else resolve();
-    });
+    exec(
+      `powershell -NoProfile -NonInteractive -Command "${ps}"`,
+      { timeout: 60000 },
+      (err) => {
+        if (err)
+          reject(new Error(`Word COM conversion failed: ${err.message}`));
+        else resolve();
+      },
+    );
   });
   // Verify the PDF was created
   await fs.access(pdfPath);
@@ -1370,14 +1461,17 @@ $w.Quit();
 
 // ── Helper: merge an array of PDF file paths into one PDF ──────────────────────
 async function mergePdfsToSingleFile(pdfPaths, outputPath) {
-  if (!PDFLib) throw new Error("pdf-lib is not installed. Run: npm install pdf-lib");
+  if (!PDFLib)
+    throw new Error("pdf-lib is not installed. Run: npm install pdf-lib");
   const { PDFDocument } = PDFLib;
   const merged = await PDFDocument.create();
   for (const pdfPath of pdfPaths) {
     const bytes = await fs.readFile(pdfPath);
     const srcDoc = await PDFDocument.load(bytes);
     const pageCount = srcDoc.getPageCount();
-    const copiedPages = await merged.copyPages(srcDoc, [...Array(pageCount).keys()]);
+    const copiedPages = await merged.copyPages(srcDoc, [
+      ...Array(pageCount).keys(),
+    ]);
     copiedPages.forEach((page) => merged.addPage(page));
   }
   const mergedBytes = await merged.save();
@@ -1394,12 +1488,32 @@ ipcMain.handle(
     await fs.access(template.filePath);
 
     const DIVEHI_MONTHS_BATCH = [
-      "ޖެނުއަރީ","ފެބްރުއަރީ","މާރޗް","އެޕްރީލް","މެއި","ޖޫން",
-      "ޖުލައި","އޯގަސްޓް","ސެޕްޓެމްބަރ","އޮކްޓޯބަރ","ނޮވެމްބަރ","ޑިސެމްބަރ",
+      "ޖެނުއަރީ",
+      "ފެބްރުއަރީ",
+      "މާރޗް",
+      "އެޕްރީލް",
+      "މެއި",
+      "ޖޫން",
+      "ޖުލައި",
+      "އޯގަސްޓް",
+      "ސެޕްޓެމްބަރ",
+      "އޮކްޓޯބަރ",
+      "ނޮވެމްބަރ",
+      "ޑިސެމްބަރ",
     ];
     const ENGLISH_MONTHS_BATCH = [
-      "January","February","March","April","May","June",
-      "July","August","September","October","November","December",
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December",
     ];
 
     const total = rows.length;
@@ -1434,10 +1548,15 @@ ipcMain.handle(
           const [yr, mo, dy] = mvtDateStr.split("-").map(Number);
           const metaEn = `${dy} ${ENGLISH_MONTHS_BATCH[mo - 1]} ${yr}`;
           const metaDv = `${dy} ${DIVEHI_MONTHS_BATCH[mo - 1]} ${yr}`;
-          formData["meta_generated_date"]        = formData["meta_generated_date"]        || metaEn;
-          formData["meta_generated_date_divehi"] = formData["meta_generated_date_divehi"] || metaDv;
-          formData["meta_generated_time"]        = formData["meta_generated_time"]        || `${pad(mvtNow.getHours())}:${pad(mvtNow.getMinutes())}`;
-          formData["meta_template_name"]         = formData["meta_template_name"]         || template.name || "";
+          formData["meta_generated_date"] =
+            formData["meta_generated_date"] || metaEn;
+          formData["meta_generated_date_divehi"] =
+            formData["meta_generated_date_divehi"] || metaDv;
+          formData["meta_generated_time"] =
+            formData["meta_generated_time"] ||
+            `${pad(mvtNow.getHours())}:${pad(mvtNow.getMinutes())}`;
+          formData["meta_template_name"] =
+            formData["meta_template_name"] || template.name || "";
         } catch (_) {}
 
         // ── Output path ────────────────────────────────────────────────
@@ -1482,7 +1601,8 @@ ipcMain.handle(
 ipcMain.handle(
   "batch-merge-to-pdf",
   async (event, { docxPaths, templateName }) => {
-    if (!docxPaths || docxPaths.length === 0) throw new Error("No files to merge");
+    if (!docxPaths || docxPaths.length === 0)
+      throw new Error("No files to merge");
 
     // Step 1: convert each docx → pdf via Word COM
     const pdfPaths = [];
@@ -1499,7 +1619,7 @@ ipcMain.handle(
     if (pdfPaths.length === 0) {
       throw new Error(
         "PDF conversion failed for all documents. Ensure Microsoft Word is installed on this computer.\n" +
-        (conversionErrors[0] ? conversionErrors[0].error : "")
+          (conversionErrors[0] ? conversionErrors[0].error : ""),
       );
     }
 
@@ -1511,10 +1631,14 @@ ipcMain.handle(
 
     // Step 3: clean up individual docx + intermediate pdf files
     for (const docxPath of docxPaths) {
-      try { await fs.unlink(docxPath); } catch (_) {}
+      try {
+        await fs.unlink(docxPath);
+      } catch (_) {}
     }
     for (const pdfPath of pdfPaths) {
-      try { await fs.unlink(pdfPath); } catch (_) {}
+      try {
+        await fs.unlink(pdfPath);
+      } catch (_) {}
     }
 
     return {
@@ -1623,44 +1747,72 @@ ipcMain.handle("choose-output-directory", async () => {
   return result.canceled ? null : result.filePaths[0];
 });
 
-ipcMain.handle("save-watermarked-image", async (event, { outputDirectory, outputFileName, base64Data }) => {
-  if (!outputDirectory || !outputFileName || !base64Data) {
-    throw new Error("save-watermarked-image: missing required fields");
-  }
-  const outputDir = path.join(outputDirectory, "watermarked");
-  await fs.mkdir(outputDir, { recursive: true });
-  const outputPath = path.join(outputDir, outputFileName);
-  const buffer = Buffer.from(base64Data, "base64");
-  await fs.writeFile(outputPath, buffer);
-  return { success: true, outputPath };
-});
+ipcMain.handle(
+  "save-watermarked-image",
+  async (event, { outputDirectory, outputFileName, base64Data }) => {
+    if (!outputDirectory || !outputFileName || !base64Data) {
+      throw new Error("save-watermarked-image: missing required fields");
+    }
+    const outputDir = path.join(outputDirectory, "watermarked");
+    await fs.mkdir(outputDir, { recursive: true });
+    const outputPath = path.join(outputDir, outputFileName);
+    const buffer = Buffer.from(base64Data, "base64");
+    await fs.writeFile(outputPath, buffer);
+    return { success: true, outputPath };
+  },
+);
 
 // ========== Work Logs IPC Handlers ==========
 
-ipcMain.handle("add-work-log", async (event, { task, notes, createdAt, tags, photoPath }) => {
-  const id = uuidv4();
-  wlDb.run(
-    "INSERT INTO work_logs (id, task, notes, createdAt, tags, photoPath) VALUES (?, ?, ?, ?, ?, ?)",
-    [id, task || "", notes || "", createdAt || new Date().toISOString(), tags || "[]", photoPath || null]
-  );
-  await saveWorkLogsDB();
-  const rows = wlDb.exec(
-    "SELECT id, task, notes, createdAt, tags, photoPath FROM work_logs WHERE id = ?",
-    [id]
-  );
-  if (!rows.length || !rows[0].values.length) return { id, task, notes, createdAt, tags, photoPath };
-  const [rid, rtask, rnotes, rca, rtags, rphoto] = rows[0].values[0];
-  return { id: rid, task: rtask, notes: rnotes, createdAt: rca, tags: rtags, photoPath: rphoto };
-});
+ipcMain.handle(
+  "add-work-log",
+  async (event, { task, notes, createdAt, tags, photoPath }) => {
+    const id = uuidv4();
+    wlDb.run(
+      "INSERT INTO work_logs (id, task, notes, createdAt, tags, photoPath) VALUES (?, ?, ?, ?, ?, ?)",
+      [
+        id,
+        task || "",
+        notes || "",
+        createdAt || new Date().toISOString(),
+        tags || "[]",
+        photoPath || null,
+      ],
+    );
+    await saveWorkLogsDB();
+    const rows = wlDb.exec(
+      "SELECT id, task, notes, createdAt, tags, photoPath FROM work_logs WHERE id = ?",
+      [id],
+    );
+    if (!rows.length || !rows[0].values.length)
+      return { id, task, notes, createdAt, tags, photoPath };
+    const [rid, rtask, rnotes, rca, rtags, rphoto] = rows[0].values[0];
+    return {
+      id: rid,
+      task: rtask,
+      notes: rnotes,
+      createdAt: rca,
+      tags: rtags,
+      photoPath: rphoto,
+    };
+  },
+);
 
 ipcMain.handle("get-work-logs", async () => {
   const rows = wlDb.exec(
-    "SELECT id, task, notes, createdAt, tags, photoPath FROM work_logs ORDER BY createdAt DESC"
+    "SELECT id, task, notes, createdAt, tags, photoPath FROM work_logs ORDER BY createdAt DESC",
   );
   if (!rows.length) return [];
-  return rows[0].values.map(([id, task, notes, createdAt, tags, photoPath]) => ({
-    id, task, notes, createdAt, tags: tags || "[]", photoPath: photoPath || null,
-  }));
+  return rows[0].values.map(
+    ([id, task, notes, createdAt, tags, photoPath]) => ({
+      id,
+      task,
+      notes,
+      createdAt,
+      tags: tags || "[]",
+      photoPath: photoPath || null,
+    }),
+  );
 });
 
 ipcMain.handle("delete-work-log", async (event, id) => {
@@ -1669,12 +1821,129 @@ ipcMain.handle("delete-work-log", async (event, id) => {
   return true;
 });
 
+// ── Calendar To-Do handlers ──────────────────────────────────────────────────
+
+ipcMain.handle("cal-todo-get", async (event, date) => {
+  const rows = wlDb.exec(
+    "SELECT id, text, done FROM cal_todos WHERE date = ? ORDER BY sort_order ASC, rowid ASC",
+    [date],
+  );
+  if (!rows.length) return [];
+  return rows[0].values.map(([id, text, done]) => ({ id, text, done: !!done }));
+});
+
+ipcMain.handle("cal-todo-save", async (event, { date, todos }) => {
+  // Replace all todos for this date atomically
+  wlDb.run("DELETE FROM cal_todos WHERE date = ?", [date]);
+  todos.forEach((item, idx) => {
+    wlDb.run(
+      "INSERT INTO cal_todos (id, date, text, done, sort_order) VALUES (?, ?, ?, ?, ?)",
+      [item.id || uuidv4(), date, item.text, item.done ? 1 : 0, idx],
+    );
+  });
+  await saveWorkLogsDB();
+  return true;
+});
+
+ipcMain.handle("cal-todo-has", async (event, date) => {
+  const rows = wlDb.exec("SELECT COUNT(*) FROM cal_todos WHERE date = ?", [
+    date,
+  ]);
+  return !!(rows.length && rows[0].values[0][0] > 0);
+});
+
+// ── Additional Calendar To-Do handlers ──────────────────────────────────────
+
+/** Migrate notionPageId column if missing (safe on first run with new schema) */
+function _ensureCalTodosMigrated() {
+  const cols = wlDb.exec("PRAGMA table_info(cal_todos)");
+  const names = cols.length ? cols[0].values.map((r) => r[1]) : [];
+  if (!names.includes("notionPageId")) {
+    wlDb.exec("ALTER TABLE cal_todos ADD COLUMN notionPageId TEXT");
+  }
+}
+
+ipcMain.handle("cal-todo-get-all", async (event, { from, to }) => {
+  _ensureCalTodosMigrated();
+  let sql =
+    "SELECT id, date, text, done, sort_order, notionPageId FROM cal_todos";
+  const params = [];
+  if (from && to) {
+    sql += " WHERE date >= ? AND date <= ?";
+    params.push(from, to);
+  } else if (from) {
+    sql += " WHERE date >= ?";
+    params.push(from);
+  } else if (to) {
+    sql += " WHERE date <= ?";
+    params.push(to);
+  }
+  sql += " ORDER BY date ASC, sort_order ASC, rowid ASC";
+  const rows = wlDb.exec(sql, params);
+  if (!rows.length) return [];
+  return rows[0].values.map(
+    ([id, date, text, done, sort_order, notionPageId]) => ({
+      id,
+      date,
+      text,
+      done: !!done,
+      sort_order,
+      notionPageId: notionPageId || null,
+    }),
+  );
+});
+
+ipcMain.handle(
+  "cal-todo-update",
+  async (event, { id, text, done, date, notionPageId }) => {
+    _ensureCalTodosMigrated();
+    // Build dynamic update
+    const sets = [];
+    const params = [];
+    if (text !== undefined) {
+      sets.push("text = ?");
+      params.push(text);
+    }
+    if (done !== undefined) {
+      sets.push("done = ?");
+      params.push(done ? 1 : 0);
+    }
+    if (date !== undefined) {
+      sets.push("date = ?");
+      params.push(date);
+    }
+    if (notionPageId !== undefined) {
+      sets.push("notionPageId = ?");
+      params.push(notionPageId);
+    }
+    if (!sets.length) return false;
+    params.push(id);
+    wlDb.run(`UPDATE cal_todos SET ${sets.join(", ")} WHERE id = ?`, params);
+    await saveWorkLogsDB();
+    return true;
+  },
+);
+
+ipcMain.handle("cal-todo-delete-by-id", async (event, id) => {
+  wlDb.run("DELETE FROM cal_todos WHERE id = ?", [id]);
+  await saveWorkLogsDB();
+  return true;
+});
+
+ipcMain.handle("cal-todo-get-years", async () => {
+  const rows = wlDb.exec(
+    "SELECT DISTINCT substr(date, 1, 4) as yr FROM cal_todos ORDER BY yr DESC",
+  );
+  if (!rows.length) return [];
+  return rows[0].values.map((r) => r[0]);
+});
+
 ipcMain.handle("export-work-logs-excel", async (event, { rows }) => {
   const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
     title: "Export Work Logs to Excel",
     defaultPath: path.join(
       app.getPath("documents"),
-      `WorkLogs_${new Date().toISOString().slice(0, 10)}.xlsx`
+      `WorkLogs_${new Date().toISOString().slice(0, 10)}.xlsx`,
     ),
     filters: [{ name: "Excel Workbook", extensions: ["xlsx"] }],
   });
@@ -1686,18 +1955,22 @@ ipcMain.handle("export-work-logs-excel", async (event, { rows }) => {
 
   const sheet = workbook.addWorksheet("Work Logs");
   sheet.columns = [
-    { header: "No.",              key: "no",    width: 6  },
-    { header: "Date",             key: "date",  width: 14 },
-    { header: "Time (MVT)",       key: "time",  width: 14 },
-    { header: "Task Description", key: "task",  width: 50 },
-    { header: "Tags",             key: "tags",  width: 24 },
-    { header: "Notes",            key: "notes", width: 40 },
+    { header: "No.", key: "no", width: 6 },
+    { header: "Date", key: "date", width: 14 },
+    { header: "Time (MVT)", key: "time", width: 14 },
+    { header: "Task Description", key: "task", width: 50 },
+    { header: "Tags", key: "tags", width: 24 },
+    { header: "Notes", key: "notes", width: 40 },
   ];
 
   const headerRow = sheet.getRow(1);
   headerRow.eachCell((cell) => {
     cell.font = { bold: true, color: { argb: "FFFFFFFF" }, size: 11 };
-    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF4A6B5A" } };
+    cell.fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FF4A6B5A" },
+    };
     cell.alignment = { vertical: "middle", horizontal: "center" };
     cell.border = { bottom: { style: "thin", color: { argb: "FFB0C8BC" } } };
   });
@@ -1708,7 +1981,11 @@ ipcMain.handle("export-work-logs-excel", async (event, { rows }) => {
     row.eachCell((cell) => {
       cell.alignment = { vertical: "top", wrapText: true };
       if (idx % 2 === 1) {
-        cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF0F4F2" } };
+        cell.fill = {
+          type: "pattern",
+          pattern: "solid",
+          fgColor: { argb: "FFF0F4F2" },
+        };
       }
     });
     row.height = 18;
@@ -1720,17 +1997,22 @@ ipcMain.handle("export-work-logs-excel", async (event, { rows }) => {
 });
 
 // ── Save a work log photo ──────────────────────────────────────────────────
-ipcMain.handle("save-work-log-photo", async (event, { dataUrl, fileName, mimeType }) => {
-  const photosDir = path.join(app.getPath("userData"), "worklog_photos");
-  try { await fs.mkdir(photosDir, { recursive: true }); } catch (_) {}
-  const ext = fileName ? path.extname(fileName) : ".jpg";
-  const outName = `${uuidv4()}${ext}`;
-  const outPath = path.join(photosDir, outName);
-  // dataUrl: "data:image/jpeg;base64,..."
-  const base64 = dataUrl.split(",")[1];
-  await fs.writeFile(outPath, Buffer.from(base64, "base64"));
-  return { path: outPath };
-});
+ipcMain.handle(
+  "save-work-log-photo",
+  async (event, { dataUrl, fileName, mimeType }) => {
+    const photosDir = path.join(app.getPath("userData"), "worklog_photos");
+    try {
+      await fs.mkdir(photosDir, { recursive: true });
+    } catch (_) {}
+    const ext = fileName ? path.extname(fileName) : ".jpg";
+    const outName = `${uuidv4()}${ext}`;
+    const outPath = path.join(photosDir, outName);
+    // dataUrl: "data:image/jpeg;base64,..."
+    const base64 = dataUrl.split(",")[1];
+    await fs.writeFile(outPath, Buffer.from(base64, "base64"));
+    return { path: outPath };
+  },
+);
 
 // ── Read a work log photo as data URL ────────────────────────────────────
 ipcMain.handle("get-work-log-photo", async (event, photoPath) => {
@@ -1738,46 +2020,69 @@ ipcMain.handle("get-work-log-photo", async (event, photoPath) => {
   try {
     const buf = await fs.readFile(photoPath);
     const ext = path.extname(photoPath).toLowerCase().replace(".", "");
-    const mime = ext === "png" ? "image/png" : ext === "gif" ? "image/gif" : ext === "webp" ? "image/webp" : "image/jpeg";
+    const mime =
+      ext === "png"
+        ? "image/png"
+        : ext === "gif"
+          ? "image/gif"
+          : ext === "webp"
+            ? "image/webp"
+            : "image/jpeg";
     return `data:${mime};base64,${buf.toString("base64")}`;
-  } catch (_) { return null; }
+  } catch (_) {
+    return null;
+  }
 });
 
 // ── Monthly Word export ───────────────────────────────────────────────────
-ipcMain.handle("export-work-logs-word", async (event, { rows, month, officer }) => {
-  const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
-    title: "Save Monthly Report",
-    defaultPath: path.join(
-      app.getPath("documents"),
-      `WorkLog_Report_${month.replace(/\s/g, "_")}.docx`
-    ),
-    filters: [{ name: "Word Document", extensions: ["docx"] }],
-  });
-  if (canceled || !filePath) return null;
+ipcMain.handle(
+  "export-work-logs-word",
+  async (event, { rows, month, officer }) => {
+    const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
+      title: "Save Monthly Report",
+      defaultPath: path.join(
+        app.getPath("documents"),
+        `WorkLog_Report_${month.replace(/\s/g, "_")}.docx`,
+      ),
+      filters: [{ name: "Word Document", extensions: ["docx"] }],
+    });
+    if (canceled || !filePath) return null;
 
-  // Build a clean OOXML docx from scratch
-  const tableRows = rows.map((r, i) => {
-    const bg = i % 2 === 0 ? "F6F8F7" : "FFFFFF";
-    return `
+    // Build a clean OOXML docx from scratch
+    const tableRows = rows
+      .map((r, i) => {
+        const bg = i % 2 === 0 ? "F6F8F7" : "FFFFFF";
+        return `
     <w:tr>
       <w:tc><w:tcPr><w:shd w:val="clear" w:color="auto" w:fill="${bg}"/><w:tcW w:w="400" w:type="dxa"/></w:tcPr><w:p><w:r><w:rPr><w:sz w:val="18"/></w:rPr><w:t>${r.no}</w:t></w:r></w:p></w:tc>
       <w:tc><w:tcPr><w:shd w:val="clear" w:color="auto" w:fill="${bg}"/><w:tcW w:w="1400" w:type="dxa"/></w:tcPr><w:p><w:r><w:rPr><w:sz w:val="18"/></w:rPr><w:t>${r.date}</w:t></w:r></w:p></w:tc>
       <w:tc><w:tcPr><w:shd w:val="clear" w:color="auto" w:fill="${bg}"/><w:tcW w:w="1200" w:type="dxa"/></w:tcPr><w:p><w:r><w:rPr><w:sz w:val="18"/></w:rPr><w:t>${r.time}</w:t></w:r></w:p></w:tc>
-      <w:tc><w:tcPr><w:shd w:val="clear" w:color="auto" w:fill="${bg}"/><w:tcW w:w="3800" w:type="dxa"/></w:tcPr><w:p><w:r><w:rPr><w:sz w:val="18"/></w:rPr><w:t xml:space="preserve">${(r.task || "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}</w:t></w:r></w:p></w:tc>
-      <w:tc><w:tcPr><w:shd w:val="clear" w:color="auto" w:fill="${bg}"/><w:tcW w:w="1600" w:type="dxa"/></w:tcPr><w:p><w:r><w:rPr><w:sz w:val="18"/></w:rPr><w:t xml:space="preserve">${(r.tags || "").replace(/&/g,"&amp;").replace(/</g,"&lt;")}</w:t></w:r></w:p></w:tc>
-      <w:tc><w:tcPr><w:shd w:val="clear" w:color="auto" w:fill="${bg}"/><w:tcW w:w="3200" w:type="dxa"/></w:tcPr><w:p><w:r><w:rPr><w:sz w:val="18"/></w:rPr><w:t xml:space="preserve">${(r.notes || "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}</w:t></w:r></w:p></w:tc>
+      <w:tc><w:tcPr><w:shd w:val="clear" w:color="auto" w:fill="${bg}"/><w:tcW w:w="3800" w:type="dxa"/></w:tcPr><w:p><w:r><w:rPr><w:sz w:val="18"/></w:rPr><w:t xml:space="preserve">${(r.task || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")}</w:t></w:r></w:p></w:tc>
+      <w:tc><w:tcPr><w:shd w:val="clear" w:color="auto" w:fill="${bg}"/><w:tcW w:w="1600" w:type="dxa"/></w:tcPr><w:p><w:r><w:rPr><w:sz w:val="18"/></w:rPr><w:t xml:space="preserve">${(r.tags || "").replace(/&/g, "&amp;").replace(/</g, "&lt;")}</w:t></w:r></w:p></w:tc>
+      <w:tc><w:tcPr><w:shd w:val="clear" w:color="auto" w:fill="${bg}"/><w:tcW w:w="3200" w:type="dxa"/></w:tcPr><w:p><w:r><w:rPr><w:sz w:val="18"/></w:rPr><w:t xml:space="preserve">${(r.notes || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")}</w:t></w:r></w:p></w:tc>
     </w:tr>`;
-  }).join("");
+      })
+      .join("");
 
-  const headerCells = ["#","Date","Time (MVT)","Task Description","Tags","Notes"].map(h =>
-    `<w:tc><w:tcPr><w:shd w:val="clear" w:color="auto" w:fill="4A6B5A"/></w:tcPr><w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:rPr><w:b/><w:color w:val="FFFFFF"/><w:sz w:val="20"/></w:rPr><w:t>${h}</w:t></w:r></w:p></w:tc>`
-  ).join("");
+    const headerCells = [
+      "#",
+      "Date",
+      "Time (MVT)",
+      "Task Description",
+      "Tags",
+      "Notes",
+    ]
+      .map(
+        (h) =>
+          `<w:tc><w:tcPr><w:shd w:val="clear" w:color="auto" w:fill="4A6B5A"/></w:tcPr><w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:rPr><w:b/><w:color w:val="FFFFFF"/><w:sz w:val="20"/></w:rPr><w:t>${h}</w:t></w:r></w:p></w:tc>`,
+      )
+      .join("");
 
-  const officerLine = officer
-    ? `<w:p><w:pPr><w:spacing w:after="40"/></w:pPr><w:r><w:rPr><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Officer: ${officer.replace(/&/g,"&amp;")}</w:t></w:r></w:p>`
-    : "";
+    const officerLine = officer
+      ? `<w:p><w:pPr><w:spacing w:after="40"/></w:pPr><w:r><w:rPr><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Officer: ${officer.replace(/&/g, "&amp;")}</w:t></w:r></w:p>`
+      : "";
 
-  const docXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+    const docXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <w:document xmlns:wpc="http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas"
   xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
   xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
@@ -1786,7 +2091,7 @@ ipcMain.handle("export-work-logs-word", async (event, { rows, month, officer }) 
       <w:r><w:rPr><w:b/><w:sz w:val="36"/><w:color w:val="4A6B5A"/></w:rPr><w:t>Monthly Work Log Report</w:t></w:r>
     </w:p>
     <w:p><w:pPr><w:jc w:val="center"/><w:spacing w:after="40"/></w:pPr>
-      <w:r><w:rPr><w:b/><w:sz w:val="26"/></w:rPr><w:t>${month.replace(/&/g,"&amp;")}</w:t></w:r>
+      <w:r><w:rPr><w:b/><w:sz w:val="26"/></w:rPr><w:t>${month.replace(/&/g, "&amp;")}</w:t></w:r>
     </w:p>
     ${officerLine}
     <w:p><w:pPr><w:spacing w:after="40"/></w:pPr>
@@ -1820,103 +2125,136 @@ ipcMain.handle("export-work-logs-word", async (event, { rows, month, officer }) 
   </w:body>
 </w:document>`;
 
-  // Build minimal valid .docx zip
-  const zip = new PizZip();
-  zip.file("_rels/.rels", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+    // Build minimal valid .docx zip
+    const zip = new PizZip();
+    zip.file(
+      "_rels/.rels",
+      `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
-</Relationships>`);
-  zip.file("[Content_Types].xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+</Relationships>`,
+    );
+    zip.file(
+      "[Content_Types].xml",
+      `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
   <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
   <Default Extension="xml" ContentType="application/xml"/>
   <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
-</Types>`);
-  zip.file("word/document.xml", docXml);
-  zip.file("word/_rels/document.xml.rels", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>`);
+</Types>`,
+    );
+    zip.file("word/document.xml", docXml);
+    zip.file(
+      "word/_rels/document.xml.rels",
+      `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>`,
+    );
 
-  const buffer = zip.generate({ type: "nodebuffer", compression: "DEFLATE" });
-  await fs.writeFile(filePath, buffer);
-  return { success: true, path: filePath };
-});
+    const buffer = zip.generate({ type: "nodebuffer", compression: "DEFLATE" });
+    await fs.writeFile(filePath, buffer);
+    return { success: true, path: filePath };
+  },
+);
 
 // ── Monthly styled Excel export ───────────────────────────────────────────
-ipcMain.handle("export-work-logs-monthly-excel", async (event, { rows, month, officer }) => {
-  const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
-    title: "Save Monthly Excel Report",
-    defaultPath: path.join(
-      app.getPath("documents"),
-      `WorkLog_Report_${month.replace(/\s/g, "_")}.xlsx`
-    ),
-    filters: [{ name: "Excel Workbook", extensions: ["xlsx"] }],
-  });
-  if (canceled || !filePath) return null;
-
-  const workbook = new ExcelJS.Workbook();
-  workbook.creator = "MTO Document Generator";
-  workbook.created = new Date();
-
-  const sheet = workbook.addWorksheet(month);
-
-  // Title rows
-  sheet.mergeCells("A1:F1");
-  const titleCell = sheet.getCell("A1");
-  titleCell.value = `Monthly Work Log Report — ${month}`;
-  titleCell.font = { bold: true, size: 16, color: { argb: "FF4A6B5A" } };
-  titleCell.alignment = { horizontal: "center", vertical: "middle" };
-  sheet.getRow(1).height = 32;
-
-  if (officer) {
-    sheet.mergeCells("A2:F2");
-    const offCell = sheet.getCell("A2");
-    offCell.value = `Officer: ${officer}   |   Addu City Council — MTO`;
-    offCell.font = { size: 11, color: { argb: "FF6B7C73" } };
-    offCell.alignment = { horizontal: "center" };
-    sheet.getRow(2).height = 20;
-  }
-
-  const dataStartRow = officer ? 4 : 3;
-  sheet.getRow(dataStartRow).values = ["No.", "Date", "Time (MVT)", "Task Description", "Tags", "Notes"];
-  sheet.getRow(dataStartRow).eachCell((cell) => {
-    cell.font = { bold: true, color: { argb: "FFFFFFFF" }, size: 11 };
-    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF4A6B5A" } };
-    cell.alignment = { vertical: "middle", horizontal: "center" };
-  });
-  sheet.getRow(dataStartRow).height = 22;
-
-  sheet.columns = [
-    { key: "no",    width: 6  },
-    { key: "date",  width: 14 },
-    { key: "time",  width: 14 },
-    { key: "task",  width: 52 },
-    { key: "tags",  width: 22 },
-    { key: "notes", width: 40 },
-  ];
-
-  rows.forEach((r, idx) => {
-    const rowIdx = dataStartRow + 1 + idx;
-    const row = sheet.getRow(rowIdx);
-    row.values = [r.no, r.date, r.time, r.task, r.tags, r.notes];
-    row.eachCell((cell) => {
-      cell.alignment = { vertical: "top", wrapText: true };
-      if (idx % 2 === 1) {
-        cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF0F4F2" } };
-      }
+ipcMain.handle(
+  "export-work-logs-monthly-excel",
+  async (event, { rows, month, officer }) => {
+    const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
+      title: "Save Monthly Excel Report",
+      defaultPath: path.join(
+        app.getPath("documents"),
+        `WorkLog_Report_${month.replace(/\s/g, "_")}.xlsx`,
+      ),
+      filters: [{ name: "Excel Workbook", extensions: ["xlsx"] }],
     });
-    row.height = 18;
-  });
+    if (canceled || !filePath) return null;
 
-  sheet.views = [{ state: "frozen", ySplit: dataStartRow }];
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = "MTO Document Generator";
+    workbook.created = new Date();
 
-  // Summary row
-  const sumRow = sheet.getRow(dataStartRow + rows.length + 2);
-  sumRow.getCell(1).value = `Total: ${rows.length} entries`;
-  sumRow.getCell(1).font = { bold: true, italic: true, color: { argb: "FF6B7C73" }, size: 10 };
+    const sheet = workbook.addWorksheet(month);
 
-  await workbook.xlsx.writeFile(filePath);
-  return { success: true, path: filePath };
-});
+    // Title rows
+    sheet.mergeCells("A1:F1");
+    const titleCell = sheet.getCell("A1");
+    titleCell.value = `Monthly Work Log Report — ${month}`;
+    titleCell.font = { bold: true, size: 16, color: { argb: "FF4A6B5A" } };
+    titleCell.alignment = { horizontal: "center", vertical: "middle" };
+    sheet.getRow(1).height = 32;
+
+    if (officer) {
+      sheet.mergeCells("A2:F2");
+      const offCell = sheet.getCell("A2");
+      offCell.value = `Officer: ${officer}   |   Addu City Council — MTO`;
+      offCell.font = { size: 11, color: { argb: "FF6B7C73" } };
+      offCell.alignment = { horizontal: "center" };
+      sheet.getRow(2).height = 20;
+    }
+
+    const dataStartRow = officer ? 4 : 3;
+    sheet.getRow(dataStartRow).values = [
+      "No.",
+      "Date",
+      "Time (MVT)",
+      "Task Description",
+      "Tags",
+      "Notes",
+    ];
+    sheet.getRow(dataStartRow).eachCell((cell) => {
+      cell.font = { bold: true, color: { argb: "FFFFFFFF" }, size: 11 };
+      cell.fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "FF4A6B5A" },
+      };
+      cell.alignment = { vertical: "middle", horizontal: "center" };
+    });
+    sheet.getRow(dataStartRow).height = 22;
+
+    sheet.columns = [
+      { key: "no", width: 6 },
+      { key: "date", width: 14 },
+      { key: "time", width: 14 },
+      { key: "task", width: 52 },
+      { key: "tags", width: 22 },
+      { key: "notes", width: 40 },
+    ];
+
+    rows.forEach((r, idx) => {
+      const rowIdx = dataStartRow + 1 + idx;
+      const row = sheet.getRow(rowIdx);
+      row.values = [r.no, r.date, r.time, r.task, r.tags, r.notes];
+      row.eachCell((cell) => {
+        cell.alignment = { vertical: "top", wrapText: true };
+        if (idx % 2 === 1) {
+          cell.fill = {
+            type: "pattern",
+            pattern: "solid",
+            fgColor: { argb: "FFF0F4F2" },
+          };
+        }
+      });
+      row.height = 18;
+    });
+
+    sheet.views = [{ state: "frozen", ySplit: dataStartRow }];
+
+    // Summary row
+    const sumRow = sheet.getRow(dataStartRow + rows.length + 2);
+    sumRow.getCell(1).value = `Total: ${rows.length} entries`;
+    sumRow.getCell(1).font = {
+      bold: true,
+      italic: true,
+      color: { argb: "FF6B7C73" },
+      size: 10,
+    };
+
+    await workbook.xlsx.writeFile(filePath);
+    return { success: true, path: filePath };
+  },
+);
 
 // ========== Social Media Templates ==========
 
@@ -1931,7 +2269,7 @@ function smImagesDir() {
 
 /** Ensure the subdirectories exist. */
 async function ensureSmDirs() {
-  await fs.mkdir(smDir(),       { recursive: true });
+  await fs.mkdir(smDir(), { recursive: true });
   await fs.mkdir(smImagesDir(), { recursive: true });
 }
 
@@ -1945,7 +2283,9 @@ ipcMain.handle("sm-list-templates", async () => {
   let entries;
   try {
     entries = await fs.readdir(smDir());
-  } catch (_) { return []; }
+  } catch (_) {
+    return [];
+  }
 
   const templates = [];
   for (const entry of entries) {
@@ -1954,7 +2294,9 @@ ipcMain.handle("sm-list-templates", async () => {
       const raw = await fs.readFile(path.join(smDir(), entry), "utf8");
       const tpl = JSON.parse(raw);
       templates.push(tpl);
-    } catch (_) { /* skip corrupt files */ }
+    } catch (_) {
+      /* skip corrupt files */
+    }
   }
   // Sort newest first
   templates.sort((a, b) => (b.savedAt || "").localeCompare(a.savedAt || ""));
@@ -1974,10 +2316,19 @@ ipcMain.handle("sm-save-template", async (event, data) => {
 
   // Persist image separately
   if (tpl.imageDataUrl) {
-    const match = tpl.imageDataUrl.match(/^data:(image\/[a-z+]+);base64,(.+)$/s);
+    const match = tpl.imageDataUrl.match(
+      /^data:(image\/[a-z+]+);base64,(.+)$/s,
+    );
     if (match) {
       const mime = match[1];
-      const ext  = mime === "image/png" ? ".png" : mime === "image/gif" ? ".gif" : mime === "image/webp" ? ".webp" : ".jpg";
+      const ext =
+        mime === "image/png"
+          ? ".png"
+          : mime === "image/gif"
+            ? ".gif"
+            : mime === "image/webp"
+              ? ".webp"
+              : ".jpg";
       const imgPath = path.join(smImagesDir(), `${id}${ext}`);
       await fs.writeFile(imgPath, Buffer.from(match[2], "base64"));
       tpl.imagePath = imgPath;
@@ -2002,10 +2353,19 @@ ipcMain.handle("sm-load-template", async (event, id) => {
   if (tpl.imagePath) {
     try {
       const buf = await fs.readFile(tpl.imagePath);
-      const ext  = path.extname(tpl.imagePath).toLowerCase().replace(".", "");
-      const mime = ext === "png" ? "image/png" : ext === "gif" ? "image/gif" : ext === "webp" ? "image/webp" : "image/jpeg";
+      const ext = path.extname(tpl.imagePath).toLowerCase().replace(".", "");
+      const mime =
+        ext === "png"
+          ? "image/png"
+          : ext === "gif"
+            ? "image/gif"
+            : ext === "webp"
+              ? "image/webp"
+              : "image/jpeg";
       tpl.imageDataUrl = `data:${mime};base64,${buf.toString("base64")}`;
-    } catch (_) { tpl.imageDataUrl = null; }
+    } catch (_) {
+      tpl.imageDataUrl = null;
+    }
   }
   return tpl;
 });
@@ -2019,10 +2379,14 @@ ipcMain.handle("sm-delete-template", async (event, id) => {
     const raw = await fs.readFile(jsonPath, "utf8");
     const tpl = JSON.parse(raw);
     if (tpl.imagePath) {
-      try { await fs.unlink(tpl.imagePath); } catch (_) {}
+      try {
+        await fs.unlink(tpl.imagePath);
+      } catch (_) {}
     }
   } catch (_) {}
-  try { await fs.unlink(jsonPath); } catch (_) {}
+  try {
+    await fs.unlink(jsonPath);
+  } catch (_) {}
   return true;
 });
 
@@ -2034,7 +2398,10 @@ ipcMain.handle("sm-export-image", async (event, { base64Data, fileName }) => {
   await ensureSmDirs();
   const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
     title: "Export Social Media Image",
-    defaultPath: path.join(app.getPath("pictures"), fileName || "social_media_export.png"),
+    defaultPath: path.join(
+      app.getPath("pictures"),
+      fileName || "social_media_export.png",
+    ),
     filters: [{ name: "PNG Image", extensions: ["png"] }],
   });
   if (canceled || !filePath) return null;
@@ -2056,7 +2423,7 @@ ipcMain.handle("sm-backup", async () => {
     title: "Backup Social Media Templates",
     defaultPath: path.join(
       app.getPath("documents"),
-      `sm-templates-backup-${new Date().toISOString().slice(0, 10)}.zip`
+      `sm-templates-backup-${new Date().toISOString().slice(0, 10)}.zip`,
     ),
     filters: [{ name: "ZIP Archive", extensions: ["zip"] }],
   });
@@ -2066,7 +2433,11 @@ ipcMain.handle("sm-backup", async () => {
 
   // Add every .json template
   let entries;
-  try { entries = await fs.readdir(smDir()); } catch (_) { entries = []; }
+  try {
+    entries = await fs.readdir(smDir());
+  } catch (_) {
+    entries = [];
+  }
   for (const entry of entries) {
     if (!entry.endsWith(".json")) continue;
     try {
@@ -2077,7 +2448,11 @@ ipcMain.handle("sm-backup", async () => {
 
   // Add every image file
   let imgEntries;
-  try { imgEntries = await fs.readdir(smImagesDir()); } catch (_) { imgEntries = []; }
+  try {
+    imgEntries = await fs.readdir(smImagesDir());
+  } catch (_) {
+    imgEntries = [];
+  }
   for (const entry of imgEntries) {
     try {
       const buf = await fs.readFile(path.join(smImagesDir(), entry));
@@ -2087,7 +2462,11 @@ ipcMain.handle("sm-backup", async () => {
 
   const zipBuf = zip.generate({ type: "nodebuffer", compression: "DEFLATE" });
   await fs.writeFile(filePath, zipBuf);
-  return { success: true, path: filePath, count: entries.filter(e => e.endsWith(".json")).length };
+  return {
+    success: true,
+    path: filePath,
+    count: entries.filter((e) => e.endsWith(".json")).length,
+  };
 });
 
 /**
@@ -2115,14 +2494,19 @@ ipcMain.handle("sm-restore", async () => {
   let restored = 0;
   for (const [relPath, zipObj] of Object.entries(zip.files)) {
     if (zipObj.dir) continue;
-    const content = zipObj.asNodeBuffer ? zipObj.asNodeBuffer() : Buffer.from(zipObj.asBinary(), "binary");
+    const content = zipObj.asNodeBuffer
+      ? zipObj.asNodeBuffer()
+      : Buffer.from(zipObj.asBinary(), "binary");
     if (relPath.startsWith("templates/") && relPath.endsWith(".json")) {
       const dest = path.join(smDir(), path.basename(relPath));
       // Fix imagePath to use current smImagesDir
       try {
         const tpl = JSON.parse(content.toString("utf8"));
         if (tpl.imagePath) {
-          tpl.imagePath = path.join(smImagesDir(), path.basename(tpl.imagePath));
+          tpl.imagePath = path.join(
+            smImagesDir(),
+            path.basename(tpl.imagePath),
+          );
         }
         await fs.writeFile(dest, JSON.stringify(tpl, null, 2), "utf8");
         restored++;
@@ -2150,14 +2534,16 @@ ipcMain.handle("notes-backup", async (event, jsonString) => {
     title: "Backup Notes",
     defaultPath: path.join(
       app.getPath("documents"),
-      `notes-backup-${new Date().toISOString().slice(0, 10)}.json`
+      `notes-backup-${new Date().toISOString().slice(0, 10)}.json`,
     ),
     filters: [{ name: "JSON File", extensions: ["json"] }],
   });
   if (canceled || !filePath) return { canceled: true };
   await fs.writeFile(filePath, jsonString, "utf8");
   let count = 0;
-  try { count = JSON.parse(jsonString).length; } catch (_) {}
+  try {
+    count = JSON.parse(jsonString).length;
+  } catch (_) {}
   return { success: true, path: filePath, count };
 });
 
@@ -2175,8 +2561,13 @@ ipcMain.handle("notes-restore", async () => {
   const raw = await fs.readFile(filePaths[0], "utf8");
   // Validate it's an array of notes
   let notes;
-  try { notes = JSON.parse(raw); } catch (_) { throw new Error("Invalid backup file — could not parse JSON."); }
-  if (!Array.isArray(notes)) throw new Error("Invalid backup file — expected an array of notes.");
+  try {
+    notes = JSON.parse(raw);
+  } catch (_) {
+    throw new Error("Invalid backup file — could not parse JSON.");
+  }
+  if (!Array.isArray(notes))
+    throw new Error("Invalid backup file — expected an array of notes.");
   return { success: true, data: JSON.stringify(notes), count: notes.length };
 });
 
@@ -2192,7 +2583,7 @@ ipcMain.handle("wl-backup", async () => {
     title: "Backup Work Logs",
     defaultPath: path.join(
       app.getPath("documents"),
-      `worklogs-backup-${new Date().toISOString().slice(0, 10)}.zip`
+      `worklogs-backup-${new Date().toISOString().slice(0, 10)}.zip`,
     ),
     filters: [{ name: "ZIP Archive", extensions: ["zip"] }],
   });
@@ -2213,7 +2604,9 @@ ipcMain.handle("wl-backup", async () => {
 
   // Add all photos
   let photoEntries = [];
-  try { photoEntries = await fs.readdir(photosDir); } catch (_) {}
+  try {
+    photoEntries = await fs.readdir(photosDir);
+  } catch (_) {}
   for (const entry of photoEntries) {
     try {
       const buf = await fs.readFile(path.join(photosDir, entry));
@@ -2242,16 +2635,28 @@ ipcMain.handle("wl-restore", async () => {
 
   const zipBuf = await fs.readFile(filePaths[0]);
   let zip;
-  try { zip = new PizZip(zipBuf); } catch (_) { throw new Error("Invalid or corrupted ZIP file."); }
+  try {
+    zip = new PizZip(zipBuf);
+  } catch (_) {
+    throw new Error("Invalid or corrupted ZIP file.");
+  }
 
-  if (!zip.files["worklogs.db"]) throw new Error("ZIP does not contain a worklogs.db — is this a valid work logs backup?");
+  if (!zip.files["worklogs.db"])
+    throw new Error(
+      "ZIP does not contain a worklogs.db — is this a valid work logs backup?",
+    );
 
   // Write the DB file
   const dbContent = zip.files["worklogs.db"].asNodeBuffer
     ? zip.files["worklogs.db"].asNodeBuffer()
     : Buffer.from(zip.files["worklogs.db"].asBinary(), "binary");
 
-  if (wlDb) { try { wlDb.close(); } catch (_) {} wlDb = null; }
+  if (wlDb) {
+    try {
+      wlDb.close();
+    } catch (_) {}
+    wlDb = null;
+  }
   await fs.writeFile(WL_DB_PATH, dbContent);
 
   // Restore photos
@@ -2259,7 +2664,9 @@ ipcMain.handle("wl-restore", async () => {
   let photoCount = 0;
   for (const [relPath, zipObj] of Object.entries(zip.files)) {
     if (zipObj.dir || !relPath.startsWith("photos/")) continue;
-    const content = zipObj.asNodeBuffer ? zipObj.asNodeBuffer() : Buffer.from(zipObj.asBinary(), "binary");
+    const content = zipObj.asNodeBuffer
+      ? zipObj.asNodeBuffer()
+      : Buffer.from(zipObj.asBinary(), "binary");
     const dest = path.join(photosDir, path.basename(relPath));
     await fs.writeFile(dest, content);
     photoCount++;
@@ -2286,7 +2693,7 @@ ipcMain.handle("docs-backup", async () => {
     title: "Backup Document Templates",
     defaultPath: path.join(
       app.getPath("documents"),
-      `doc-templates-backup-${new Date().toISOString().slice(0, 10)}.zip`
+      `doc-templates-backup-${new Date().toISOString().slice(0, 10)}.zip`,
     ),
     filters: [{ name: "ZIP Archive", extensions: ["zip"] }],
   });
@@ -2300,7 +2707,9 @@ ipcMain.handle("docs-backup", async () => {
 
   // Add template files (skip social-media/ subdir)
   let entries = [];
-  try { entries = await fs.readdir(settings.templatesDir); } catch (_) {}
+  try {
+    entries = await fs.readdir(settings.templatesDir);
+  } catch (_) {}
   let count = 0;
   for (const entry of entries) {
     if (entry === SM_SUBDIR) continue; // skip social-media folder
@@ -2335,15 +2744,24 @@ ipcMain.handle("docs-restore", async () => {
 
   const zipBuf = await fs.readFile(filePaths[0]);
   let zip;
-  try { zip = new PizZip(zipBuf); } catch (_) { throw new Error("Invalid or corrupted ZIP file."); }
-  if (!zip.files["mto_forms.db"]) throw new Error("ZIP does not contain mto_forms.db — is this a valid document templates backup?");
+  try {
+    zip = new PizZip(zipBuf);
+  } catch (_) {
+    throw new Error("Invalid or corrupted ZIP file.");
+  }
+  if (!zip.files["mto_forms.db"])
+    throw new Error(
+      "ZIP does not contain mto_forms.db — is this a valid document templates backup?",
+    );
 
   // Restore template files first
   await fs.mkdir(settings.templatesDir, { recursive: true });
   let count = 0;
   for (const [relPath, zipObj] of Object.entries(zip.files)) {
     if (zipObj.dir || !relPath.startsWith("files/")) continue;
-    const content = zipObj.asNodeBuffer ? zipObj.asNodeBuffer() : Buffer.from(zipObj.asBinary(), "binary");
+    const content = zipObj.asNodeBuffer
+      ? zipObj.asNodeBuffer()
+      : Buffer.from(zipObj.asBinary(), "binary");
     const dest = path.join(settings.templatesDir, path.basename(relPath));
     await fs.writeFile(dest, content);
     count++;
@@ -2354,7 +2772,12 @@ ipcMain.handle("docs-restore", async () => {
     ? zip.files["mto_forms.db"].asNodeBuffer()
     : Buffer.from(zip.files["mto_forms.db"].asBinary(), "binary");
 
-  if (db) { try { db.close(); } catch (_) {} db = null; }
+  if (db) {
+    try {
+      db.close();
+    } catch (_) {}
+    db = null;
+  }
   await fs.writeFile(settings.dbPath, dbContent);
   await initSQLite(settings.dbPath);
 
@@ -2363,7 +2786,7 @@ ipcMain.handle("docs-restore", async () => {
   if (rows.length && rows[0].values.length) {
     for (const [id, oldPath] of rows[0].values) {
       const fileName = path.basename(oldPath);
-      const newPath  = path.join(settings.templatesDir, fileName);
+      const newPath = path.join(settings.templatesDir, fileName);
       db.run("UPDATE templates SET filePath = ? WHERE id = ?", [newPath, id]);
     }
     await saveDatabase();
@@ -2393,7 +2816,7 @@ ipcMain.handle("full-backup", async (event, notesJson) => {
     title: "Backup Everything",
     defaultPath: path.join(
       app.getPath("documents"),
-      `mto-full-backup-${new Date().toISOString().slice(0, 10)}.zip`
+      `mto-full-backup-${new Date().toISOString().slice(0, 10)}.zip`,
     ),
     filters: [{ name: "ZIP Archive", extensions: ["zip"] }],
   });
@@ -2405,7 +2828,9 @@ ipcMain.handle("full-backup", async (event, notesJson) => {
   const dbBuf = await fs.readFile(settings.dbPath);
   zip.file("docs/mto_forms.db", dbBuf);
   let docEntries = [];
-  try { docEntries = await fs.readdir(settings.templatesDir); } catch (_) {}
+  try {
+    docEntries = await fs.readdir(settings.templatesDir);
+  } catch (_) {}
   for (const entry of docEntries) {
     if (entry === SM_SUBDIR) continue;
     const fullPath = path.join(settings.templatesDir, entry);
@@ -2420,28 +2845,53 @@ ipcMain.handle("full-backup", async (event, notesJson) => {
   // ── Social Media templates ──
   await ensureSmDirs();
   let smEntries = [];
-  try { smEntries = await fs.readdir(smDir()); } catch (_) {}
+  try {
+    smEntries = await fs.readdir(smDir());
+  } catch (_) {}
   for (const entry of smEntries) {
     if (!entry.endsWith(".json")) continue;
-    try { zip.file(`social-media/templates/${entry}`, await fs.readFile(path.join(smDir(), entry))); } catch (_) {}
+    try {
+      zip.file(
+        `social-media/templates/${entry}`,
+        await fs.readFile(path.join(smDir(), entry)),
+      );
+    } catch (_) {}
   }
   let smImgEntries = [];
-  try { smImgEntries = await fs.readdir(smImagesDir()); } catch (_) {}
+  try {
+    smImgEntries = await fs.readdir(smImagesDir());
+  } catch (_) {}
   for (const entry of smImgEntries) {
-    try { zip.file(`social-media/images/${entry}`, await fs.readFile(path.join(smImagesDir(), entry))); } catch (_) {}
+    try {
+      zip.file(
+        `social-media/images/${entry}`,
+        await fs.readFile(path.join(smImagesDir(), entry)),
+      );
+    } catch (_) {}
   }
 
   // ── Work Logs ──
-  try { zip.file("worklogs/worklogs.db", await fs.readFile(WL_DB_PATH)); } catch (_) {}
+  try {
+    zip.file("worklogs/worklogs.db", await fs.readFile(WL_DB_PATH));
+  } catch (_) {}
   const photosDir = path.join(app.getPath("userData"), "worklog_photos");
   let photoEntries = [];
-  try { photoEntries = await fs.readdir(photosDir); } catch (_) {}
+  try {
+    photoEntries = await fs.readdir(photosDir);
+  } catch (_) {}
   for (const entry of photoEntries) {
-    try { zip.file(`worklogs/photos/${entry}`, await fs.readFile(path.join(photosDir, entry))); } catch (_) {}
+    try {
+      zip.file(
+        `worklogs/photos/${entry}`,
+        await fs.readFile(path.join(photosDir, entry)),
+      );
+    } catch (_) {}
   }
 
   // ── Notes (passed from renderer) ──
-  try { zip.file("notes.json", notesJson || "[]"); } catch (_) {}
+  try {
+    zip.file("notes.json", notesJson || "[]");
+  } catch (_) {}
 
   const zipBuf = zip.generate({ type: "nodebuffer", compression: "DEFLATE" });
   await fs.writeFile(filePath, zipBuf);
@@ -2463,37 +2913,59 @@ ipcMain.handle("full-restore", async () => {
 
   const zipBuf = await fs.readFile(filePaths[0]);
   let zip;
-  try { zip = new PizZip(zipBuf); } catch (_) { throw new Error("Invalid or corrupted ZIP file."); }
+  try {
+    zip = new PizZip(zipBuf);
+  } catch (_) {
+    throw new Error("Invalid or corrupted ZIP file.");
+  }
 
-  const hasAny = Object.keys(zip.files).some(k =>
-    k.startsWith("docs/") || k.startsWith("social-media/") ||
-    k.startsWith("worklogs/") || k === "notes.json"
+  const hasAny = Object.keys(zip.files).some(
+    (k) =>
+      k.startsWith("docs/") ||
+      k.startsWith("social-media/") ||
+      k.startsWith("worklogs/") ||
+      k === "notes.json",
   );
-  if (!hasAny) throw new Error("This does not appear to be a valid full backup ZIP.");
+  if (!hasAny)
+    throw new Error("This does not appear to be a valid full backup ZIP.");
 
   const readZipFile = (key) => {
     const f = zip.files[key];
     if (!f) return null;
-    return f.asNodeBuffer ? f.asNodeBuffer() : Buffer.from(f.asBinary(), "binary");
+    return f.asNodeBuffer
+      ? f.asNodeBuffer()
+      : Buffer.from(f.asBinary(), "binary");
   };
 
   // ── Document templates ──
   await fs.mkdir(settings.templatesDir, { recursive: true });
   for (const [relPath, zipObj] of Object.entries(zip.files)) {
     if (zipObj.dir || !relPath.startsWith("docs/files/")) continue;
-    const content = zipObj.asNodeBuffer ? zipObj.asNodeBuffer() : Buffer.from(zipObj.asBinary(), "binary");
-    await fs.writeFile(path.join(settings.templatesDir, path.basename(relPath)), content);
+    const content = zipObj.asNodeBuffer
+      ? zipObj.asNodeBuffer()
+      : Buffer.from(zipObj.asBinary(), "binary");
+    await fs.writeFile(
+      path.join(settings.templatesDir, path.basename(relPath)),
+      content,
+    );
   }
   const docDbBuf = readZipFile("docs/mto_forms.db");
   if (docDbBuf) {
-    if (db) { try { db.close(); } catch (_) {} db = null; }
+    if (db) {
+      try {
+        db.close();
+      } catch (_) {}
+      db = null;
+    }
     await fs.writeFile(settings.dbPath, docDbBuf);
     await initSQLite(settings.dbPath);
     const rows = db.exec("SELECT id, filePath FROM templates");
     if (rows.length && rows[0].values.length) {
       for (const [id, oldPath] of rows[0].values) {
-        db.run("UPDATE templates SET filePath = ? WHERE id = ?",
-          [path.join(settings.templatesDir, path.basename(oldPath)), id]);
+        db.run("UPDATE templates SET filePath = ? WHERE id = ?", [
+          path.join(settings.templatesDir, path.basename(oldPath)),
+          id,
+        ]);
       }
       await saveDatabase();
     }
@@ -2503,29 +2975,50 @@ ipcMain.handle("full-restore", async () => {
   await ensureSmDirs();
   for (const [relPath, zipObj] of Object.entries(zip.files)) {
     if (zipObj.dir) continue;
-    const content = zipObj.asNodeBuffer ? zipObj.asNodeBuffer() : Buffer.from(zipObj.asBinary(), "binary");
-    if (relPath.startsWith("social-media/templates/") && relPath.endsWith(".json")) {
+    const content = zipObj.asNodeBuffer
+      ? zipObj.asNodeBuffer()
+      : Buffer.from(zipObj.asBinary(), "binary");
+    if (
+      relPath.startsWith("social-media/templates/") &&
+      relPath.endsWith(".json")
+    ) {
       const dest = path.join(smDir(), path.basename(relPath));
       try {
         const tpl = JSON.parse(content.toString("utf8"));
-        if (tpl.imagePath) tpl.imagePath = path.join(smImagesDir(), path.basename(tpl.imagePath));
+        if (tpl.imagePath)
+          tpl.imagePath = path.join(
+            smImagesDir(),
+            path.basename(tpl.imagePath),
+          );
         await fs.writeFile(dest, JSON.stringify(tpl, null, 2), "utf8");
-      } catch (_) { await fs.writeFile(dest, content); }
+      } catch (_) {
+        await fs.writeFile(dest, content);
+      }
     } else if (relPath.startsWith("social-media/images/")) {
-      await fs.writeFile(path.join(smImagesDir(), path.basename(relPath)), content);
+      await fs.writeFile(
+        path.join(smImagesDir(), path.basename(relPath)),
+        content,
+      );
     }
   }
 
   // ── Work Logs ──
   const wlDbBuf = readZipFile("worklogs/worklogs.db");
   if (wlDbBuf) {
-    if (wlDb) { try { wlDb.close(); } catch (_) {} wlDb = null; }
+    if (wlDb) {
+      try {
+        wlDb.close();
+      } catch (_) {}
+      wlDb = null;
+    }
     await fs.writeFile(WL_DB_PATH, wlDbBuf);
     const photosDir = path.join(app.getPath("userData"), "worklog_photos");
     await fs.mkdir(photosDir, { recursive: true });
     for (const [relPath, zipObj] of Object.entries(zip.files)) {
       if (zipObj.dir || !relPath.startsWith("worklogs/photos/")) continue;
-      const content = zipObj.asNodeBuffer ? zipObj.asNodeBuffer() : Buffer.from(zipObj.asBinary(), "binary");
+      const content = zipObj.asNodeBuffer
+        ? zipObj.asNodeBuffer()
+        : Buffer.from(zipObj.asBinary(), "binary");
       await fs.writeFile(path.join(photosDir, path.basename(relPath)), content);
     }
     await initWorkLogsDB();

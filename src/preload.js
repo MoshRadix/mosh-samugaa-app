@@ -1,7 +1,7 @@
 /**
  * @file preload.js
  * @description Secure Electron Preload Script.
- * Context-isolated bridge exposing IPC (Inter-Process Communication) safe channels 
+ * Context-isolated bridge exposing IPC (Inter-Process Communication) safe channels
  * from the Node.js main process to the isolated frontend Renderer environment.
  */
 
@@ -12,7 +12,6 @@ const { contextBridge, ipcRenderer } = require("electron");
  * protects against full Node.js access vulnerabilities.
  */
 contextBridge.exposeInMainWorld("electronAPI", {
-  
   // ==========================================
   // TEMPLATE MANAGEMENT
   // ==========================================
@@ -49,14 +48,16 @@ contextBridge.exposeInMainWorld("electronAPI", {
    * @param {Object} data - Contains { templateId, fields: [...] }
    * @returns {Promise<Object>} Refreshed template state.
    */
-  updateTemplateFields: (data) => ipcRenderer.invoke("update-template-fields", data),
+  updateTemplateFields: (data) =>
+    ipcRenderer.invoke("update-template-fields", data),
 
   /**
    * Parses underlying file variables and overwrites existing form structure schemas.
    * @param {string} templateId - Unique template UUID identifier.
    * @returns {Promise<Object>} The parsed field array state map.
    */
-  reloadTemplateFields: (templateId) => ipcRenderer.invoke("reload-template-fields", templateId),
+  reloadTemplateFields: (templateId) =>
+    ipcRenderer.invoke("reload-template-fields", templateId),
 
   // ==========================================
   // DOCUMENT GENERATION
@@ -99,7 +100,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
    * @param {string} templateId - Filter context template tracking UUID.
    * @returns {Promise<Array>} List containing valid data records linked to the key context.
    */
-  getDataRecords: (templateId) => ipcRenderer.invoke("get-data-records", templateId),
+  getDataRecords: (templateId) =>
+    ipcRenderer.invoke("get-data-records", templateId),
 
   // ==========================================
   // PREVIEW
@@ -110,7 +112,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
    * @param {string} templateId - Unique template layout target key context.
    * @returns {Promise<void>}
    */
-  previewTemplate: (templateId) => ipcRenderer.invoke("preview-template", templateId),
+  previewTemplate: (templateId) =>
+    ipcRenderer.invoke("preview-template", templateId),
 
   // ==========================================
   // FILE DIALOGS
@@ -185,8 +188,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
    * path without relying on File.path (which is stripped in sandboxed renderers).
    * @returns {Promise<string|null>} Absolute path chosen by the user, or null.
    */
-  chooseOutputDirectory: () =>
-    ipcRenderer.invoke("choose-output-directory"),
+  chooseOutputDirectory: () => ipcRenderer.invoke("choose-output-directory"),
 
   // ==========================================
   // WORK LOGS
@@ -218,7 +220,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
    * @param {Object} data - { rows: Array<{no,date,time,task,notes,tags}> }
    * @returns {Promise<{success:boolean, path:string}|null>}
    */
-  exportWorkLogsExcel: (data) => ipcRenderer.invoke("export-work-logs-excel", data),
+  exportWorkLogsExcel: (data) =>
+    ipcRenderer.invoke("export-work-logs-excel", data),
 
   /**
    * Saves a base64 photo attached to a work log entry.
@@ -232,21 +235,51 @@ contextBridge.exposeInMainWorld("electronAPI", {
    * @param {string} photoPath - Absolute path to the stored photo file.
    * @returns {Promise<string|null>} Base64 data URL or null.
    */
-  getWorkLogPhoto: (photoPath) => ipcRenderer.invoke("get-work-log-photo", photoPath),
+  getWorkLogPhoto: (photoPath) =>
+    ipcRenderer.invoke("get-work-log-photo", photoPath),
 
   /**
    * Exports a formatted monthly summary as a Word (.docx) report.
    * @param {Object} data - { rows, month, officer }
    * @returns {Promise<{success:boolean, path:string}|null>}
    */
-  exportWorkLogsWord: (data) => ipcRenderer.invoke("export-work-logs-word", data),
+  exportWorkLogsWord: (data) =>
+    ipcRenderer.invoke("export-work-logs-word", data),
 
   /**
    * Exports a formatted monthly summary as a styled Excel report.
    * @param {Object} data - { rows, month, officer }
    * @returns {Promise<{success:boolean, path:string}|null>}
    */
-  exportWorkLogsMonthlyExcel: (data) => ipcRenderer.invoke("export-work-logs-monthly-excel", data),
+  exportWorkLogsMonthlyExcel: (data) =>
+    ipcRenderer.invoke("export-work-logs-monthly-excel", data),
+
+  // ==========================================
+  // CALENDAR TO-DO
+  // ==========================================
+
+  /** Get all to-do items for a date (YYYY-MM-DD). Returns [{id, text, done}]. */
+  calTodoGet: (date) => ipcRenderer.invoke("cal-todo-get", date),
+
+  /** Save (replace) all to-do items for a date. todos = [{id, text, done}]. */
+  calTodoSave: (date, todos) =>
+    ipcRenderer.invoke("cal-todo-save", { date, todos }),
+
+  /** Returns true if the date has any to-do items. */
+  calTodoHas: (date) => ipcRenderer.invoke("cal-todo-has", date),
+
+  /** Get all todos with optional {from, to} date filter (YYYY-MM-DD). */
+  calTodoGetAll: (filter) =>
+    ipcRenderer.invoke("cal-todo-get-all", filter || {}),
+
+  /** Update fields on a single todo by id. */
+  calTodoUpdate: (data) => ipcRenderer.invoke("cal-todo-update", data),
+
+  /** Delete a single todo by id. */
+  calTodoDeleteById: (id) => ipcRenderer.invoke("cal-todo-delete-by-id", id),
+
+  /** Get distinct years that have any todos. */
+  calTodoGetYears: () => ipcRenderer.invoke("cal-todo-get-years"),
 
   /**
    * Opens a native file dialog restricted to CSV / XLSX files (for batch generation).
@@ -259,7 +292,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
    * @param {Object} data - { base64: string }
    * @returns {Promise<{ columns: string[], rows: Object[] }>}
    */
-  parseSpreadsheetBuffer: (data) => ipcRenderer.invoke("parse-spreadsheet-buffer", data),
+  parseSpreadsheetBuffer: (data) =>
+    ipcRenderer.invoke("parse-spreadsheet-buffer", data),
 
   /**
    * Generates a document for every row in the provided data array using the
@@ -268,7 +302,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
    * @param {Object} data - { templateId, rows: Array<Object>, outputFormat }
    * @returns {Promise<{ total, succeeded, failed, results: Array }>}
    */
-  batchGenerateDocuments: (data) => ipcRenderer.invoke("batch-generate-documents", data),
+  batchGenerateDocuments: (data) =>
+    ipcRenderer.invoke("batch-generate-documents", data),
   batchMergeToPdf: (data) => ipcRenderer.invoke("batch-merge-to-pdf", data),
 
   // ==========================================
@@ -289,18 +324,17 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
   /** Export a generated image — opens native save dialog and writes the file. */
   smExportImage: (data) => ipcRenderer.invoke("sm-export-image", data),
-  smBackup:  ()   => ipcRenderer.invoke("sm-backup"),
-  smRestore: ()   => ipcRenderer.invoke("sm-restore"),
-  notesBackup:  (json) => ipcRenderer.invoke("notes-backup", json),
-  notesRestore: ()     => ipcRenderer.invoke("notes-restore"),
-  wlBackup:  ()   => ipcRenderer.invoke("wl-backup"),
-  wlRestore: ()   => ipcRenderer.invoke("wl-restore"),
-  docsBackup:  ()   => ipcRenderer.invoke("docs-backup"),
-  docsRestore: ()   => ipcRenderer.invoke("docs-restore"),
-  fullBackup:  (notesJson) => ipcRenderer.invoke("full-backup", notesJson),
-  fullRestore: ()   => ipcRenderer.invoke("full-restore"),
+  smBackup: () => ipcRenderer.invoke("sm-backup"),
+  smRestore: () => ipcRenderer.invoke("sm-restore"),
+  notesBackup: (json) => ipcRenderer.invoke("notes-backup", json),
+  notesRestore: () => ipcRenderer.invoke("notes-restore"),
+  wlBackup: () => ipcRenderer.invoke("wl-backup"),
+  wlRestore: () => ipcRenderer.invoke("wl-restore"),
+  docsBackup: () => ipcRenderer.invoke("docs-backup"),
+  docsRestore: () => ipcRenderer.invoke("docs-restore"),
+  fullBackup: (notesJson) => ipcRenderer.invoke("full-backup", notesJson),
+  fullRestore: () => ipcRenderer.invoke("full-restore"),
 });
-
 
 //OLD ONE
 // const { contextBridge, ipcRenderer } = require("electron");

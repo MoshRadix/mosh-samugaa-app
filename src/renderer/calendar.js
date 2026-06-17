@@ -9,24 +9,51 @@
 // CONSTANTS & DATA
 // ============================================================================
 
-const CAL_LANG_KEY    = "mto_cal_lang";
-const CAL_REMOTE_URL  = "https://api.npoint.io/8221abfb843e0b947998";
-const CAL_CACHE_KEY   = "mto_cal_remote_holidays";
+const CAL_LANG_KEY = "mto_cal_lang";
+const CAL_REMOTE_URL = "https://api.npoint.io/8221abfb843e0b947998";
+const CAL_CACHE_KEY = "mto_cal_remote_holidays";
 const CAL_CACHE_TS_KEY = "mto_cal_remote_ts";
-const CAL_CACHE_TTL   = 24 * 60 * 60 * 1000; // 24 hours in ms
+const CAL_CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours in ms
 
 const CAL_I18N = {
   en: {
     monthNames: [
-      "January","February","March","April","May","June",
-      "July","August","September","October","November","December"
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December",
     ],
-    dayNamesShort: ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"],
-    dayNamesFull: ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"],
+    dayNamesShort: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+    dayNamesFull: [
+      "Sunday",
+      "Monday",
+      "Tuesday",
+      "Wednesday",
+      "Thursday",
+      "Friday",
+      "Saturday",
+    ],
     hijriMonths: [
-      "Muharram","Safar","Rabi' al-Awwal","Rabi' al-Thani",
-      "Jumada al-Awwal","Jumada al-Thani","Rajab","Sha'ban",
-      "Ramadan","Shawwal","Dhu al-Qi'dah","Dhu al-Hijjah"
+      "Muharram",
+      "Safar",
+      "Rabi' al-Awwal",
+      "Rabi' al-Thani",
+      "Jumada al-Awwal",
+      "Jumada al-Thani",
+      "Rajab",
+      "Sha'ban",
+      "Ramadan",
+      "Shawwal",
+      "Dhu al-Qi'dah",
+      "Dhu al-Hijjah",
     ],
     today: "Today",
     weekView: "Week",
@@ -45,15 +72,42 @@ const CAL_I18N = {
   },
   dv: {
     monthNames: [
-      "ޖަނަވަރީ","ފެބްރުއަރީ","މާރިޗް","އޭޕްރިލް","މެއި","ޖޫން",
-      "ޖުލައި","އޮގަސްޓް","ސެޕްޓެންބަރ","އޮކްޓޯބަރ","ނޮވެންބަރ","ޑިސެންބަރ"
+      "ޖަނަވަރީ",
+      "ފެބްރުއަރީ",
+      "މާރިޗް",
+      "އޭޕްރިލް",
+      "މެއި",
+      "ޖޫން",
+      "ޖުލައި",
+      "އޮގަސްޓް",
+      "ސެޕްޓެންބަރ",
+      "އޮކްޓޯބަރ",
+      "ނޮވެންބަރ",
+      "ޑިސެންބަރ",
     ],
-    dayNamesShort: ["އާދި","ހޯމަ","އަން","ބުދަ","ބުރާ","ހުކުރު","ހޮނި"],
-    dayNamesFull: ["އާދީއްތަ","ހޯމަ","އަންގާރަ","ބުދަ","ބުރާސްފަތި","ހުކުރު","ހޮނިހިރު"],
+    dayNamesShort: ["އާދި", "ހޯމަ", "އަން", "ބުދަ", "ބުރާ", "ހުކުރު", "ހޮނި"],
+    dayNamesFull: [
+      "އާދީއްތަ",
+      "ހޯމަ",
+      "އަންގާރަ",
+      "ބުދަ",
+      "ބުރާސްފަތި",
+      "ހުކުރު",
+      "ހޮނިހިރު",
+    ],
     hijriMonths: [
-      "މުޙައްރަމް","ސަފަރު","ރަބީޢު ލްއައްވަލް","ރަބީޢު ލްއާޚިރު",
-      "ޖުމާދަލްއޫލާ","ޖުމާދަ ލްއާޚިރާ","ރަޖަބް","ޝަޢްބާން",
-      "ރަމަޟާން","ޝައްވާލް","ޛުލްޤަޢިދާ","ޛުލްޙިއްޖާ"
+      "މުޙައްރަމް",
+      "ސަފަރު",
+      "ރަބީޢު ލްއައްވަލް",
+      "ރަބީޢު ލްއާޚިރު",
+      "ޖުމާދަލްއޫލާ",
+      "ޖުމާދަ ލްއާޚިރާ",
+      "ރަޖަބް",
+      "ޝަޢްބާން",
+      "ރަމަޟާން",
+      "ޝައްވާލް",
+      "ޛުލްޤަޢިދާ",
+      "ޛުލްޙިއްޖާ",
     ],
     today: "މިއަދު",
     weekView: "ހަފްތާ",
@@ -69,19 +123,19 @@ const CAL_I18N = {
     prev: "‹",
     next: "›",
     weekOf: "ހަފްތާ:",
-  }
+  },
 };
 
 /**
  * Maldives fixed public holidays (MM-DD format).
  */
 const MV_FIXED_HOLIDAYS = {
-  "01-01": { en: "New Year's Day",   dv: "އާ އަހަރުގެ ދުވަސް" },
-  "05-01": { en: "Workers' Day",     dv: "މަސައްކަތްތެރިންގެ ދުވަސް" },
+  "01-01": { en: "New Year's Day", dv: "އާ އަހަރުގެ ދުވަސް" },
+  "05-01": { en: "Workers' Day", dv: "މަސައްކަތްތެރިންގެ ދުވަސް" },
   "07-26": { en: "Independence Day", dv: "މިނިވަން ދުވަސް" },
   "07-27": { en: "Independence Day", dv: "މިނިވަން ދުވަސް" },
-  "11-03": { en: "Victory Day",      dv: "ނަޞްރުގެ ދުވަސް" },
-  "11-11": { en: "Republic Day",     dv: "ޖުމްހޫރީ ދުވަސް" },
+  "11-03": { en: "Victory Day", dv: "ނަޞްރުގެ ދުވަސް" },
+  "11-11": { en: "Republic Day", dv: "ޖުމްހޫރީ ދުވަސް" },
 };
 
 /**
@@ -89,86 +143,227 @@ const MV_FIXED_HOLIDAYS = {
  * Awareness / commemorative days — shown in a distinct colour, not public holidays.
  */
 const INTL_OBSERVANCE_DAYS = {
-  "01-04": { en: "World Braille Day",                                        dv: "ދުނިޔޭގެ ބްރެއިލް ދުވަސް" },
-  "01-24": { en: "International Education Day",                              dv: "ބައިނަލް އަޤްވާމީ ތަޢުލީމީ ދުވަސް" },
-  "01-27": { en: "Holocaust Remembrance Day",                                dv: "ހޮލޮކޯސްޓް ހަނދާންކުރުމުގެ ދުވަސް" },
-  "02-04": { en: "World Cancer Day",                                         dv: "ދުނިޔޭގެ ކެންސަރ ދުވަސް" },
-  "02-06": { en: "Int'l Day of Zero Tolerance for FGM",                     dv: "ބައިނަލް އަޤްވާމީ އަންހެނުން ޚިތާނުކުރުން ހުއްޓުވުމުގެ ދުވަސް" },
-  "02-11": { en: "Int'l Day of Women and Girls in Science",                  dv: "ބައިނަލް އަޤްވާމީ ސައިންސްގައި އަންހެނުންނާއި އަންހެންކުދިންގެ ދުވަސް" },
-  "02-13": { en: "World Radio Day",                                          dv: "ދުނިޔޭގެ ރޭޑިއޯ ދުވަސް" },
-  "02-20": { en: "World Day of Social Justice",                              dv: "ދުނިޔޭގެ އިޖްތިމާޢީ ޢަދާލަތުގެ ދުވަސް" },
-  "02-21": { en: "International Mother Language Day",                        dv: "ބައިނަލް އަޤްވާމީ މާދަރީ ބަހުގެ ދުވަސް" },
-  "03-01": { en: "World Civil Defence Day",                                  dv: "ދުނިޔޭގެ ސިވިލް ޑިފެންސް ދުވަސް" },
-  "03-03": { en: "World Wildlife Day",                                       dv: "ދުނިޔޭގެ ވައިލްޑްލައިފް ދުވަސް" },
-  "03-04": { en: "World Obesity Day",                                        dv: "ދުނިޔޭގެ ފަލަކަމުގެ ދުވަސް" },
-  "03-08": { en: "International Women's Day",                                dv: "ބައިނަލް އަޤްވާމީ އަންހެނުންގެ ދުވަސް" },
-  "03-15": { en: "World Consumer Rights Day",                                dv: "ދުނިޔޭގެ ކޮންސިއުމަރ ޙައްޤުތަކުގެ ދުވަސް" },
-  "03-20": { en: "World Happiness Day",                                      dv: "ދުނިޔޭގެ އުފާވެރިކަމުގެ ދުވަސް" },
-  "03-21": { en: "World Down Syndrome Day",                                  dv: "ދުނިޔޭގެ ޑައުން ސިންޑްރޯމް ދުވަސް" },
-  "03-22": { en: "World Water Day",                                          dv: "ދުނިޔޭގެ ފެނުގެ ދުވަސް" },
-  "03-23": { en: "World Meteorological Day",                                 dv: "ދުނިޔޭގެ މޫސުމީ ދުވަސް" },
-  "03-24": { en: "World Tuberculosis Day",                                   dv: "ދުނިޔޭގެ ޓިބީ ދުވަސް" },
-  "04-02": { en: "World Autism Awareness Day",                               dv: "ދުނިޔޭގެ އޯޓިޒަމް ދުވަސް" },
-  "04-07": { en: "World Health Day",                                         dv: "ދުނިޔޭގެ ޞިއްޙަތުގެ ދުވަސް" },
-  "04-22": { en: "Earth Day",                                                dv: "ދުނިޔޭގެ ދުވަސް" },
-  "04-23": { en: "World Book and Copyright Day",                             dv: "ދުނިޔޭގެ ފޮތާއި އަލިފުބާ ދުވަސް" },
-  "04-25": { en: "World Malaria Day",                                        dv: "ދުނިޔޭގެ މެލޭރިއާ ދުވަސް" },
-  "05-03": { en: "World Press Freedom Day",                                  dv: "ދުނިޔޭގެ ނޫސްވެރިކަމުގެ މިނިވަންކަމުގެ ދުވަސް" },
-  "05-05": { en: "World Hand Hygiene Day",                                   dv: "ދުނިޔޭގެ އަތްދޮވުމުގެ ދުވަސް" },
-  "05-08": { en: "World Red Cross Day",                                      dv: "ދުނިޔޭގެ ރެޑް ކްރޮސް ދުވަސް" },
-  "05-12": { en: "International Nurses Day",                                 dv: "ބައިނަލް އަޤްވާމީ ނަރުހުންގެ ދުވަސް" },
-  "05-15": { en: "International Day of Families",                            dv: "ބައިނަލް އަޤްވާމީ އާއިލާތަކުގެ ދުވަސް" },
-  "05-17": { en: "World Telecommunication Day",                              dv: "ދުނިޔޭގެ ޓެލެކޮމިއުނިކޭޝަން ދުވަސް" },
-  "05-18": { en: "International Museum Day",                                 dv: "ބައިނަލް އަޤްވާމީ މިއުޒިއަމް ދުވަސް" },
-  "05-21": { en: "World Cultural Diversity Day",                             dv: "ދުނިޔޭގެ ސަޤާފީ ތަފާތުވެރިކަމުގެ ދުވަސް" },
-  "05-22": { en: "International Day for Biological Diversity",               dv: "ބައިނަލް އަޤްވާމީ ތިމާވެށީގެ ތަފާތުވެރިކަމުގެ ދުވަސް" },
-  "05-31": { en: "World No Tobacco Day",                                     dv: "ދުނިޔޭގެ ދުންފަތް ނުބޭނުންކުރާ ދުވަސް" },
-  "06-05": { en: "World Environment Day",                                    dv: "ދުނިޔޭގެ ތިމާވެށީގެ ދުވަސް" },
-  "06-08": { en: "World Oceans Day",                                         dv: "ދުނިޔޭގެ ކަނޑުތަކުގެ ދުވަސް" },
-  "06-12": { en: "World Day Against Child Labour",                           dv: "ކުޑަކުދިން ގެންގުޅެ ދިނުން ހުއްޓުވުމުގެ ދުވަސް" },
-  "06-17": { en: "World Day to Combat Desertification",                      dv: "ބިން ހަލާކުވުން ހުއްޓުވުމުގެ ދުވަސް" },
-  "06-20": { en: "World Refugee Day",                                        dv: "ދުނިޔޭގެ ރެފިއުޖީންގެ ދުވަސް" },
-  "06-21": { en: "World Music Day",                                          dv: "ދުނިޔޭގެ މިއުޒިކް ދުވަސް" },
-  "06-26": { en: "International Day Against Drug Abuse",                     dv: "ބައިނަލް އަޤްވާމީ މަސްތުވާތަކެތި ބޭނުންކުރުމާ ދެކޮޅު ދުވަސް" },
-  "07-11": { en: "World Population Day",                                     dv: "ދުނިޔޭގެ އާބާދީގެ ދުވަސް" },
-  "07-18": { en: "Nelson Mandela International Day",                         dv: "ބައިނަލް އަޤްވާމީ ނެލްސަން މަންޑޭލާ ދުވަސް" },
-  "07-30": { en: "World Day Against Trafficking in Persons",                 dv: "މީހުން ޓްރެފިކް ކުރުމާ ދެކޮޅު ދުވަސް" },
-  "08-09": { en: "Int'l Day of the World's Indigenous Peoples",             dv: "ބައިނަލް އަޤްވާމީ ދުނިޔޭގެ އަސްލު ދިރިއުޅޭ ދަރިކޮޅުތަކުގެ ދުވަސް" },
-  "08-12": { en: "International Youth Day",                                  dv: "ބައިނަލް އަޤްވާމީ ޒުވާނުންގެ ދުވަސް" },
-  "08-19": { en: "World Humanitarian Day",                                   dv: "ދުނިޔޭގެ އިންސާނީ އެހީތެރިކަމުގެ ދުވަސް" },
-  "09-05": { en: "International Day of Charity",                             dv: "ބައިނަލް އަޤްވާމީ ޚައިރާތުގެ ދުވަސް" },
-  "09-08": { en: "International Literacy Day",                               dv: "ބައިނަލް އަޤްވާމީ ކިޔަވަން ދެނެގަތުމުގެ ދުވަސް" },
-  "09-10": { en: "World Suicide Prevention Day",                             dv: "ދުނިޔޭގެ މީހުން މަރުނުގަތުމަށް ހޭލުންތެރިކުރުމުގެ ދުވަސް" },
-  "09-15": { en: "International Day of Democracy",                           dv: "ބައިނަލް އަޤްވާމީ ޑިމޮކްރެސީ ދުވަސް" },
-  "09-16": { en: "World Ozone Day",                                          dv: "ދުނިޔޭގެ އޯޒޯން ދުވަސް" },
-  "09-21": { en: "International Day of Peace",                               dv: "ބައިނަލް އަޤްވާމީ ޞުލްޙައިގެ ދުވަސް" },
-  "09-27": { en: "World Tourism Day",                                        dv: "ދުނިޔޭގެ ޓޫރިޒަމް ދުވަސް" },
-  "10-01": { en: "International Day of Older Persons",                       dv: "ބައިނަލް އަޤްވާމީ އުުމުރުން ދުވަސްވީ މީހުންގެ ދުވަސް" },
-  "10-02": { en: "International Day of Non-Violence",                        dv: "ބައިނަލް އަޤްވާމީ އަނިޔާ ނުކުރުމުގެ ދުވަސް" },
-  "10-05": { en: "World Teachers' Day",                                      dv: "ދުނިޔޭގެ މުދައްރިސުންގެ ދުވަސް" },
-  "10-09": { en: "World Post Day",                                           dv: "ދުނިޔޭގެ ޕޯސްޓް ދުވަސް" },
-  "10-10": { en: "World Mental Health Day",                                  dv: "ދުނިޔޭގެ ނަފްސާނީ ޞިއްޙަތުގެ ދުވަސް" },
-  "10-11": { en: "International Day of the Girl Child",                      dv: "ބައިނަލް އަޤްވާމީ އަންހެންކުދިންގެ ދުވަސް" },
-  "10-13": { en: "International Day for Disaster Risk Reduction",            dv: "ބައިނަލް އަޤްވާމީ ގުދުރަތީ ކާރިސާ ކުޑަ ކުރުމުގެ ދުވަސް" },
-  "10-15": { en: "World Students' Day",                                      dv: "ދުނިޔޭގެ ދަރިވަރުންގެ ދުވަސް" },
-  "10-16": { en: "World Food Day",                                           dv: "ދުނިޔޭގެ ކާބޯތަކެތީގެ ދުވަސް" },
-  "10-17": { en: "International Day for the Eradication of Poverty",        dv: "ބައިނަލް އަޤްވާމީ ފަގީރުކަން ނައްތާލުމުގެ ދުވަސް" },
-  "10-24": { en: "United Nations Day",                                       dv: "އދ.ގެ ދުވަސް" },
-  "10-31": { en: "World Cities Day",                                         dv: "ދުނިޔޭގެ ސިޓީތަކުގެ ދުވަސް" },
-  "11-14": { en: "World Diabetes Day",                                       dv: "ދުނިޔޭގެ ހަކުރުބަލީގެ ދުވަސް" },
-  "11-16": { en: "International Day for Tolerance",                          dv: "ބައިނަލް އަޤްވާމީ ތަޙައްމަލްކުރުމުގެ ދުވަސް" },
-  "11-19": { en: "International Men's Day",                                  dv: "ބައިނަލް އަޤްވާމީ ފިރިހެނުންގެ ދުވަސް" },
-  "11-20": { en: "World Children's Day",                                     dv: "ދުނިޔޭގެ ކުޑަކުދިންގެ ދުވަސް" },
-  "11-21": { en: "World Television Day",                                     dv: "ދުނިޔޭގެ ޓެލެވިޝަން ދުވަސް" },
-  "11-25": { en: "Int'l Day for Elimination of Violence Against Women",     dv: "ބައިނަލް އަޤްވާމީ އަންހެނުންނަށް ކުރާ އަނިޔާ ނައްތާލުމުގެ ދުވަސް" },
-  "12-01": { en: "World AIDS Day",                                           dv: "ދުނިޔޭގެ އެއިޑްސް ދުވަސް" },
-  "12-02": { en: "Int'l Day for the Abolition of Slavery",                  dv: "ބައިނަލް އަޤްވާމީ އަޅުވެތިކަން ނައްތާލުމުގެ ދުވަސް" },
-  "12-03": { en: "Int'l Day of Persons with Disabilities",                  dv: "ބައިނަލް އަޤްވާމީ ނުކުޅެދުންތެރިކަން ހުންނަ ފަރާތްތަކުގެ ދުވަސް" },
-  "12-05": { en: "World Soil Day",                                           dv: "ދުނިޔޭގެ ބިމުގެ ދުވަސް" },
-  "12-09": { en: "International Anti-Corruption Day",                        dv: "ބައިނަލް އަޤްވާމީ ކޮރަޕްޝަނާ ދެކޮޅު ދުވަސް" },
-  "12-10": { en: "Human Rights Day",                                         dv: "ދުނިޔޭގެ އިންސާނީ ޙައްޤުތަކުގެ ދުވަސް" },
-  "12-11": { en: "International Mountain Day",                               dv: "ބައިނަލް އަޤްވާމީ ފަރުބަދަތަކުގެ ދުވަސް" },
-  "12-18": { en: "International Migrants Day",                               dv: "ބައިނަލް އަޤްވާމީ ހިޖުރަވެރިންގެ ދުވަސް" },
+  "01-04": { en: "World Braille Day", dv: "ދުނިޔޭގެ ބްރެއިލް ދުވަސް" },
+  "01-24": {
+    en: "International Education Day",
+    dv: "ބައިނަލް އަޤްވާމީ ތަޢުލީމީ ދުވަސް",
+  },
+  "01-27": {
+    en: "Holocaust Remembrance Day",
+    dv: "ހޮލޮކޯސްޓް ހަނދާންކުރުމުގެ ދުވަސް",
+  },
+  "02-04": { en: "World Cancer Day", dv: "ދުނިޔޭގެ ކެންސަރ ދުވަސް" },
+  "02-06": {
+    en: "Int'l Day of Zero Tolerance for FGM",
+    dv: "ބައިނަލް އަޤްވާމީ އަންހެނުން ޚިތާނުކުރުން ހުއްޓުވުމުގެ ދުވަސް",
+  },
+  "02-11": {
+    en: "Int'l Day of Women and Girls in Science",
+    dv: "ބައިނަލް އަޤްވާމީ ސައިންސްގައި އަންހެނުންނާއި އަންހެންކުދިންގެ ދުވަސް",
+  },
+  "02-13": { en: "World Radio Day", dv: "ދުނިޔޭގެ ރޭޑިއޯ ދުވަސް" },
+  "02-20": {
+    en: "World Day of Social Justice",
+    dv: "ދުނިޔޭގެ އިޖްތިމާޢީ ޢަދާލަތުގެ ދުވަސް",
+  },
+  "02-21": {
+    en: "International Mother Language Day",
+    dv: "ބައިނަލް އަޤްވާމީ މާދަރީ ބަހުގެ ދުވަސް",
+  },
+  "03-01": {
+    en: "World Civil Defence Day",
+    dv: "ދުނިޔޭގެ ސިވިލް ޑިފެންސް ދުވަސް",
+  },
+  "03-03": { en: "World Wildlife Day", dv: "ދުނިޔޭގެ ވައިލްޑްލައިފް ދުވަސް" },
+  "03-04": { en: "World Obesity Day", dv: "ދުނިޔޭގެ ފަލަކަމުގެ ދުވަސް" },
+  "03-08": {
+    en: "International Women's Day",
+    dv: "ބައިނަލް އަޤްވާމީ އަންހެނުންގެ ދުވަސް",
+  },
+  "03-15": {
+    en: "World Consumer Rights Day",
+    dv: "ދުނިޔޭގެ ކޮންސިއުމަރ ޙައްޤުތަކުގެ ދުވަސް",
+  },
+  "03-20": { en: "World Happiness Day", dv: "ދުނިޔޭގެ އުފާވެރިކަމުގެ ދުވަސް" },
+  "03-21": {
+    en: "World Down Syndrome Day",
+    dv: "ދުނިޔޭގެ ޑައުން ސިންޑްރޯމް ދުވަސް",
+  },
+  "03-22": { en: "World Water Day", dv: "ދުނިޔޭގެ ފެނުގެ ދުވަސް" },
+  "03-23": { en: "World Meteorological Day", dv: "ދުނިޔޭގެ މޫސުމީ ދުވަސް" },
+  "03-24": { en: "World Tuberculosis Day", dv: "ދުނިޔޭގެ ޓިބީ ދުވަސް" },
+  "04-02": { en: "World Autism Awareness Day", dv: "ދުނިޔޭގެ އޯޓިޒަމް ދުވަސް" },
+  "04-07": { en: "World Health Day", dv: "ދުނިޔޭގެ ޞިއްޙަތުގެ ދުވަސް" },
+  "04-22": { en: "Earth Day", dv: "ދުނިޔޭގެ ދުވަސް" },
+  "04-23": {
+    en: "World Book and Copyright Day",
+    dv: "ދުނިޔޭގެ ފޮތާއި އަލިފުބާ ދުވަސް",
+  },
+  "04-25": { en: "World Malaria Day", dv: "ދުނިޔޭގެ މެލޭރިއާ ދުވަސް" },
+  "05-03": {
+    en: "World Press Freedom Day",
+    dv: "ދުނިޔޭގެ ނޫސްވެރިކަމުގެ މިނިވަންކަމުގެ ދުވަސް",
+  },
+  "05-05": { en: "World Hand Hygiene Day", dv: "ދުނިޔޭގެ އަތްދޮވުމުގެ ދުވަސް" },
+  "05-08": { en: "World Red Cross Day", dv: "ދުނިޔޭގެ ރެޑް ކްރޮސް ދުވަސް" },
+  "05-12": {
+    en: "International Nurses Day",
+    dv: "ބައިނަލް އަޤްވާމީ ނަރުހުންގެ ދުވަސް",
+  },
+  "05-15": {
+    en: "International Day of Families",
+    dv: "ބައިނަލް އަޤްވާމީ އާއިލާތަކުގެ ދުވަސް",
+  },
+  "05-17": {
+    en: "World Telecommunication Day",
+    dv: "ދުނިޔޭގެ ޓެލެކޮމިއުނިކޭޝަން ދުވަސް",
+  },
+  "05-18": {
+    en: "International Museum Day",
+    dv: "ބައިނަލް އަޤްވާމީ މިއުޒިއަމް ދުވަސް",
+  },
+  "05-21": {
+    en: "World Cultural Diversity Day",
+    dv: "ދުނިޔޭގެ ސަޤާފީ ތަފާތުވެރިކަމުގެ ދުވަސް",
+  },
+  "05-22": {
+    en: "International Day for Biological Diversity",
+    dv: "ބައިނަލް އަޤްވާމީ ތިމާވެށީގެ ތަފާތުވެރިކަމުގެ ދުވަސް",
+  },
+  "05-31": {
+    en: "World No Tobacco Day",
+    dv: "ދުނިޔޭގެ ދުންފަތް ނުބޭނުންކުރާ ދުވަސް",
+  },
+  "06-05": { en: "World Environment Day", dv: "ދުނިޔޭގެ ތިމާވެށީގެ ދުވަސް" },
+  "06-08": { en: "World Oceans Day", dv: "ދުނިޔޭގެ ކަނޑުތަކުގެ ދުވަސް" },
+  "06-12": {
+    en: "World Day Against Child Labour",
+    dv: "ކުޑަކުދިން ގެންގުޅެ ދިނުން ހުއްޓުވުމުގެ ދުވަސް",
+  },
+  "06-17": {
+    en: "World Day to Combat Desertification",
+    dv: "ބިން ހަލާކުވުން ހުއްޓުވުމުގެ ދުވަސް",
+  },
+  "06-20": { en: "World Refugee Day", dv: "ދުނިޔޭގެ ރެފިއުޖީންގެ ދުވަސް" },
+  "06-21": { en: "World Music Day", dv: "ދުނިޔޭގެ މިއުޒިކް ދުވަސް" },
+  "06-26": {
+    en: "International Day Against Drug Abuse",
+    dv: "ބައިނަލް އަޤްވާމީ މަސްތުވާތަކެތި ބޭނުންކުރުމާ ދެކޮޅު ދުވަސް",
+  },
+  "07-11": { en: "World Population Day", dv: "ދުނިޔޭގެ އާބާދީގެ ދުވަސް" },
+  "07-18": {
+    en: "Nelson Mandela International Day",
+    dv: "ބައިނަލް އަޤްވާމީ ނެލްސަން މަންޑޭލާ ދުވަސް",
+  },
+  "07-30": {
+    en: "World Day Against Trafficking in Persons",
+    dv: "މީހުން ޓްރެފިކް ކުރުމާ ދެކޮޅު ދުވަސް",
+  },
+  "08-09": {
+    en: "Int'l Day of the World's Indigenous Peoples",
+    dv: "ބައިނަލް އަޤްވާމީ ދުނިޔޭގެ އަސްލު ދިރިއުޅޭ ދަރިކޮޅުތަކުގެ ދުވަސް",
+  },
+  "08-12": {
+    en: "International Youth Day",
+    dv: "ބައިނަލް އަޤްވާމީ ޒުވާނުންގެ ދުވަސް",
+  },
+  "08-19": {
+    en: "World Humanitarian Day",
+    dv: "ދުނިޔޭގެ އިންސާނީ އެހީތެރިކަމުގެ ދުވަސް",
+  },
+  "09-05": {
+    en: "International Day of Charity",
+    dv: "ބައިނަލް އަޤްވާމީ ޚައިރާތުގެ ދުވަސް",
+  },
+  "09-08": {
+    en: "International Literacy Day",
+    dv: "ބައިނަލް އަޤްވާމީ ކިޔަވަން ދެނެގަތުމުގެ ދުވަސް",
+  },
+  "09-10": {
+    en: "World Suicide Prevention Day",
+    dv: "ދުނިޔޭގެ މީހުން މަރުނުގަތުމަށް ހޭލުންތެރިކުރުމުގެ ދުވަސް",
+  },
+  "09-15": {
+    en: "International Day of Democracy",
+    dv: "ބައިނަލް އަޤްވާމީ ޑިމޮކްރެސީ ދުވަސް",
+  },
+  "09-16": { en: "World Ozone Day", dv: "ދުނިޔޭގެ އޯޒޯން ދުވަސް" },
+  "09-21": {
+    en: "International Day of Peace",
+    dv: "ބައިނަލް އަޤްވާމީ ޞުލްޙައިގެ ދުވަސް",
+  },
+  "09-27": { en: "World Tourism Day", dv: "ދުނިޔޭގެ ޓޫރިޒަމް ދުވަސް" },
+  "10-01": {
+    en: "International Day of Older Persons",
+    dv: "ބައިނަލް އަޤްވާމީ އުުމުރުން ދުވަސްވީ މީހުންގެ ދުވަސް",
+  },
+  "10-02": {
+    en: "International Day of Non-Violence",
+    dv: "ބައިނަލް އަޤްވާމީ އަނިޔާ ނުކުރުމުގެ ދުވަސް",
+  },
+  "10-05": { en: "World Teachers' Day", dv: "ދުނިޔޭގެ މުދައްރިސުންގެ ދުވަސް" },
+  "10-09": { en: "World Post Day", dv: "ދުނިޔޭގެ ޕޯސްޓް ދުވަސް" },
+  "10-10": {
+    en: "World Mental Health Day",
+    dv: "ދުނިޔޭގެ ނަފްސާނީ ޞިއްޙަތުގެ ދުވަސް",
+  },
+  "10-11": {
+    en: "International Day of the Girl Child",
+    dv: "ބައިނަލް އަޤްވާމީ އަންހެންކުދިންގެ ދުވަސް",
+  },
+  "10-13": {
+    en: "International Day for Disaster Risk Reduction",
+    dv: "ބައިނަލް އަޤްވާމީ ގުދުރަތީ ކާރިސާ ކުޑަ ކުރުމުގެ ދުވަސް",
+  },
+  "10-15": { en: "World Students' Day", dv: "ދުނިޔޭގެ ދަރިވަރުންގެ ދުވަސް" },
+  "10-16": { en: "World Food Day", dv: "ދުނިޔޭގެ ކާބޯތަކެތީގެ ދުވަސް" },
+  "10-17": {
+    en: "International Day for the Eradication of Poverty",
+    dv: "ބައިނަލް އަޤްވާމީ ފަގީރުކަން ނައްތާލުމުގެ ދުވަސް",
+  },
+  "10-24": { en: "United Nations Day", dv: "އދ.ގެ ދުވަސް" },
+  "10-31": { en: "World Cities Day", dv: "ދުނިޔޭގެ ސިޓީތަކުގެ ދުވަސް" },
+  "11-14": { en: "World Diabetes Day", dv: "ދުނިޔޭގެ ހަކުރުބަލީގެ ދުވަސް" },
+  "11-16": {
+    en: "International Day for Tolerance",
+    dv: "ބައިނަލް އަޤްވާމީ ތަޙައްމަލްކުރުމުގެ ދުވަސް",
+  },
+  "11-19": {
+    en: "International Men's Day",
+    dv: "ބައިނަލް އަޤްވާމީ ފިރިހެނުންގެ ދުވަސް",
+  },
+  "11-20": { en: "World Children's Day", dv: "ދުނިޔޭގެ ކުޑަކުދިންގެ ދުވަސް" },
+  "11-21": { en: "World Television Day", dv: "ދުނިޔޭގެ ޓެލެވިޝަން ދުވަސް" },
+  "11-25": {
+    en: "Int'l Day for Elimination of Violence Against Women",
+    dv: "ބައިނަލް އަޤްވާމީ އަންހެނުންނަށް ކުރާ އަނިޔާ ނައްތާލުމުގެ ދުވަސް",
+  },
+  "12-01": { en: "World AIDS Day", dv: "ދުނިޔޭގެ އެއިޑްސް ދުވަސް" },
+  "12-02": {
+    en: "Int'l Day for the Abolition of Slavery",
+    dv: "ބައިނަލް އަޤްވާމީ އަޅުވެތިކަން ނައްތާލުމުގެ ދުވަސް",
+  },
+  "12-03": {
+    en: "Int'l Day of Persons with Disabilities",
+    dv: "ބައިނަލް އަޤްވާމީ ނުކުޅެދުންތެރިކަން ހުންނަ ފަރާތްތަކުގެ ދުވަސް",
+  },
+  "12-05": { en: "World Soil Day", dv: "ދުނިޔޭގެ ބިމުގެ ދުވަސް" },
+  "12-09": {
+    en: "International Anti-Corruption Day",
+    dv: "ބައިނަލް އަޤްވާމީ ކޮރަޕްޝަނާ ދެކޮޅު ދުވަސް",
+  },
+  "12-10": {
+    en: "Human Rights Day",
+    dv: "ދުނިޔޭގެ އިންސާނީ ޙައްޤުތަކުގެ ދުވަސް",
+  },
+  "12-11": {
+    en: "International Mountain Day",
+    dv: "ބައިނަލް އަޤްވާމީ ފަރުބަދަތަކުގެ ދުވަސް",
+  },
+  "12-18": {
+    en: "International Migrants Day",
+    dv: "ބައިނަލް އަޤްވާމީ ހިޖުރަވެރިންގެ ދުވަސް",
+  },
 };
 
 // ============================================================================
@@ -182,17 +377,20 @@ const INTL_OBSERVANCE_DAYS = {
  */
 function gregorianToHijri(gYear, gMonth, gDay) {
   const date = new Date(gYear, gMonth - 1, gDay);
-  
+
   const formatter = new Intl.DateTimeFormat("en-TN-u-ca-islamic-umalqura", {
     day: "numeric",
     month: "numeric",
-    year: "numeric"
+    year: "numeric",
   });
-  
+
   const parts = formatter.formatToParts(date);
-  const hDay   = parseInt(parts.find(p => p.type === "day").value, 10);
-  const hMonth = parseInt(parts.find(p => p.type === "month").value, 10);
-  const hYear  = parseInt(parts.find(p => p.type === "year").value.replace(/\D/g, ""), 10);
+  const hDay = parseInt(parts.find((p) => p.type === "day").value, 10);
+  const hMonth = parseInt(parts.find((p) => p.type === "month").value, 10);
+  const hYear = parseInt(
+    parts.find((p) => p.type === "year").value.replace(/\D/g, ""),
+    10,
+  );
 
   return { year: hYear, month: hMonth, day: hDay };
 }
@@ -214,18 +412,68 @@ function generateDynamicIslamicHolidays(gYear) {
   const holidays = [];
 
   const islamicHolidaysSchema = [
-    { hMonth: 9,  hDay: 1,  en: "First Day of Ramadan",               dv: "ރަމަޟާން ފެށޭ ދުވަސް" },
-    { hMonth: 10, hDay: 1,  en: "Eid al-Fitr (Day 1)",                dv: "ފިތުރު ޢީދު (1 ވަނަ ދުވަސް)" },
-    { hMonth: 10, hDay: 2,  en: "Eid al-Fitr (Day 2)",                dv: "ފިތުރު ޢީދު (2 ވަނަ ދުވަސް)" },
-    { hMonth: 10, hDay: 3,  en: "Eid al-Fitr (Day 3)",                dv: "ފިތުރު ޢީދު (3 ވަނަ ދުވަސް)" },
-    { hMonth: 12, hDay: 9,  en: "Day of Arafat (Hajj Day)",           dv: "އަރަފާތް ދުވަސް" },
-    { hMonth: 12, hDay: 10, en: "Eid al-Adha (Day 1)",                dv: "އަޟްހާ ޢީދު (1 ވަނަ ދުވަސް)" },
-    { hMonth: 12, hDay: 11, en: "Eid al-Adha (Day 2)",                dv: "އަޟްހާ ޢީދު (2 ވަނަ ދުވަސް)" },
-    { hMonth: 12, hDay: 12, en: "Eid al-Adha (Day 3)",                dv: "އަޟްހާ ޢީދު (3 ވަނަ ދުވަސް)" },
-    { hMonth: 1,  hDay: 1,  en: "Islamic New Year",                   dv: "ހިޖްރީ އާ އަހަރު" },
-    { hMonth: 3,  hDay: 1,  en: "National Day",                       dv: "ޤައުމީ ދުވަސް" },
-    { hMonth: 3,  hDay: 12, en: "Mawlid al-Nabi (Prophet's Birthday)", dv: "މީލާދުންނަބީ" },
-    { hMonth: 4,  hDay: 2,  en: "The Day Maldives Embraced Islam",    dv: "ރާއްޖެ އިސްލާމްވި ދުވަސް" }
+    {
+      hMonth: 9,
+      hDay: 1,
+      en: "First Day of Ramadan",
+      dv: "ރަމަޟާން ފެށޭ ދުވަސް",
+    },
+    {
+      hMonth: 10,
+      hDay: 1,
+      en: "Eid al-Fitr (Day 1)",
+      dv: "ފިތުރު ޢީދު (1 ވަނަ ދުވަސް)",
+    },
+    {
+      hMonth: 10,
+      hDay: 2,
+      en: "Eid al-Fitr (Day 2)",
+      dv: "ފިތުރު ޢީދު (2 ވަނަ ދުވަސް)",
+    },
+    {
+      hMonth: 10,
+      hDay: 3,
+      en: "Eid al-Fitr (Day 3)",
+      dv: "ފިތުރު ޢީދު (3 ވަނަ ދުވަސް)",
+    },
+    {
+      hMonth: 12,
+      hDay: 9,
+      en: "Day of Arafat (Hajj Day)",
+      dv: "އަރަފާތް ދުވަސް",
+    },
+    {
+      hMonth: 12,
+      hDay: 10,
+      en: "Eid al-Adha (Day 1)",
+      dv: "އަޟްހާ ޢީދު (1 ވަނަ ދުވަސް)",
+    },
+    {
+      hMonth: 12,
+      hDay: 11,
+      en: "Eid al-Adha (Day 2)",
+      dv: "އަޟްހާ ޢީދު (2 ވަނަ ދުވަސް)",
+    },
+    {
+      hMonth: 12,
+      hDay: 12,
+      en: "Eid al-Adha (Day 3)",
+      dv: "އަޟްހާ ޢީދު (3 ވަނަ ދުވަސް)",
+    },
+    { hMonth: 1, hDay: 1, en: "Islamic New Year", dv: "ހިޖްރީ އާ އަހަރު" },
+    { hMonth: 3, hDay: 1, en: "National Day", dv: "ޤައުމީ ދުވަސް" },
+    {
+      hMonth: 3,
+      hDay: 12,
+      en: "Mawlid al-Nabi (Prophet's Birthday)",
+      dv: "މީލާދުންނަބީ",
+    },
+    {
+      hMonth: 4,
+      hDay: 2,
+      en: "The Day Maldives Embraced Islam",
+      dv: "ރާއްޖެ އިސްލާމްވި ދުވަސް",
+    },
   ];
 
   // Map out a wide Gregorian window around the year to catch overlapping months
@@ -233,28 +481,32 @@ function generateDynamicIslamicHolidays(gYear) {
   const endDate = new Date(gYear + 1, 1, 15);
 
   const formatter = new Intl.DateTimeFormat("en-TN-u-ca-islamic-umalqura", {
-    day: "numeric", month: "numeric", year: "numeric"
+    day: "numeric",
+    month: "numeric",
+    year: "numeric",
   });
 
   for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
     const parts = formatter.formatToParts(d);
-    const hDay = parseInt(parts.find(p => p.type === "day").value, 10);
-    const hMonth = parseInt(parts.find(p => p.type === "month").value, 10);
-    
-    const match = islamicHolidaysSchema.find(h => h.hMonth === hMonth && h.hDay === hDay);
-    
+    const hDay = parseInt(parts.find((p) => p.type === "day").value, 10);
+    const hMonth = parseInt(parts.find((p) => p.type === "month").value, 10);
+
+    const match = islamicHolidaysSchema.find(
+      (h) => h.hMonth === hMonth && h.hDay === hDay,
+    );
+
     if (match) {
       const computedY = d.getFullYear();
       if (computedY === gYear) {
         const yyyy = computedY;
         const mm = String(d.getMonth() + 1).padStart(2, "0");
         const dd = String(d.getDate()).padStart(2, "0");
-        
+
         holidays.push({
           date: `${yyyy}-${mm}-${dd}`,
           en: match.en,
           dv: match.dv,
-          type: "islamic"
+          type: "islamic",
         });
       }
     }
@@ -314,7 +566,7 @@ function getObservanceInfo(year, month1based, day) {
     CAL_OBSERVANCE_MAP = buildObservanceMap(year);
     _lastObsMappedYear = year;
   }
-  const key = `${year}-${String(month1based).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
+  const key = `${year}-${String(month1based).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
   return CAL_OBSERVANCE_MAP[key] || null;
 }
 
@@ -324,18 +576,18 @@ let _lastMappedYear = new Date().getFullYear();
 
 // Sync status: "idle" | "loading" | "ok" | "cached" | "error"
 let _calSyncStatus = "idle";
-let _calSyncMeta   = null; 
+let _calSyncMeta = null;
 
 /** Merge a flat array of {date, en, dv, type} entries into the live map */
 function mergeRemoteHolidays(entries) {
   for (const h of entries) {
     if (!h.date || !h.en) continue;
     CAL_HOLIDAY_MAP[h.date] = {
-      en:          h.en,
-      dv:          h.dv || h.en,
-      type:        "declared",
+      en: h.en,
+      dv: h.dv || h.en,
+      type: "declared",
       gazette_ref: h.gazette_ref || null,
-      remote:      true,
+      remote: true,
     };
   }
 }
@@ -345,21 +597,26 @@ async function fetchRemoteHolidays() {
   _calSyncStatus = "loading";
   renderSyncStatus();
 
-  const cachedTs   = parseInt(localStorage.getItem(CAL_CACHE_TS_KEY) || "0", 10);
+  const cachedTs = parseInt(localStorage.getItem(CAL_CACHE_TS_KEY) || "0", 10);
   const cachedData = localStorage.getItem(CAL_CACHE_KEY);
-  const age        = Date.now() - cachedTs;
+  const age = Date.now() - cachedTs;
 
   if (cachedData && age < CAL_CACHE_TTL) {
     try {
       const parsed = JSON.parse(cachedData);
       const entries = flattenRemoteJson(parsed);
       mergeRemoteHolidays(entries);
-      _calSyncMeta   = { last_updated: parsed.last_updated, source: parsed.source };
+      _calSyncMeta = {
+        last_updated: parsed.last_updated,
+        source: parsed.source,
+      };
       _calSyncStatus = "cached";
       renderSyncStatus();
       renderCalendar();
       return;
-    } catch (_) { /* corrupt cache fallback */ }
+    } catch (_) {
+      /* corrupt cache fallback */
+    }
   }
 
   try {
@@ -370,20 +627,23 @@ async function fetchRemoteHolidays() {
     const entries = flattenRemoteJson(json);
     mergeRemoteHolidays(entries);
 
-    _calSyncMeta   = { last_updated: json.last_updated, source: json.source };
+    _calSyncMeta = { last_updated: json.last_updated, source: json.source };
     _calSyncStatus = "ok";
 
-    localStorage.setItem(CAL_CACHE_KEY,    JSON.stringify(json));
+    localStorage.setItem(CAL_CACHE_KEY, JSON.stringify(json));
     localStorage.setItem(CAL_CACHE_TS_KEY, String(Date.now()));
   } catch (err) {
     console.warn("[Calendar] Remote holiday fetch failed:", err.message);
     if (cachedData) {
       try {
-        const parsed  = JSON.parse(cachedData);
+        const parsed = JSON.parse(cachedData);
         const entries = flattenRemoteJson(parsed);
         mergeRemoteHolidays(entries);
-        _calSyncMeta   = { last_updated: parsed.last_updated, source: parsed.source };
-      } catch (_) { }
+        _calSyncMeta = {
+          last_updated: parsed.last_updated,
+          source: parsed.source,
+        };
+      } catch (_) {}
     }
     _calSyncStatus = "error";
   }
@@ -409,7 +669,7 @@ async function refreshRemoteHolidays() {
 }
 
 function getHolidayInfo(year, month1based, day) {
-  const key = `${year}-${String(month1based).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
+  const key = `${year}-${String(month1based).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
   return CAL_HOLIDAY_MAP[key] || null;
 }
 
@@ -422,18 +682,18 @@ function isWeekend(dayOfWeek) {
 // ============================================================================
 
 let _calState = {
-  view: "month",      
+  view: "month",
   lang: "en",
   year: new Date().getFullYear(),
-  month: new Date().getMonth(), 
-  weekStart: null,   
-  selectedDate: null, 
+  month: new Date().getMonth(),
+  weekStart: null,
+  selectedDate: null,
 };
 
 function calLoadState() {
   _calState.lang = localStorage.getItem(CAL_LANG_KEY) || "en";
   const today = new Date();
-  _calState.year  = today.getFullYear();
+  _calState.year = today.getFullYear();
   _calState.month = today.getMonth();
   const d = new Date(today);
   d.setDate(d.getDate() - d.getDay());
@@ -445,33 +705,455 @@ function calSaveLang() {
 }
 
 // ============================================================================
+// TODO STORAGE  (persisted in worklogs.db via IPC)
+// ============================================================================
+
+async function calGetTodos(dateStr) {
+  try {
+    return await window.electronAPI.calTodoGet(dateStr);
+  } catch (_) {
+    return [];
+  }
+}
+async function calSaveTodos(dateStr, todos) {
+  try {
+    await window.electronAPI.calTodoSave(dateStr, todos);
+  } catch (_) {}
+}
+async function calHasTodos(dateStr) {
+  try {
+    return await window.electronAPI.calTodoHas(dateStr);
+  } catch (_) {
+    return false;
+  }
+}
+
+// ============================================================================
+// TODO DATE CACHE  (sync Set populated before each render)
+// ============================================================================
+
+let _calTodoDates = new Set();
+
+async function _prefetchTodoDates(dateStrs) {
+  const results = await Promise.all(
+    dateStrs.map(async (d) => ({ d, has: await calHasTodos(d) })),
+  );
+  results.forEach(({ d, has }) => {
+    if (has) _calTodoDates.add(d);
+    else _calTodoDates.delete(d);
+  });
+}
+
+async function _prefetchVisibleTodoDates() {
+  const { view, year, month } = _calState;
+  const dates = [];
+  if (view === "month") {
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    for (let d = 1; d <= daysInMonth; d++)
+      dates.push(
+        `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`,
+      );
+  } else if (view === "week") {
+    const ws = new Date(_calState.weekStart);
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(ws);
+      d.setDate(ws.getDate() + i);
+      dates.push(
+        `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`,
+      );
+    }
+  } else if (view === "year") {
+    for (let m = 0; m < 12; m++) {
+      const dim = new Date(year, m + 1, 0).getDate();
+      for (let d = 1; d <= dim; d++)
+        dates.push(
+          `${year}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`,
+        );
+    }
+  }
+  await _prefetchTodoDates(dates);
+}
+
+// ============================================================================
+// TODO POPOVER
+// ============================================================================
+
+let _todoPopoverDate = null;
+let _monthViewBodyHeight = 0; // captured after month view renders; reused for year view panel popup
+
+function _openTodoPopover(dateStr, anchorEl, panelMode = false) {
+  _closeTodoPopover();
+  _hideTodoTooltip();
+  _todoPopoverDate = dateStr;
+
+  const [year, month1, day] = dateStr.split("-").map(Number);
+  const date = new Date(year, month1 - 1, day);
+  const L = CAL_I18N[_calState.lang];
+  const label = `${L.dayNamesFull[date.getDay()]}, ${L.monthNames[month1 - 1]} ${day}`;
+
+  const popover = document.createElement("div");
+  popover.className = "cal-todo-popover";
+  popover.id = "cal-todo-popover";
+  if (panelMode) popover.classList.add("cal-todo-popover--panel");
+  popover.innerHTML = `
+    <div class="cal-todo-popover-header">
+      <span class="cal-todo-popover-title">${label}</span>
+      <button class="cal-todo-popover-close" title="Close">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div class="cal-todo-list" id="cal-todo-popover-list"></div>
+    <div class="cal-todo-add-row">
+      <input class="cal-todo-input" id="cal-todo-popover-input" type="text"
+        placeholder="Add to-do…" maxlength="200" autocomplete="off" />
+      <button class="cal-todo-add-btn" id="cal-todo-popover-add">+</button>
+    </div>
+  `;
+  popover.style.visibility = "hidden";
+  document.body.appendChild(popover);
+
+  // Position: panel mode aligns to cal-body, otherwise anchors to the cell
+  if (panelMode) {
+    _positionAsCalPanel(popover);
+  } else {
+    _positionPopover(popover, anchorEl);
+  }
+  popover.style.visibility = "";
+
+  popover
+    .querySelector(".cal-todo-popover-close")
+    .addEventListener("click", _closeTodoPopover);
+
+  const inputEl = popover.querySelector("#cal-todo-popover-input");
+  const addBtn = popover.querySelector("#cal-todo-popover-add");
+
+  async function addTodo() {
+    const text = inputEl.value.trim();
+    if (!text) return;
+    const todos = await calGetTodos(dateStr);
+    todos.push({ id: `${Date.now()}`, text, done: false });
+    await calSaveTodos(dateStr, todos);
+    inputEl.value = "";
+    await _renderTodoList(dateStr);
+    _refreshDayCell(dateStr);
+  }
+
+  addBtn.addEventListener("click", addTodo);
+  inputEl.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") addTodo();
+  });
+
+  // Outside-click dismissal
+  setTimeout(() => {
+    document.addEventListener("mousedown", _outsideClickHandler, {
+      capture: true,
+    });
+    document.addEventListener("keydown", _escKeyHandler, { capture: true });
+  }, 0);
+
+  inputEl.focus();
+  _renderTodoList(dateStr);
+}
+
+/**
+ * Position the popover overlaid on the calendar body panel —
+ * top-left aligned, same height. Used when opened from the sidebar button.
+ */
+function _positionAsCalPanel(popover) {
+  const calBody = document.getElementById("cal-body");
+  if (!calBody) {
+    _positionPopover(popover, document.getElementById("cal-detail-panel"));
+    return;
+  }
+
+  const rect = calBody.getBoundingClientRect();
+  const height = _monthViewBodyHeight > 0 ? _monthViewBodyHeight : rect.height;
+
+  popover.style.left = `${rect.left}px`;
+  popover.style.top = `${rect.top}px`;
+  popover.style.width = `${rect.width}px`;
+  popover.style.height = `${height}px`;
+}
+
+function _positionPopover(popover, anchorEl) {
+  const POPOVER_W = 520;
+  const GAP = 2;
+
+  const rect = anchorEl.getBoundingClientRect();
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+
+  // Must measure actual height after the element is in the DOM
+  const h = popover.offsetHeight || 320;
+
+  // Horizontal: align to left of anchor, clamp within viewport
+  let left = rect.left;
+  if (left + POPOVER_W > vw - 8) left = vw - POPOVER_W - 8;
+  if (left < 8) left = 8;
+
+  // Vertical: prefer below cell, flip above if not enough room
+  let top;
+  if (rect.bottom + GAP + h <= vh - 8) {
+    top = rect.bottom + GAP;
+  } else {
+    top = Math.max(8, rect.top - GAP - h);
+  }
+
+  popover.style.left = `${left}px`;
+  popover.style.top = `${top}px`;
+}
+
+async function _renderTodoList(dateStr) {
+  const listEl = document.getElementById("cal-todo-popover-list");
+  if (!listEl) return;
+
+  const todos = await calGetTodos(dateStr);
+  if (todos.length === 0) {
+    listEl.innerHTML = `<div class="cal-todo-empty">No to-do items yet.</div>`;
+    return;
+  }
+
+  listEl.innerHTML = todos
+    .map(
+      (item, idx) => `
+    <div class="cal-todo-item${item.done ? " cal-todo-item--done" : ""}" data-idx="${idx}">
+      <button class="cal-todo-check" data-idx="${idx}" title="Toggle done">
+        ${item.done ? `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>` : ""}
+      </button>
+      <span class="cal-todo-text">${item.text}</span>
+      <button class="cal-todo-delete" data-idx="${idx}" title="Remove">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+  `,
+    )
+    .join("");
+
+  listEl.querySelectorAll(".cal-todo-check").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const todos = await calGetTodos(dateStr);
+      const idx = parseInt(btn.dataset.idx, 10);
+      todos[idx].done = !todos[idx].done;
+      await calSaveTodos(dateStr, todos);
+      await _renderTodoList(dateStr);
+      _refreshDayCell(dateStr);
+    });
+  });
+
+  listEl.querySelectorAll(".cal-todo-delete").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const todos = await calGetTodos(dateStr);
+      const idx = parseInt(btn.dataset.idx, 10);
+      todos.splice(idx, 1);
+      await calSaveTodos(dateStr, todos);
+      await _renderTodoList(dateStr);
+      _refreshDayCell(dateStr);
+    });
+  });
+}
+
+function _closeTodoPopover() {
+  const existing = document.getElementById("cal-todo-popover");
+  if (existing) existing.remove();
+  _todoPopoverDate = null;
+  document.removeEventListener("mousedown", _outsideClickHandler, {
+    capture: true,
+  });
+  document.removeEventListener("keydown", _escKeyHandler, { capture: true });
+}
+
+function _outsideClickHandler(e) {
+  const pop = document.getElementById("cal-todo-popover");
+  if (pop && !pop.contains(e.target)) _closeTodoPopover();
+}
+
+function _escKeyHandler(e) {
+  if (e.key === "Escape") _closeTodoPopover();
+}
+
+// ============================================================================
+// TODO HOVER TOOLTIP  (read-only preview on mouseenter)
+// ============================================================================
+
+let _hoverTooltipTimer = null;
+
+function _showTodoTooltip(dateStr, anchorEl) {
+  // Don't show tooltip if the editable popover is already open
+  if (document.getElementById("cal-todo-popover")) return;
+
+  _cancelTodoTooltip();
+
+  _hoverTooltipTimer = setTimeout(async () => {
+    // Bail if popover opened during the delay, or cell no longer hovered
+    if (document.getElementById("cal-todo-popover")) return;
+    if (document.getElementById("cal-todo-tooltip")) return;
+
+    const todos = await calGetTodos(dateStr);
+    if (!todos.length) return;
+    if (document.getElementById("cal-todo-popover")) return;
+
+    const tooltip = document.createElement("div");
+    tooltip.className = "cal-todo-tooltip";
+    tooltip.id = "cal-todo-tooltip";
+
+    const [year, month1, day] = dateStr.split("-").map(Number);
+    const date = new Date(year, month1 - 1, day);
+    const L = CAL_I18N[_calState.lang];
+    const label = `${L.monthNames[month1 - 1]} ${day} — To-Do`;
+
+    const done = todos.filter((t) => t.done).length;
+    const total = todos.length;
+    const pct = Math.round((done / total) * 100);
+
+    tooltip.innerHTML = `
+      <div class="cal-todo-tooltip-header">${label}</div>
+      <div class="cal-todo-tooltip-progress">
+        <div class="cal-todo-tooltip-bar"><div class="cal-todo-tooltip-fill" style="width:${pct}%"></div></div>
+        <span class="cal-todo-tooltip-count">${done}/${total}</span>
+      </div>
+      <ul class="cal-todo-tooltip-list">
+        ${todos
+          .map(
+            (t) => `
+          <li class="cal-todo-tooltip-item${t.done ? " cal-todo-tooltip-item--done" : ""}">
+            <span class="cal-todo-tooltip-check">${
+              t.done
+                ? `<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>`
+                : ""
+            }</span>
+            <span class="cal-todo-tooltip-text">${t.text}</span>
+          </li>
+        `,
+          )
+          .join("")}
+      </ul>
+    `;
+
+    tooltip.style.visibility = "hidden";
+    document.body.appendChild(tooltip);
+    _positionPopover(tooltip, anchorEl);
+    tooltip.style.visibility = "";
+
+    // Dismiss if mouse enters the tooltip itself then leaves
+    tooltip.addEventListener("mouseleave", _hideTodoTooltip);
+  }, 280);
+}
+
+function _hideTodoTooltip() {
+  _cancelTodoTooltip();
+  const tip = document.getElementById("cal-todo-tooltip");
+  if (tip) tip.remove();
+}
+
+function _cancelTodoTooltip() {
+  if (_hoverTooltipTimer) {
+    clearTimeout(_hoverTooltipTimer);
+    _hoverTooltipTimer = null;
+  }
+}
+
+/** Refresh dot indicators on a single day cell across all views. */
+async function _refreshDayCell(dateStr) {
+  const hasTodos = await calHasTodos(dateStr);
+  if (hasTodos) _calTodoDates.add(dateStr);
+  else _calTodoDates.delete(dateStr);
+
+  document.querySelectorAll(`[data-date="${dateStr}"]`).forEach((cell) => {
+    if (cell.classList.contains("cal-day--outside")) return;
+
+    // Month / year view
+    const gregEl = cell.querySelector(".cal-day-greg");
+    if (gregEl) {
+      let dotsEl = gregEl.querySelector(".cal-day-dots");
+      const obsDot = dotsEl
+        ? dotsEl.querySelector(".cal-observance-dot")
+        : gregEl.querySelector(".cal-observance-dot");
+      const todoDot = dotsEl ? dotsEl.querySelector(".cal-todo-dot") : null;
+      if (hasTodos && !todoDot) {
+        if (!dotsEl) {
+          dotsEl = document.createElement("span");
+          dotsEl.className = "cal-day-dots";
+          if (obsDot) {
+            dotsEl.appendChild(obsDot.cloneNode(true));
+            obsDot.remove();
+          }
+          gregEl.appendChild(dotsEl);
+        }
+        const d = document.createElement("span");
+        d.className = "cal-todo-dot";
+        d.title = "Has to-do items";
+        dotsEl.appendChild(d);
+      } else if (!hasTodos && todoDot) {
+        todoDot.remove();
+        dotsEl = gregEl.querySelector(".cal-day-dots");
+        if (dotsEl && dotsEl.children.length === 0) dotsEl.remove();
+      }
+    }
+
+    // Week view
+    const weekNumEl = cell.querySelector(".cal-week-day-num");
+    if (weekNumEl) {
+      let weekDots = weekNumEl.querySelector(".cal-week-dots");
+      const todoDotW = weekNumEl.querySelector(".cal-todo-dot");
+      if (hasTodos && !todoDotW) {
+        if (!weekDots) {
+          weekDots = document.createElement("span");
+          weekDots.className = "cal-week-dots";
+          weekNumEl.appendChild(weekDots);
+        }
+        const d = document.createElement("span");
+        d.className = "cal-todo-dot";
+        d.title = "Has to-do items";
+        weekDots.appendChild(d);
+      } else if (!hasTodos && todoDotW) {
+        todoDotW.remove();
+        weekDots = weekNumEl.querySelector(".cal-week-dots");
+        if (weekDots && weekDots.children.length === 0) weekDots.remove();
+      }
+    }
+  });
+}
+
+// ============================================================================
 // RENDERING HELPERS
 // ============================================================================
 
-function t(key) { return CAL_I18N[_calState.lang][key] || key; }
+function t(key) {
+  return CAL_I18N[_calState.lang][key] || key;
+}
 
 function calDayCell(year, month1, day, opts = {}) {
   const { outsideMonth = false, compact = false } = opts;
-  const date  = new Date(year, month1 - 1, day);
-  const dow   = date.getDay();
+  const date = new Date(year, month1 - 1, day);
+  const dow = date.getDay();
   const weekend = isWeekend(dow);
-  const holiday   = getHolidayInfo(year, month1, day);
-  const observance = !outsideMonth ? getObservanceInfo(year, month1, day) : null;
-  const today   = new Date();
+  const holiday = getHolidayInfo(year, month1, day);
+  const observance = !outsideMonth
+    ? getObservanceInfo(year, month1, day)
+    : null;
+  const today = new Date();
   const isToday = date.toDateString() === today.toDateString();
-  const dateStr = `${year}-${String(month1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
+  const dateStr = `${year}-${String(month1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
   const isSelected = _calState.selectedDate === dateStr;
 
   const hijri = gregorianToHijri(year, month1, day);
   const hijriMonths = CAL_I18N[_calState.lang].hijriMonths;
 
-  const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const todayMidnight = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate(),
+  );
   const isPast = !outsideMonth && date < todayMidnight;
 
   let classes = "cal-day";
   if (outsideMonth) classes += " cal-day--outside";
-  if (isPast)       classes += " cal-day--past";
-  if (weekend)      classes += " cal-day--weekend";
+  if (isPast) classes += " cal-day--past";
+  if (weekend) classes += " cal-day--weekend";
   if (holiday) {
     if (holiday.type === "declared" || holiday.type === "special") {
       classes += " cal-day--declared";
@@ -480,21 +1162,33 @@ function calDayCell(year, month1, day, opts = {}) {
     }
   }
   if (!holiday && observance) classes += " cal-day--observance";
-  if (isToday)      classes += " cal-day--today";
-  if (isSelected)   classes += " cal-day--selected";
-  if (compact)      classes += " cal-day--compact";
+  if (isToday) classes += " cal-day--today";
+  if (isSelected) classes += " cal-day--selected";
+  if (compact) classes += " cal-day--compact";
 
   const holidayLabel = holiday
     ? `<div class="cal-day-holiday-label">${holiday[_calState.lang]}</div>`
-    : (observance ? `<div class="cal-day-observance-label">${observance[_calState.lang]}</div>` : "");
-  const observanceDot = observance ? `<span class="cal-observance-dot" title="${observance[_calState.lang]}"></span>` : "";
+    : observance
+      ? `<div class="cal-day-observance-label">${observance[_calState.lang]}</div>`
+      : "";
+  const observanceDot = observance
+    ? `<span class="cal-observance-dot" title="${observance[_calState.lang]}"></span>`
+    : "";
+  const hasTodos = !outsideMonth && _calTodoDates.has(dateStr);
+  const todoDot = hasTodos
+    ? `<span class="cal-todo-dot" title="Has to-do items"></span>`
+    : "";
+  const dots =
+    observanceDot || todoDot
+      ? `<span class="cal-day-dots">${observanceDot}${todoDot}</span>`
+      : "";
   const hijriLabel = compact
     ? `<div class="cal-day-hijri">${hijri.day}</div>`
     : `<div class="cal-day-hijri">${hijri.day} ${hijriMonths[hijri.month - 1]}</div>`;
 
   return `
     <div class="${classes}" data-date="${dateStr}" data-year="${year}" data-month="${month1}" data-day="${day}">
-      <div class="cal-day-greg">${day}${observanceDot}</div>
+      <div class="cal-day-greg"><span class="cal-day-num">${day}</span>${dots}</div>
       ${hijriLabel}
       ${holidayLabel}
     </div>
@@ -508,7 +1202,7 @@ function calDayCell(year, month1, day, opts = {}) {
 function renderMonthView(container) {
   const { year, month, lang } = _calState;
   const L = CAL_I18N[lang];
-  const firstDay = new Date(year, month, 1).getDay(); 
+  const firstDay = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const prevMonthDays = new Date(year, month, 0).getDate();
 
@@ -523,8 +1217,11 @@ function renderMonthView(container) {
   for (let i = firstDay - 1; i >= 0; i--) {
     const d = prevMonthDays - i;
     const prevMonth = month === 0 ? 12 : month;
-    const prevYear  = month === 0 ? year - 1 : year;
-    html += calDayCell(prevYear, prevMonth, d, { outsideMonth: true, compact: true });
+    const prevYear = month === 0 ? year - 1 : year;
+    html += calDayCell(prevYear, prevMonth, d, {
+      outsideMonth: true,
+      compact: true,
+    });
   }
 
   for (let d = 1; d <= daysInMonth; d++) {
@@ -535,8 +1232,11 @@ function renderMonthView(container) {
   const trailing = totalCells - firstDay - daysInMonth;
   for (let d = 1; d <= trailing; d++) {
     const nextMonth = month === 11 ? 1 : month + 2;
-    const nextYear  = month === 11 ? year + 1 : year;
-    html += calDayCell(nextYear, nextMonth, d, { outsideMonth: true, compact: true });
+    const nextYear = month === 11 ? year + 1 : year;
+    html += calDayCell(nextYear, nextMonth, d, {
+      outsideMonth: true,
+      compact: true,
+    });
   }
 
   html += `</div></div>`;
@@ -558,22 +1258,22 @@ function renderWeekView(container) {
   for (let i = 0; i < 7; i++) {
     const d = new Date(weekStart);
     d.setDate(weekStart.getDate() + i);
-    const year   = d.getFullYear();
+    const year = d.getFullYear();
     const month1 = d.getMonth() + 1;
-    const day    = d.getDate();
-    const dow    = d.getDay();
+    const day = d.getDate();
+    const dow = d.getDay();
     const weekend = isWeekend(dow);
     const holiday = getHolidayInfo(year, month1, day);
     const observance = getObservanceInfo(year, month1, day);
-    const today   = new Date();
+    const today = new Date();
     const isToday = d.toDateString() === today.toDateString();
-    const dateStr = `${year}-${String(month1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
+    const dateStr = `${year}-${String(month1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
     const isSelected = _calState.selectedDate === dateStr;
     const hijri = gregorianToHijri(year, month1, day);
     const hijriMonths = CAL_I18N[lang].hijriMonths;
 
     let classes = "cal-week-day";
-    if (weekend)    classes += " cal-week-day--weekend";
+    if (weekend) classes += " cal-week-day--weekend";
     if (holiday) {
       if (holiday.type === "declared" || holiday.type === "special") {
         classes += " cal-week-day--declared";
@@ -582,16 +1282,23 @@ function renderWeekView(container) {
       }
     }
     if (!holiday && observance) classes += " cal-week-day--observance";
-    if (isToday)    classes += " cal-week-day--today";
+    if (isToday) classes += " cal-week-day--today";
     if (isSelected) classes += " cal-week-day--selected";
-    const todayMidnightW = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const todayMidnightW = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate(),
+    );
     if (d < todayMidnightW && !isToday) classes += " cal-week-day--past";
 
     html += `
       <div class="${classes}" data-date="${dateStr}" data-year="${year}" data-month="${month1}" data-day="${day}">
         <div class="cal-week-day-header">
           <span class="cal-week-day-name">${L.dayNamesShort[dow]}</span>
-          <span class="cal-week-day-num">${day}${observance ? `<span class="cal-observance-dot cal-observance-dot--week" title="${observance[lang]}"></span>` : ""}</span>
+          <span class="cal-week-day-num">
+            <span class="cal-week-day-num-val">${day}</span>
+            ${observance || _calTodoDates.has(dateStr) ? `<span class="cal-week-dots">${observance ? `<span class="cal-observance-dot" title="${observance[lang]}"></span>` : ""}${_calTodoDates.has(dateStr) ? `<span class="cal-todo-dot" title="Has to-do items"></span>` : ""}</span>` : ""}
+          </span>
           <span class="cal-week-month">${L.monthNames[d.getMonth()].slice(0, _calState.lang === "dv" ? 4 : 3)}</span>
         </div>
         <div class="cal-week-hijri">${hijri.day} ${hijriMonths[hijri.month - 1]} ${hijri.year}</div>
@@ -634,8 +1341,11 @@ function renderYearView(container) {
     for (let i = firstDay - 1; i >= 0; i--) {
       const d = prevDays - i;
       const pMonth = m === 0 ? 12 : m;
-      const pYear  = m === 0 ? year - 1 : year;
-      html += calDayCell(pYear, pMonth, d, { outsideMonth: true, compact: true });
+      const pYear = m === 0 ? year - 1 : year;
+      html += calDayCell(pYear, pMonth, d, {
+        outsideMonth: true,
+        compact: true,
+      });
     }
 
     for (let d = 1; d <= daysInMonth; d++) {
@@ -646,8 +1356,11 @@ function renderYearView(container) {
     const trailing = totalCells - firstDay - daysInMonth;
     for (let d = 1; d <= trailing; d++) {
       const nMonth = m === 11 ? 1 : m + 2;
-      const nYear  = m === 11 ? year + 1 : year;
-      html += calDayCell(nYear, nMonth, d, { outsideMonth: true, compact: true });
+      const nYear = m === 11 ? year + 1 : year;
+      html += calDayCell(nYear, nMonth, d, {
+        outsideMonth: true,
+        compact: true,
+      });
     }
 
     html += `</div></div>`;
@@ -681,15 +1394,18 @@ function renderDayDetail() {
   const weekend = isWeekend(dow);
 
   let badges = "";
-  if (weekend)  badges += `<span class="cal-badge cal-badge--weekend">${t("weekend")}</span>`;
+  if (weekend)
+    badges += `<span class="cal-badge cal-badge--weekend">${t("weekend")}</span>`;
   if (holiday) {
-    const typeClass = (holiday.type === "declared" || holiday.type === "special")
-      ? "cal-badge--declared"
-      : "cal-badge--holiday";
+    const typeClass =
+      holiday.type === "declared" || holiday.type === "special"
+        ? "cal-badge--declared"
+        : "cal-badge--holiday";
     badges += `<span class="cal-badge ${typeClass}">${t("publicHoliday")}</span>`;
   }
   if (!holiday && observance) {
-    const obsLabel = _calState.lang === "en" ? "Int'l Day" : "ބައިނަލް އަޤްވާމީ";
+    const obsLabel =
+      _calState.lang === "en" ? "Int'l Day" : "ބައިނަލް އަޤްވާމީ";
     badges += `<span class="cal-badge cal-badge--observance">🌐 ${obsLabel}</span>`;
   }
 
@@ -697,9 +1413,23 @@ function renderDayDetail() {
     ? `<div class="cal-detail-gazette">📋 ${holiday.gazette_ref}</div>`
     : "";
 
-  const observanceHtml = (!holiday && observance)
-    ? `<div class="cal-detail-observance-name">🌐 ${observance[_calState.lang]}</div>`
-    : "";
+  const observanceHtml =
+    !holiday && observance
+      ? `<div class="cal-detail-observance-name">🌐 ${observance[_calState.lang]}</div>`
+      : "";
+
+  // Todo hint — tap the blue dot on the cell to open todos
+  const hasTodos = _calTodoDates.has(_calState.selectedDate);
+  const todoHint = `
+    <button class="cal-detail-todo-btn" id="cal-detail-todo-btn">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="9" y1="12" x2="15" y2="12"/><line x1="12" y1="9" x2="12" y2="15"/>
+        <circle cx="12" cy="12" r="9"/>
+      </svg>
+      ${hasTodos ? "View / Edit To-Do" : "Add To-Do"}
+      ${hasTodos ? `<span class="cal-detail-todo-badge"></span>` : ""}
+    </button>
+  `;
 
   panel.innerHTML = `
     <div class="cal-detail-date">
@@ -718,7 +1448,13 @@ function renderDayDetail() {
       ${gazetteHtml}
       ${observanceHtml}
     </div>
+    <div class="cal-detail-todo-row">${todoHint}</div>
   `;
+
+  // Open popover anchored to the selected day cell
+  panel.querySelector("#cal-detail-todo-btn")?.addEventListener("click", () => {
+    _openTodoPopover(_calState.selectedDate, null, true);
+  });
 }
 
 // ============================================================================
@@ -732,25 +1468,31 @@ function renderSyncStatus() {
   const icons = { loading: "⟳", ok: "✓", cached: "✓", error: "⚠", idle: "" };
   const labels = {
     loading: "Checking for updates…",
-    ok:      _calSyncMeta ? `Updated ${_calSyncMeta.last_updated}` : "Holidays up to date",
-    cached:  _calSyncMeta ? `Cached · ${_calSyncMeta.last_updated}` : "Cached",
-    error:   "Could not reach server — using local data",
-    idle:    "",
+    ok: _calSyncMeta
+      ? `Updated ${_calSyncMeta.last_updated}`
+      : "Holidays up to date",
+    cached: _calSyncMeta ? `Cached · ${_calSyncMeta.last_updated}` : "Cached",
+    error: "Could not reach server — using local data",
+    idle: "",
   };
 
   el.dataset.status = _calSyncStatus;
   el.innerHTML = `
     <span class="cal-sync-icon">${icons[_calSyncStatus]}</span>
     <span class="cal-sync-label">${labels[_calSyncStatus]}</span>
-    ${_calSyncStatus !== "loading"
-      ? `<button class="cal-sync-refresh" id="cal-sync-refresh-btn" title="Refresh holidays from server">↺</button>`
-      : ""}
+    ${
+      _calSyncStatus !== "loading"
+        ? `<button class="cal-sync-refresh" id="cal-sync-refresh-btn" title="Refresh holidays from server">↺</button>`
+        : ""
+    }
   `;
 
-  document.getElementById("cal-sync-refresh-btn")?.addEventListener("click", (e) => {
-    e.stopPropagation();
-    refreshRemoteHolidays();
-  });
+  document
+    .getElementById("cal-sync-refresh-btn")
+    ?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      refreshRemoteHolidays();
+    });
 }
 
 // ============================================================================
@@ -760,15 +1502,21 @@ function renderSyncStatus() {
 function calNavigate(direction) {
   if (_calState.view === "month") {
     _calState.month += direction;
-    if (_calState.month > 11) { _calState.month = 0; _calState.year++; }
-    if (_calState.month < 0)  { _calState.month = 11; _calState.year--; }
+    if (_calState.month > 11) {
+      _calState.month = 0;
+      _calState.year++;
+    }
+    if (_calState.month < 0) {
+      _calState.month = 11;
+      _calState.year--;
+    }
   } else if (_calState.view === "year") {
     _calState.year += direction;
   } else if (_calState.view === "week") {
     const ws = new Date(_calState.weekStart);
     ws.setDate(ws.getDate() + direction * 7);
     _calState.weekStart = ws;
-    _calState.year  = ws.getFullYear();
+    _calState.year = ws.getFullYear();
     _calState.month = ws.getMonth();
   }
   renderCalendar();
@@ -776,7 +1524,7 @@ function calNavigate(direction) {
 
 function calGoToday() {
   const today = new Date();
-  _calState.year  = today.getFullYear();
+  _calState.year = today.getFullYear();
   _calState.month = today.getMonth();
   const d = new Date(today);
   d.setDate(d.getDate() - d.getDay());
@@ -792,11 +1540,12 @@ function calGoToday() {
 function calHeaderTitle() {
   const { view, year, month, lang } = _calState;
   const L = CAL_I18N[lang];
-  if (view === "year")  return `${year}`;
+  if (view === "year") return `${year}`;
   if (view === "month") return `${L.monthNames[month]} ${year}`;
   if (view === "week") {
     const ws = new Date(_calState.weekStart);
-    const we = new Date(ws); we.setDate(we.getDate() + 6);
+    const we = new Date(ws);
+    we.setDate(we.getDate() + 6);
     const sliceLen = _calState.lang === "dv" ? 4 : 3;
     const sm = L.monthNames[ws.getMonth()].slice(0, sliceLen);
     const em = L.monthNames[we.getMonth()].slice(0, sliceLen);
@@ -812,31 +1561,31 @@ function calHeaderTitle() {
 // MAIN RENDER
 // ============================================================================
 
-function renderCalendar() {
-  const titleEl   = document.getElementById("cal-title");
-  const bodyEl    = document.getElementById("cal-body");
-  const langBtn   = document.getElementById("cal-lang-btn");
+async function renderCalendar() {
+  const titleEl = document.getElementById("cal-title");
+  const bodyEl = document.getElementById("cal-body");
+  const langBtn = document.getElementById("cal-lang-btn");
   if (!titleEl || !bodyEl) return;
 
-  // Track dynamic year browsing state to shift calculation matrices seamlessly
   if (_calState.year !== _lastMappedYear) {
     CAL_HOLIDAY_MAP = buildHolidayMap(_calState.year);
     _lastMappedYear = _calState.year;
-    
-    // Maintain secondary mapping integrity for active network caching buffers
     const cachedData = localStorage.getItem(CAL_CACHE_KEY);
     if (cachedData) {
-      try { mergeRemoteHolidays(flattenRemoteJson(JSON.parse(cachedData))); } catch(_) {}
+      try {
+        mergeRemoteHolidays(flattenRemoteJson(JSON.parse(cachedData)));
+      } catch (_) {}
     }
   }
 
   const container = bodyEl.closest(".cal-container");
-  if (container) container.classList.toggle("cal-lang--dv", _calState.lang === "dv");
+  if (container)
+    container.classList.toggle("cal-lang--dv", _calState.lang === "dv");
 
   titleEl.textContent = calHeaderTitle();
   if (langBtn) langBtn.textContent = t("language");
 
-  ["week","month","year"].forEach(v => {
+  ["week", "month", "year"].forEach((v) => {
     const btn = document.getElementById(`cal-view-${v}`);
     if (btn) btn.classList.toggle("active", _calState.view === v);
     if (btn) btn.textContent = t(`${v}View`);
@@ -845,11 +1594,19 @@ function renderCalendar() {
   const todayBtn = document.getElementById("cal-today-btn");
   if (todayBtn) todayBtn.textContent = t("today");
 
+  _closeTodoPopover();
+  await _prefetchVisibleTodoDates();
+
   bodyEl.innerHTML = "";
   bodyEl.className = `cal-body cal-body--${_calState.view}`;
 
-  if (_calState.view === "month") renderMonthView(bodyEl);
-  else if (_calState.view === "week") renderWeekView(bodyEl);
+  if (_calState.view === "month") {
+    renderMonthView(bodyEl);
+    // Capture height after paint so year-view panel popup matches month-view height
+    requestAnimationFrame(() => {
+      _monthViewBodyHeight = bodyEl.getBoundingClientRect().height;
+    });
+  } else if (_calState.view === "week") renderWeekView(bodyEl);
   else if (_calState.view === "year") renderYearView(bodyEl);
 
   renderDayDetail();
@@ -857,7 +1614,7 @@ function renderCalendar() {
   if (_calState.view === "week") {
     const ws = _calState.weekStart;
     _calState.month = ws.getMonth();
-    _calState.year  = ws.getFullYear();
+    _calState.year = ws.getFullYear();
   }
 }
 
@@ -866,14 +1623,44 @@ function renderCalendar() {
 // ============================================================================
 
 function attachDayClickHandlers(container) {
-  container.querySelectorAll("[data-date]").forEach(el => {
-    el.addEventListener("click", () => {
-      const ds = el.dataset.date;
+  container.querySelectorAll("[data-date]").forEach((el) => {
+    const ds = el.dataset.date;
+
+    // Hover tooltip — only for cells with todos
+    el.addEventListener("mouseenter", () => {
+      if (_calTodoDates.has(ds)) _showTodoTooltip(ds, el);
+    });
+    el.addEventListener("mouseleave", () => {
+      // Small grace period so cursor can move into the tooltip without it vanishing
+      _cancelTodoTooltip();
+      setTimeout(() => {
+        const tip = document.getElementById("cal-todo-tooltip");
+        if (tip && !tip.matches(":hover")) tip.remove();
+      }, 120);
+    });
+
+    el.addEventListener("click", (e) => {
+      _hideTodoTooltip();
+
+      // If the click was on the todo dot, open the editable popover directly
+      if (e.target.closest(".cal-todo-dot")) {
+        _calState.selectedDate = ds;
+        container.querySelectorAll("[data-date]").forEach((c) => {
+          const isThis = c.dataset.date === ds;
+          c.classList.toggle("cal-day--selected", isThis);
+          c.classList.toggle("cal-week-day--selected", isThis);
+        });
+        renderDayDetail();
+        _openTodoPopover(ds, el);
+        return;
+      }
+
       _calState.selectedDate = _calState.selectedDate === ds ? null : ds;
-      container.querySelectorAll("[data-date]").forEach(e => {
-        const isThis = e.dataset.date === _calState.selectedDate;
-        e.classList.toggle("cal-day--selected", isThis);
-        e.classList.toggle("cal-week-day--selected", isThis);
+      _closeTodoPopover();
+      container.querySelectorAll("[data-date]").forEach((c) => {
+        const isThis = c.dataset.date === _calState.selectedDate;
+        c.classList.toggle("cal-day--selected", isThis);
+        c.classList.toggle("cal-week-day--selected", isThis);
       });
       renderDayDetail();
     });
@@ -896,16 +1683,22 @@ function initCalendar() {
   calLoadState();
   fetchRemoteHolidays();
 
-  ["week","month","year"].forEach(v => {
+  ["week", "month", "year"].forEach((v) => {
     document.getElementById(`cal-view-${v}`)?.addEventListener("click", () => {
       _calState.view = v;
       renderCalendar();
     });
   });
 
-  document.getElementById("cal-prev-btn")?.addEventListener("click", () => calNavigate(-1));
-  document.getElementById("cal-next-btn")?.addEventListener("click", () => calNavigate(1));
-  document.getElementById("cal-today-btn")?.addEventListener("click", calGoToday);
+  document
+    .getElementById("cal-prev-btn")
+    ?.addEventListener("click", () => calNavigate(-1));
+  document
+    .getElementById("cal-next-btn")
+    ?.addEventListener("click", () => calNavigate(1));
+  document
+    .getElementById("cal-today-btn")
+    ?.addEventListener("click", calGoToday);
 
   document.getElementById("cal-lang-btn")?.addEventListener("click", () => {
     _calState.lang = _calState.lang === "en" ? "dv" : "en";
