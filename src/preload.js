@@ -268,18 +268,23 @@ contextBridge.exposeInMainWorld("electronAPI", {
   /** Returns true if the date has any to-do items. */
   calTodoHas: (date) => ipcRenderer.invoke("cal-todo-has", date),
 
-  /** Get all todos with optional {from, to} date filter (YYYY-MM-DD). */
-  calTodoGetAll: (filter) =>
-    ipcRenderer.invoke("cal-todo-get-all", filter || {}),
+  /** Get all to-do items across all dates (optional {from, to} date range). */
+  calTodoGetAll: (opts) => ipcRenderer.invoke("cal-todo-get-all", opts || {}),
 
-  /** Update fields on a single todo by id. */
-  calTodoUpdate: (data) => ipcRenderer.invoke("cal-todo-update", data),
+  /** Move a single to-do to a new date. */
+  calTodoMove: (id, newDate) =>
+    ipcRenderer.invoke("cal-todo-move", { id, newDate }),
 
-  /** Delete a single todo by id. */
-  calTodoDeleteById: (id) => ipcRenderer.invoke("cal-todo-delete-by-id", id),
+  /** Update text and/or done status of a single to-do item. */
+  calTodoUpdate: (id, fields) =>
+    ipcRenderer.invoke("cal-todo-update", { id, ...fields }),
 
-  /** Get distinct years that have any todos. */
-  calTodoGetYears: () => ipcRenderer.invoke("cal-todo-get-years"),
+  /** Delete a single to-do item by id. */
+  calTodoDelete: (id) => ipcRenderer.invoke("cal-todo-delete", { id }),
+
+  /** Insert a new to-do item. Returns the created item {id, date, text, done}. */
+  calTodoAdd: (date, text) =>
+    ipcRenderer.invoke("cal-todo-add", { date, text }),
 
   /**
    * Opens a native file dialog restricted to CSV / XLSX files (for batch generation).

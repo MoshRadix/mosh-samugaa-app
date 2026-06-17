@@ -191,7 +191,7 @@ function switchView(view) {
   if (mainContent) {
     mainContent.classList.toggle(
       "main-content--flush",
-      view === "notes" || view === "social-media",
+      view === "notes" || view === "social-media" || view === "todo",
     );
   }
 
@@ -297,15 +297,15 @@ function switchView(view) {
       }
       break;
 
-    case "todo":
-      if (typeof initTodo === "function") {
-        initTodo();
-      }
-      break;
-
     case "social-media":
       if (typeof initSocialMedia === "function") {
         initSocialMedia();
+      }
+      break;
+
+    case "todo":
+      if (typeof initTodo === "function") {
+        initTodo();
       }
       break;
   }

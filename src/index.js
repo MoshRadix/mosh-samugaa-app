@@ -138,8 +138,7 @@ async function initWorkLogsDB() {
       date TEXT NOT NULL,
       text TEXT NOT NULL,
       done INTEGER NOT NULL DEFAULT 0,
-      sort_order INTEGER NOT NULL DEFAULT 0,
-      notionPageId TEXT
+      sort_order INTEGER NOT NULL DEFAULT 0
     );
     CREATE INDEX IF NOT EXISTS idx_cal_todos_date ON cal_todos(date);
   `);
@@ -1852,21 +1851,9 @@ ipcMain.handle("cal-todo-has", async (event, date) => {
   return !!(rows.length && rows[0].values[0][0] > 0);
 });
 
-// ── Additional Calendar To-Do handlers ──────────────────────────────────────
-
-/** Migrate notionPageId column if missing (safe on first run with new schema) */
-function _ensureCalTodosMigrated() {
-  const cols = wlDb.exec("PRAGMA table_info(cal_todos)");
-  const names = cols.length ? cols[0].values.map((r) => r[1]) : [];
-  if (!names.includes("notionPageId")) {
-    wlDb.exec("ALTER TABLE cal_todos ADD COLUMN notionPageId TEXT");
-  }
-}
-
-ipcMain.handle("cal-todo-get-all", async (event, { from, to }) => {
-  _ensureCalTodosMigrated();
-  let sql =
-    "SELECT id, date, text, done, sort_order, notionPageId FROM cal_todos";
+/** Get all todos (optionally filtered by date range). Returns [{id, date, text, done}]. */
+ipcMain.handle("cal-todo-get-all", async (event, { from, to } = {}) => {
+  let sql = "SELECT id, date, text, done, sort_order FROM cal_todos";
   const params = [];
   if (from && to) {
     sql += " WHERE date >= ? AND date <= ?";
@@ -1874,68 +1861,63 @@ ipcMain.handle("cal-todo-get-all", async (event, { from, to }) => {
   } else if (from) {
     sql += " WHERE date >= ?";
     params.push(from);
-  } else if (to) {
-    sql += " WHERE date <= ?";
-    params.push(to);
   }
   sql += " ORDER BY date ASC, sort_order ASC, rowid ASC";
   const rows = wlDb.exec(sql, params);
   if (!rows.length) return [];
-  return rows[0].values.map(
-    ([id, date, text, done, sort_order, notionPageId]) => ({
-      id,
-      date,
-      text,
-      done: !!done,
-      sort_order,
-      notionPageId: notionPageId || null,
-    }),
-  );
+  return rows[0].values.map(([id, date, text, done, sort_order]) => ({
+    id,
+    date,
+    text,
+    done: !!done,
+    sort_order,
+  }));
 });
 
-ipcMain.handle(
-  "cal-todo-update",
-  async (event, { id, text, done, date, notionPageId }) => {
-    _ensureCalTodosMigrated();
-    // Build dynamic update
-    const sets = [];
-    const params = [];
-    if (text !== undefined) {
-      sets.push("text = ?");
-      params.push(text);
-    }
-    if (done !== undefined) {
-      sets.push("done = ?");
-      params.push(done ? 1 : 0);
-    }
-    if (date !== undefined) {
-      sets.push("date = ?");
-      params.push(date);
-    }
-    if (notionPageId !== undefined) {
-      sets.push("notionPageId = ?");
-      params.push(notionPageId);
-    }
-    if (!sets.length) return false;
-    params.push(id);
-    wlDb.run(`UPDATE cal_todos SET ${sets.join(", ")} WHERE id = ?`, params);
-    await saveWorkLogsDB();
-    return true;
-  },
-);
+/** Move a single todo item to a new date (updates the date column). */
+ipcMain.handle("cal-todo-move", async (event, { id, newDate }) => {
+  wlDb.run("UPDATE cal_todos SET date = ? WHERE id = ?", [newDate, id]);
+  await saveWorkLogsDB();
+  return true;
+});
 
-ipcMain.handle("cal-todo-delete-by-id", async (event, id) => {
+/** Update text and/or done status of a single todo item. */
+ipcMain.handle("cal-todo-update", async (event, { id, text, done }) => {
+  if (text !== undefined && done !== undefined) {
+    wlDb.run("UPDATE cal_todos SET text = ?, done = ? WHERE id = ?", [
+      text,
+      done ? 1 : 0,
+      id,
+    ]);
+  } else if (text !== undefined) {
+    wlDb.run("UPDATE cal_todos SET text = ? WHERE id = ?", [text, id]);
+  } else if (done !== undefined) {
+    wlDb.run("UPDATE cal_todos SET done = ? WHERE id = ?", [done ? 1 : 0, id]);
+  }
+  await saveWorkLogsDB();
+  return true;
+});
+
+/** Delete a single todo item by id. */
+ipcMain.handle("cal-todo-delete", async (event, { id }) => {
   wlDb.run("DELETE FROM cal_todos WHERE id = ?", [id]);
   await saveWorkLogsDB();
   return true;
 });
 
-ipcMain.handle("cal-todo-get-years", async () => {
-  const rows = wlDb.exec(
-    "SELECT DISTINCT substr(date, 1, 4) as yr FROM cal_todos ORDER BY yr DESC",
+/** Insert a new todo item. */
+ipcMain.handle("cal-todo-add", async (event, { date, text }) => {
+  const id = uuidv4();
+  const rowsNow = wlDb.exec("SELECT COUNT(*) FROM cal_todos WHERE date = ?", [
+    date,
+  ]);
+  const count = rowsNow.length ? rowsNow[0].values[0][0] : 0;
+  wlDb.run(
+    "INSERT INTO cal_todos (id, date, text, done, sort_order) VALUES (?, ?, ?, 0, ?)",
+    [id, date, text, count],
   );
-  if (!rows.length) return [];
-  return rows[0].values.map((r) => r[0]);
+  await saveWorkLogsDB();
+  return { id, date, text, done: false, sort_order: count };
 });
 
 ipcMain.handle("export-work-logs-excel", async (event, { rows }) => {
