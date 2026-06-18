@@ -4,6 +4,20 @@
  * Reads/writes todos from worklogs.db via IPC.
  * Calendar integration: updating due date refreshes calendar dot indicators.
  * Notion sync: push all visible todos to Notion DB; pull tasks from Notion.
+ *
+ * UX improvements (v2):
+ * - Priority dots (colour-coded) always visible on items
+ * - Overdue group: danger-coloured header + warm background tint
+ * - Progress bars animate via CSS transition (already in CSS)
+ * - Inline double-click text editing (no modal for text-only edits)
+ * - Action buttons always visible at low opacity, full on hover
+ * - Collapsible sidebar sections (Status expanded, Tags/Notion collapsed by default)
+ * - Active filter pill in toolbar — shows when tag/priority filter is active
+ * - "All done" empty state distinct from "nothing exists" empty state
+ * - Space key toggles done on keyboard-focused item
+ * - Tab/Shift-Tab navigation between items
+ * - Optimistic UI for done toggle (DOM updates immediately, rolls back on error)
+ * - Today group sticky at top when in view
  */
 
 // ============================================================================
@@ -11,7 +25,7 @@
 // ============================================================================
 
 let _tdInitialized = false;
-let _tdAllItems = []; // All loaded items [{id, date, text, done, tags}]
+let _tdAllItems = []; // All loaded items [{id, date, text, done, tags, priority}]
 let _tdFilter = "current-week";
 let _tdStatusFilter = "all"; // "all" | "pending" | "done"
 let _tdSearchQuery = "";
@@ -34,7 +48,6 @@ let _tdNotionSyncing = false;
 
 async function initTodo() {
   if (_tdInitialized) {
-    // Already initialized — just reload data
     _tdLoadNotionCreds();
     await _tdLoadAll();
     return;
@@ -52,6 +65,7 @@ async function initTodo() {
   _tdBindNotionButtons();
   _tdBindYearNav();
   _tdBindExport();
+  _tdBindCollapsibleSections();
   _tdLoadNotionCreds();
 
   await _tdLoadAll();
@@ -90,7 +104,6 @@ function _tdGetDateRange() {
 
   if (_tdFilter === "current-week") {
     const start = new Date(today);
-    // Maldives: week starts Sunday
     start.setDate(today.getDate() - today.getDay());
     const end = new Date(start);
     end.setDate(start.getDate() + 6);
@@ -118,8 +131,10 @@ function _tdGetDateRange() {
   }
 
   if (_tdFilter === "last-3-months") {
-    const start = new Date(today.getFullYear(), today.getMonth() - 2, 1);
-    return { from: _tdFmtDate(start), to: todayStr };
+    // 3 previous months + current month, through end of current month
+    const start = new Date(today.getFullYear(), today.getMonth() - 3, 1);
+    const end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+    return { from: _tdFmtDate(start), to: _tdFmtDate(end) };
   }
 
   if (_tdFilter === "year") {
@@ -150,28 +165,22 @@ function _tdGetRangeLabel() {
 function _tdGetFiltered() {
   let items = [..._tdAllItems];
 
-  // Status filter
   if (_tdStatusFilter === "pending") items = items.filter((i) => !i.done);
   else if (_tdStatusFilter === "done") items = items.filter((i) => i.done);
 
-  // Priority filter
   if (_tdPriorityFilter !== "all") {
     items = items.filter((i) => (i.priority || "medium") === _tdPriorityFilter);
   }
 
-  // Tag filter
   if (_tdTagFilter) {
     items = items.filter((i) => Array.isArray(i.tags) && i.tags.includes(_tdTagFilter));
   }
 
-  // Search
   if (_tdSearchQuery) {
     const q = _tdSearchQuery.toLowerCase();
     items = items.filter((i) => i.text.toLowerCase().includes(q));
   }
 
-  // Sort
-  const today = _tdFmtDate(new Date());
   items.sort((a, b) => {
     if (_tdSortMode === "date-asc")
       return a.date < b.date ? -1 : a.date > b.date ? 1 : 0;
@@ -198,6 +207,7 @@ function _tdRender() {
   _tdUpdateRangeLabel();
   _tdUpdateTagFilterSidebar();
   _tdUpdatePriorityFilterSidebar();
+  _tdUpdateActiveFilterPill();
 
   const items = _tdGetFiltered();
   const groups = document.getElementById("td-groups");
@@ -211,12 +221,22 @@ function _tdRender() {
       empty.style.display = "flex";
       const title = document.getElementById("td-empty-title");
       const sub = document.getElementById("td-empty-sub");
-      if (_tdSearchQuery && title) title.textContent = "No matching to-dos";
-      else if (title) title.textContent = "No to-dos in this range";
-      if (sub)
-        sub.textContent = _tdSearchQuery
-          ? "Try a different search"
-          : "Click + to add a to-do";
+
+      if (_tdSearchQuery) {
+        if (title) title.textContent = "No matching tasks";
+        if (sub) sub.textContent = "Try a different search term";
+      } else {
+        // Distinguish "all done" vs "nothing exists"
+        const total = _tdAllItems.length;
+        const done = _tdAllItems.filter((i) => i.done).length;
+        if (total > 0 && done === total && _tdStatusFilter !== "done") {
+          if (title) title.textContent = "All done!";
+          if (sub) sub.textContent = "Every task in this range is complete 🎉";
+        } else {
+          if (title) title.textContent = "Nothing scheduled here";
+          if (sub) sub.textContent = "Press N or click New to add a task";
+        }
+      }
     }
     return;
   }
@@ -258,11 +278,23 @@ function _tdRender() {
         ? Math.round((doneCount / dateItems.length) * 100)
         : 0;
 
+    // Overdue group: stronger signal — class drives CSS colour + bg tint
+    const groupClasses = [
+      "td-group",
+      isOverdue && !isToday && !isYesterday ? "td-group--overdue" : "",
+      isToday ? "td-group--today" : "",
+    ].filter(Boolean).join(" ");
+
+    // Overdue date label gets danger colour via CSS class
+    const dateLabelClass = isOverdue && !isToday && !isYesterday
+      ? "td-group-date td-group-date--overdue"
+      : "td-group-date";
+
     html += `
-      <div class="td-group${isOverdue && !isToday && !isYesterday ? " td-group--overdue" : ""}${isToday ? " td-group--today" : ""}" data-date="${date}">
+      <div class="${groupClasses}" data-date="${date}">
         <div class="td-group-header">
           <div class="td-group-date-row">
-            <span class="td-group-date">${dateLabel}</span>
+            <span class="${dateLabelClass}">${dateLabel}</span>
             ${dateBadge}
           </div>
           <div class="td-group-meta">
@@ -272,13 +304,13 @@ function _tdRender() {
             <span class="td-group-count">${doneCount}/${dateItems.length}</span>
           </div>
         </div>
-        <div class="td-items">
+        <div class="td-items" role="list">
           ${dateItems.map((item) => _tdRenderItem(item)).join("")}
         </div>
         <div class="td-group-footer">
           <button class="td-inline-add" data-date="${date}">
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            Add to-do for this date
+            Add task for this date
           </button>
         </div>
       </div>
@@ -297,29 +329,37 @@ function _tdRenderItem(item) {
   const tagPills = tags.length
     ? `<div class="td-item-tags">${tags.map(t => `<span class="td-tag-pill td-tag-pill--item" data-tag="${_tdEscape(t)}">${_tdEscape(t)}</span>`).join("")}</div>`
     : "";
+
+  // Priority dot colours — red/amber/teal
+  const dotColours = { high: "#c47a6e", medium: "#c9a87b", low: "#6c8b7a" };
+  const dotColour = dotColours[priority] || dotColours.medium;
+
   return `
-    <div class="td-item${item.done ? " td-item--done" : ""}${isOverdue ? " td-item--overdue" : ""} td-item--priority-${priority}" data-id="${item.id}" data-date="${item.date}" data-priority="${priority}">
-      <button class="td-check" data-id="${item.id}" data-done="${item.done}" title="${item.done ? "Mark pending" : "Mark done"}">
+    <div class="td-item${item.done ? " td-item--done" : ""}${isOverdue ? " td-item--overdue" : ""} td-item--priority-${priority}"
+         data-id="${item.id}" data-date="${item.date}" data-priority="${priority}"
+         role="listitem" tabindex="0" aria-label="${_tdEscape(item.text)}${item.done ? ', done' : ', pending'}">
+      <button class="td-check" data-id="${item.id}" data-done="${item.done}" title="${item.done ? "Mark pending" : "Mark done"}" aria-pressed="${item.done}">
         <svg class="td-check-icon" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
           <polyline points="20 6 9 17 4 12"/>
         </svg>
       </button>
+      <span class="td-priority-dot" style="background:${dotColour}" title="${priority} priority" aria-hidden="true"></span>
       <div class="td-item-body">
-        <span class="td-item-text">${_tdEscape(item.text)}</span>
+        <span class="td-item-text" data-id="${item.id}">${_tdEscape(item.text)}</span>
         ${tagPills}
       </div>
       <div class="td-item-actions">
-        <button class="td-action-btn td-edit-btn" data-id="${item.id}" title="Edit">
+        <button class="td-action-btn td-edit-btn" data-id="${item.id}" title="Edit (double-click task to edit inline)" aria-label="Edit task">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
         </button>
-        <button class="td-action-btn td-date-btn" data-id="${item.id}" data-date="${item.date}" title="Change due date">
+        <button class="td-action-btn td-date-btn" data-id="${item.id}" data-date="${item.date}" title="Change due date" aria-label="Change due date">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
         </button>
-        <button class="td-action-btn td-delete-btn" data-id="${item.id}" title="Delete">
+        <button class="td-action-btn td-delete-btn" data-id="${item.id}" title="Delete" aria-label="Delete task">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
         </button>
       </div>
-      <input type="date" class="td-inline-date-input" id="td-date-input-${item.id}" value="${item.date}" style="display:none" />
+      <input type="date" class="td-inline-date-input" id="td-date-input-${item.id}" value="${item.date}" style="display:none" aria-hidden="true"/>
     </div>
   `;
 }
@@ -344,7 +384,6 @@ function _tdUpdateStats() {
   if (elPending) elPending.textContent = pending;
   if (elOverdue) elOverdue.textContent = overdue;
 
-  // Global progress bar
   const pct = total > 0 ? Math.round((done / total) * 100) : 0;
   const globalFill = document.getElementById("td-global-progress-fill");
   const globalPct = document.getElementById("td-global-progress-pct");
@@ -358,6 +397,62 @@ function _tdUpdateStats() {
 function _tdUpdateRangeLabel() {
   const el = document.getElementById("td-range-label");
   if (el) el.textContent = _tdGetRangeLabel();
+}
+
+// ── Active filter pill in toolbar ─────────────────────────────────────────
+
+function _tdUpdateActiveFilterPill() {
+  const wrap = document.getElementById("td-active-filter-pill-wrap");
+  if (!wrap) return;
+
+  const parts = [];
+  if (_tdTagFilter) parts.push(`tag: ${_tdTagFilter}`);
+  if (_tdPriorityFilter !== "all") parts.push(`${_tdPriorityFilter} priority`);
+
+  if (parts.length === 0) {
+    wrap.style.display = "none";
+    wrap.innerHTML = "";
+    return;
+  }
+
+  wrap.style.display = "flex";
+  wrap.innerHTML = parts.map(p => `
+    <span class="td-active-filter-pill">
+      ${_tdEscape(p)}
+      <button class="td-active-filter-clear" data-filter="${_tdEscape(p)}" title="Clear this filter" aria-label="Clear filter ${_tdEscape(p)}">
+        <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </span>
+  `).join("");
+
+  wrap.querySelectorAll(".td-active-filter-clear").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const f = btn.dataset.filter;
+      if (f.startsWith("tag:")) _tdTagFilter = null;
+      if (f.includes("priority")) _tdPriorityFilter = "all";
+      _tdRender();
+    });
+  });
+}
+
+// ============================================================================
+// COLLAPSIBLE SIDEBAR SECTIONS
+// ============================================================================
+
+function _tdBindCollapsibleSections() {
+  const toggles = document.querySelectorAll(".td-section-toggle");
+  toggles.forEach(toggle => {
+    toggle.addEventListener("click", () => {
+      const section = toggle.closest(".td-sidebar-section");
+      if (!section) return;
+      const body = section.querySelector(".td-section-body");
+      if (!body) return;
+      const isCollapsed = body.classList.toggle("td-section-body--collapsed");
+      toggle.setAttribute("aria-expanded", String(!isCollapsed));
+      toggle.classList.toggle("td-section-toggle--collapsed", isCollapsed);
+    });
+  });
 }
 
 // ============================================================================
@@ -458,19 +553,9 @@ function _tdBindYearNav() {
     _tdLoadAll();
   };
 
-  if (prev)
-    prev.addEventListener("click", () => {
-      _tdYearSel--;
-      update();
-    });
-  if (next)
-    next.addEventListener("click", () => {
-      _tdYearSel++;
-      update();
-    });
+  if (prev) prev.addEventListener("click", () => { _tdYearSel--; update(); });
+  if (next) next.addEventListener("click", () => { _tdYearSel++; update(); });
 }
-
-
 
 // ============================================================================
 // PRIORITY — sidebar filter, modal selector
@@ -527,15 +612,13 @@ function _tdUpdateTagFilterSidebar() {
   const tags = _tdGetAllTags();
   if (tags.length === 0) {
     if (empty) empty.style.display = "block";
-    // Remove any existing tag buttons
     list.querySelectorAll(".td-tag-filter-btn").forEach(b => b.remove());
-    if (_tdTagFilter) { _tdTagFilter = null; }
+    if (_tdTagFilter) _tdTagFilter = null;
     return;
   }
 
   if (empty) empty.style.display = "none";
 
-  // Rebuild tag buttons (clear old ones first)
   list.querySelectorAll(".td-tag-filter-btn").forEach(b => b.remove());
   for (const tag of tags) {
     const btn = document.createElement("button");
@@ -550,14 +633,13 @@ function _tdUpdateTagFilterSidebar() {
     list.appendChild(btn);
   }
 
-  // If current filter tag was deleted from all items, clear it
   if (_tdTagFilter && !tags.includes(_tdTagFilter)) {
     _tdTagFilter = null;
   }
 }
 
 function _tdBindTagFilter() {
-  // Initial render handled by _tdUpdateTagFilterSidebar via _tdRender
+  // Handled dynamically in _tdUpdateTagFilterSidebar
 }
 
 function _tdRenderModalTags() {
@@ -600,6 +682,7 @@ function _tdBindAddButton() {
   if (btn) btn.addEventListener("click", () => _tdOpenModal(null, null));
   const btn2 = document.getElementById("td-new-btn-main");
   if (btn2) btn2.addEventListener("click", () => _tdOpenModal(null, null));
+
   // Keyboard shortcut: N to open new todo (when not in an input)
   document.addEventListener("keydown", (e) => {
     if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA" || e.target.isContentEditable) return;
@@ -675,7 +758,6 @@ function _tdBindModal() {
         _tdCloseModal();
       }
     });
-    // Char count
     textarea.addEventListener("input", () => {
       const remaining = 500 - textarea.value.length;
       const counter = document.getElementById("td-char-count");
@@ -697,13 +779,13 @@ function _tdOpenModal(editId, prefillDate) {
 
   if (editId) {
     const item = _tdAllItems.find((i) => i.id === editId);
-    if (title) title.textContent = "Edit To-Do";
+    if (title) title.textContent = "Edit task";
     if (textarea) textarea.value = item ? item.text : "";
     if (dateInput) dateInput.value = item ? item.date : _tdFmtDate(new Date());
     _tdModalTags = item && Array.isArray(item.tags) ? [...item.tags] : [];
     _tdModalPriority = item ? (item.priority || "medium") : "medium";
   } else {
-    if (title) title.textContent = "New To-Do";
+    if (title) title.textContent = "New task";
     if (textarea) textarea.value = "";
     if (dateInput) dateInput.value = prefillDate || _tdFmtDate(new Date());
     _tdModalTags = [];
@@ -713,6 +795,12 @@ function _tdOpenModal(editId, prefillDate) {
   _tdRenderModalTags();
   _tdUpdateModalPriority();
   if (overlay) overlay.style.display = "flex";
+  // Reset char counter
+  const counter = document.getElementById("td-char-count");
+  if (counter && textarea) {
+    counter.textContent = `${500 - (textarea.value.length)} remaining`;
+    counter.classList.remove("td-char-count--warn");
+  }
   setTimeout(() => textarea && textarea.focus(), 50);
 }
 
@@ -732,7 +820,11 @@ async function _tdSaveModal() {
   const date = dateInput ? dateInput.value : "";
 
   if (!text) {
-    if (textarea) textarea.focus();
+    if (textarea) {
+      textarea.focus();
+      textarea.classList.add("td-form-textarea--error");
+      setTimeout(() => textarea.classList.remove("td-form-textarea--error"), 800);
+    }
     return;
   }
   if (!date) {
@@ -745,7 +837,6 @@ async function _tdSaveModal() {
 
   try {
     if (_tdEditingId) {
-      // Update existing
       const item = _tdAllItems.find((i) => i.id === _tdEditingId);
       if (item) {
         const oldDate = item.date;
@@ -761,18 +852,88 @@ async function _tdSaveModal() {
         item.priority = priority;
       }
     } else {
-      // New item
       const newItem = await window.electronAPI.calTodoAdd(date, text, tags, priority);
       _tdAllItems.push(newItem);
       _tdNotifyCalendar(date);
     }
   } catch (e) {
     console.error("Todo save error:", e);
-    if (window.showToast) window.showToast("Failed to save to-do", "error");
+    if (window.showToast) window.showToast("Failed to save task", "error");
   }
 
   _tdCloseModal();
   _tdRender();
+}
+
+// ============================================================================
+// INLINE TEXT EDITING (double-click to edit in place)
+// ============================================================================
+
+function _tdStartInlineEdit(textEl, itemId) {
+  if (textEl.dataset.editing === "true") return;
+  const item = _tdAllItems.find((i) => i.id === itemId);
+  if (!item) return;
+
+  textEl.dataset.editing = "true";
+  const originalText = item.text;
+
+  // Make editable
+  textEl.setAttribute("contenteditable", "true");
+  textEl.classList.add("td-item-text--editing");
+  textEl.focus();
+
+  // Move cursor to end
+  const range = document.createRange();
+  const sel = window.getSelection();
+  range.selectNodeContents(textEl);
+  range.collapse(false);
+  sel.removeAllRanges();
+  sel.addRange(range);
+
+  const finish = async (save) => {
+    if (textEl.dataset.editing !== "true") return;
+    textEl.dataset.editing = "false";
+    textEl.removeAttribute("contenteditable");
+    textEl.classList.remove("td-item-text--editing");
+
+    const newText = textEl.textContent.trim();
+    if (save && newText && newText !== originalText) {
+      try {
+        await window.electronAPI.calTodoUpdate(itemId, { text: newText });
+        item.text = newText;
+        // Re-render the text span only to re-escape it properly
+        textEl.textContent = newText;
+      } catch (e) {
+        console.error("Inline edit save error:", e);
+        textEl.textContent = originalText;
+        if (window.showToast) window.showToast("Failed to save edit", "error");
+      }
+    } else {
+      // Restore original if cancelled or unchanged
+      textEl.textContent = originalText;
+    }
+  };
+
+  textEl.addEventListener("keydown", function onKey(e) {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      textEl.removeEventListener("keydown", onKey);
+      textEl.removeEventListener("blur", onBlur);
+      finish(true);
+    }
+    if (e.key === "Escape") {
+      e.preventDefault();
+      textEl.removeEventListener("keydown", onKey);
+      textEl.removeEventListener("blur", onBlur);
+      finish(false);
+    }
+  });
+
+  const onBlur = () => {
+    textEl.removeEventListener("blur", onBlur);
+    finish(true);
+  };
+  textEl.addEventListener("blur", onBlur);
 }
 
 // ============================================================================
@@ -783,29 +944,55 @@ function _tdBindItemEvents() {
   const groups = document.getElementById("td-groups");
   if (!groups) return;
 
-  // Toggle done
+  // Toggle done — optimistic UI
   groups.querySelectorAll(".td-check").forEach((btn) => {
     btn.addEventListener("click", async (e) => {
       e.stopPropagation();
       const id = btn.dataset.id;
       const wasDone = btn.dataset.done === "true";
       const newDone = !wasDone;
+
+      // Optimistic update
+      const item = _tdAllItems.find((i) => i.id === id);
+      if (item) item.done = newDone;
+      btn.dataset.done = String(newDone);
+      const itemEl = btn.closest(".td-item");
+      if (itemEl) {
+        itemEl.classList.toggle("td-item--done", newDone);
+        btn.setAttribute("aria-pressed", String(newDone));
+      }
+      _tdUpdateStats();
+
       try {
         await window.electronAPI.calTodoUpdate(id, { done: newDone });
-        const item = _tdAllItems.find((i) => i.id === id);
-        if (item) item.done = newDone;
+        // Full re-render for progress bar + strikethrough sync
         _tdRender();
       } catch (e) {
         console.error("Toggle done error:", e);
+        // Roll back
+        if (item) item.done = wasDone;
+        _tdRender();
+        if (window.showToast) window.showToast("Failed to update task", "error");
       }
     });
   });
 
-  // Edit
+  // Edit button → open modal
   groups.querySelectorAll(".td-edit-btn").forEach((btn) => {
     btn.addEventListener("click", (e) => {
       e.stopPropagation();
       _tdOpenModal(btn.dataset.id, null);
+    });
+  });
+
+  // Double-click task text → inline edit
+  groups.querySelectorAll(".td-item-text[data-id]").forEach((textEl) => {
+    textEl.addEventListener("dblclick", (e) => {
+      e.stopPropagation();
+      const id = textEl.dataset.id;
+      const parentItem = textEl.closest(".td-item");
+      if (parentItem && parentItem.classList.contains("td-item--done")) return; // no inline edit for done items
+      _tdStartInlineEdit(textEl, id);
     });
   });
 
@@ -816,7 +1003,6 @@ function _tdBindItemEvents() {
       const id = btn.dataset.id;
       const input = document.getElementById(`td-date-input-${id}`);
       if (!input) return;
-      // Show native date picker
       input.style.display = "block";
       input.focus();
       input.showPicker && input.showPicker();
@@ -829,15 +1015,9 @@ function _tdBindItemEvents() {
 
       const onChange = async () => {
         const newDate = input.value;
-        if (!newDate) {
-          cleanup();
-          return;
-        }
+        if (!newDate) { cleanup(); return; }
         const item = _tdAllItems.find((i) => i.id === id);
-        if (!item || item.date === newDate) {
-          cleanup();
-          return;
-        }
+        if (!item || item.date === newDate) { cleanup(); return; }
         const oldDate = item.date;
         try {
           await window.electronAPI.calTodoMove(id, newDate);
@@ -847,8 +1027,7 @@ function _tdBindItemEvents() {
           _tdRender();
         } catch (e) {
           console.error("Move date error:", e);
-          if (window.showToast)
-            window.showToast("Failed to update due date", "error");
+          if (window.showToast) window.showToast("Failed to update due date", "error");
         }
         cleanup();
       };
@@ -864,8 +1043,8 @@ function _tdBindItemEvents() {
       e.stopPropagation();
       const id = btn.dataset.id;
       const confirmed = await (window.showConfirm
-        ? window.showConfirm("Delete this to-do?", "Delete")
-        : Promise.resolve(confirm("Delete this to-do?")));
+        ? window.showConfirm("Delete this task?", "Delete")
+        : Promise.resolve(confirm("Delete this task?")));
       if (!confirmed) return;
       try {
         await window.electronAPI.calTodoDelete(id);
@@ -873,7 +1052,7 @@ function _tdBindItemEvents() {
         if (item) _tdNotifyCalendar(item.date);
         _tdAllItems = _tdAllItems.filter((i) => i.id !== id);
         _tdRender();
-        if (window.showToast) window.showToast("To-do deleted", "success");
+        if (window.showToast) window.showToast("Task deleted", "success");
       } catch (e) {
         console.error("Delete error:", e);
       }
@@ -888,38 +1067,62 @@ function _tdBindItemEvents() {
     });
   });
 
-  // Click tag pill on item to filter by that tag
+  // Click tag pill on item → filter by that tag
   groups.querySelectorAll(".td-tag-pill--item").forEach((pill) => {
     pill.addEventListener("click", (e) => {
       e.stopPropagation();
       const tag = pill.dataset.tag;
-      if (_tdTagFilter === tag) {
-        _tdTagFilter = null;
-      } else {
-        _tdTagFilter = tag;
-      }
+      _tdTagFilter = _tdTagFilter === tag ? null : tag;
       _tdRender();
+    });
+  });
+
+  // Keyboard navigation: Tab between items, Space to toggle done, Enter to open modal
+  groups.querySelectorAll(".td-item[tabindex='0']").forEach((itemEl) => {
+    itemEl.addEventListener("keydown", (e) => {
+      if (e.target !== itemEl) return; // only when item itself is focused, not children
+      if (e.key === " ") {
+        e.preventDefault();
+        const checkBtn = itemEl.querySelector(".td-check");
+        if (checkBtn) checkBtn.click();
+      }
+      if (e.key === "Enter") {
+        e.preventDefault();
+        const id = itemEl.dataset.id;
+        if (id) _tdOpenModal(id, null);
+      }
+      if (e.key === "Delete" || e.key === "Backspace") {
+        e.preventDefault();
+        const deleteBtn = itemEl.querySelector(".td-delete-btn");
+        if (deleteBtn) deleteBtn.click();
+      }
+    });
+  });
+
+  // Focus-visible: show actions when item is keyboard-focused
+  groups.querySelectorAll(".td-item[tabindex='0']").forEach((itemEl) => {
+    itemEl.addEventListener("focus", () => {
+      const actions = itemEl.querySelector(".td-item-actions");
+      if (actions) actions.classList.add("td-item-actions--visible");
+    });
+    itemEl.addEventListener("blur", () => {
+      const actions = itemEl.querySelector(".td-item-actions");
+      if (actions) actions.classList.remove("td-item-actions--visible");
     });
   });
 }
 
 // ============================================================================
-// CALENDAR INTEGRATION — notify calendar to refresh dot indicators
+// CALENDAR INTEGRATION
 // ============================================================================
 
 function _tdNotifyCalendar(dateStr) {
-  // If calendar module is loaded and currently rendered, refresh its dot cache
   if (typeof _calTodoDates !== "undefined") {
-    // Refresh the dot for this date by checking IPC
-    if (
-      typeof calHasTodos === "function" &&
-      typeof _calTodoDates !== "undefined"
-    ) {
+    if (typeof calHasTodos === "function" && typeof _calTodoDates !== "undefined") {
       calHasTodos(dateStr)
         .then((has) => {
           if (has) _calTodoDates.add(dateStr);
           else _calTodoDates.delete(dateStr);
-          // If calendar view is visible, re-render the specific cell
           if (typeof _refreshDayCell === "function") _refreshDayCell(dateStr);
         })
         .catch(() => {});
@@ -962,17 +1165,10 @@ function _tdSetNotionBusy(busy) {
   if (pullBtn) pullBtn.disabled = busy;
 }
 
-/**
- * Push all current items (in filtered range) to Notion.
- * Creates new pages for todos that don't have a notion_id,
- * updates existing ones that do.
- * We store notion_id per todo in localStorage as a simple mapping.
- */
 async function _tdNotionPush() {
   _tdLoadNotionCreds();
   if (!_tdNotionToken || !_tdNotionDbId) {
-    if (window.showToast)
-      window.showToast("Configure Notion in Settings first", "error");
+    if (window.showToast) window.showToast("Configure Notion in Settings → Notion first", "error");
     return;
   }
   if (_tdNotionSyncing) return;
@@ -981,26 +1177,18 @@ async function _tdNotionPush() {
 
   const items = _tdGetFiltered();
   const notionMap = _tdLoadNotionMap();
-  let created = 0,
-    updated = 0,
-    failed = 0;
+  let created = 0, updated = 0, failed = 0;
 
   for (const item of items) {
     const existingPageId = notionMap[item.id];
     try {
       if (existingPageId) {
-        // Update existing Notion page
         await _tdNotionUpdatePage(existingPageId, item);
         updated++;
       } else {
-        // Create new Notion page
         const pageId = await _tdNotionCreatePage(item);
-        if (pageId) {
-          notionMap[item.id] = pageId;
-          created++;
-        } else {
-          failed++;
-        }
+        if (pageId) { notionMap[item.id] = pageId; created++; }
+        else failed++;
       }
     } catch (e) {
       console.error("Notion push item error:", e);
@@ -1010,7 +1198,6 @@ async function _tdNotionPush() {
 
   _tdSaveNotionMap(notionMap);
   _tdSetNotionBusy(false);
-
   const msg = `Notion sync: ${created} created, ${updated} updated${failed ? `, ${failed} failed` : ""}`;
   if (window.showToast) window.showToast(msg, failed ? "error" : "success");
 }
@@ -1036,9 +1223,7 @@ async function _tdNotionUpdatePage(pageId, item) {
   const response = await fetch(`https://api.notion.com/v1/pages/${pageId}`, {
     method: "PATCH",
     headers: _tdNotionHeaders(),
-    body: JSON.stringify({
-      properties: _tdItemToNotionProps(item),
-    }),
+    body: JSON.stringify({ properties: _tdItemToNotionProps(item) }),
   });
   if (!response.ok) {
     console.error("Notion update page error:", await response.text());
@@ -1046,15 +1231,10 @@ async function _tdNotionUpdatePage(pageId, item) {
   }
 }
 
-/**
- * Pull todos from Notion database and merge into local.
- * Only imports todos that don't already exist locally (by Notion page ID).
- */
 async function _tdNotionPull() {
   _tdLoadNotionCreds();
   if (!_tdNotionToken || !_tdNotionDbId) {
-    if (window.showToast)
-      window.showToast("Configure Notion in Settings first", "error");
+    if (window.showToast) window.showToast("Configure Notion in Settings → Notion first", "error");
     return;
   }
   if (_tdNotionSyncing) return;
@@ -1064,20 +1244,16 @@ async function _tdNotionPull() {
   try {
     const pages = await _tdNotionQueryDatabase();
     const notionMap = _tdLoadNotionMap();
-    // Reverse map: notionPageId -> localId
     const reverseMap = {};
     for (const [localId, pageId] of Object.entries(notionMap)) {
       reverseMap[pageId] = localId;
     }
 
-    let imported = 0,
-      updated = 0;
+    let imported = 0, updated = 0;
 
     for (const page of pages) {
       const pageId = page.id;
       const props = page.properties;
-
-      // Extract values from Notion properties
       const text = _tdNotionExtractTitle(props);
       const done =
         _tdNotionExtractCheckbox(props, "Done") ||
@@ -1093,7 +1269,6 @@ async function _tdNotionPull() {
       const existingLocalId = reverseMap[pageId];
 
       if (existingLocalId) {
-        // Update existing local item
         const localItem = _tdAllItems.find((i) => i.id === existingLocalId);
         if (localItem) {
           localItem.text = text;
@@ -1105,14 +1280,10 @@ async function _tdNotionPull() {
             _tdNotifyCalendar(oldDate);
             _tdNotifyCalendar(date);
           }
-          await window.electronAPI.calTodoUpdate(existingLocalId, {
-            text,
-            done,
-          });
+          await window.electronAPI.calTodoUpdate(existingLocalId, { text, done });
           updated++;
         }
       } else {
-        // Create new local item
         const newItem = await window.electronAPI.calTodoAdd(date, text);
         await window.electronAPI.calTodoUpdate(newItem.id, { done });
         newItem.done = done;
@@ -1126,16 +1297,12 @@ async function _tdNotionPull() {
     _tdSaveNotionMap(notionMap);
     _tdSetNotionBusy(false);
     _tdRender();
-    const msg = `Notion pull: ${imported} imported, ${updated} updated`;
-    if (window.showToast) window.showToast(msg, "success");
+    if (window.showToast) window.showToast(`Notion pull: ${imported} imported, ${updated} updated`, "success");
   } catch (e) {
     console.error("Notion pull error:", e);
     _tdSetNotionBusy(false);
     if (window.showToast)
-      window.showToast(
-        "Notion pull failed: " + (e.message || "unknown error"),
-        "error",
-      );
+      window.showToast("Notion pull failed. Check Settings → Notion for credentials.", "error");
   }
 }
 
@@ -1146,7 +1313,7 @@ async function _tdNotionQueryDatabase() {
       method: "POST",
       headers: _tdNotionHeaders(),
       body: JSON.stringify({ page_size: 100 }),
-    },
+    }
   );
   if (!response.ok) throw new Error("Query failed: " + (await response.text()));
   const data = await response.json();
@@ -1163,22 +1330,18 @@ function _tdNotionHeaders() {
 
 function _tdItemToNotionProps(item) {
   return {
-    Name: {
-      title: [{ text: { content: item.text } }],
-    },
+    Name: { title: [{ text: { content: item.text } }] },
     Done: { checkbox: item.done },
     "Due Date": { date: item.date ? { start: item.date } : null },
   };
 }
 
 function _tdNotionExtractTitle(props) {
-  // Try common title property names
   for (const key of ["Name", "Title", "Task", "To-do", "Todo"]) {
     if (props[key] && props[key].title && props[key].title.length > 0) {
       return props[key].title.map((t) => t.plain_text).join("");
     }
   }
-  // Fallback: first title-type prop
   for (const prop of Object.values(props)) {
     if (prop.type === "title" && prop.title && prop.title.length > 0) {
       return prop.title.map((t) => t.plain_text).join("");
@@ -1188,9 +1351,7 @@ function _tdNotionExtractTitle(props) {
 }
 
 function _tdNotionExtractCheckbox(props, key) {
-  return props[key] && props[key].type === "checkbox"
-    ? props[key].checkbox
-    : null;
+  return props[key] && props[key].type === "checkbox" ? props[key].checkbox : null;
 }
 
 function _tdNotionExtractDate(props, key) {
@@ -1200,7 +1361,6 @@ function _tdNotionExtractDate(props, key) {
   return null;
 }
 
-// Persist Notion page ID <-> local todo ID mapping in localStorage
 function _tdLoadNotionMap() {
   try {
     return JSON.parse(localStorage.getItem("mto_todo_notion_map") || "{}");
@@ -1211,6 +1371,77 @@ function _tdLoadNotionMap() {
 
 function _tdSaveNotionMap(map) {
   localStorage.setItem("mto_todo_notion_map", JSON.stringify(map));
+}
+
+// ============================================================================
+// EXPORT (Excel + Word)
+// ============================================================================
+
+function _tdBindExport() {
+  const exportBtn  = document.getElementById("td-export-btn");
+  const exportMenu = document.getElementById("td-export-menu");
+  const excelItem  = document.getElementById("td-export-excel");
+  const wordItem   = document.getElementById("td-export-word");
+
+  if (!exportBtn || !exportMenu) return;
+
+  exportBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const open = exportMenu.style.display !== "none";
+    exportMenu.style.display = open ? "none" : "block";
+  });
+
+  document.addEventListener("click", () => {
+    if (exportMenu) exportMenu.style.display = "none";
+  });
+
+  if (excelItem) excelItem.addEventListener("click", () => {
+    exportMenu.style.display = "none";
+    _tdExportExcel();
+  });
+
+  if (wordItem) wordItem.addEventListener("click", () => {
+    exportMenu.style.display = "none";
+    _tdExportWord();
+  });
+}
+
+async function _tdExportExcel() {
+  if (!_tdAllItems.length) {
+    if (window.showToast) window.showToast("No tasks to export", "error");
+    return;
+  }
+  try {
+    const result = await window.electronAPI.exportTodoExcel({
+      todos: _tdAllItems,
+      rangeLabel: _tdGetRangeLabel(),
+    });
+    if (result && result.success) {
+      if (window.showToast) window.showToast("Excel exported successfully", "success");
+    }
+  } catch (e) {
+    console.error("Todo Excel export error:", e);
+    if (window.showToast) window.showToast("Export failed: " + (e.message || "unknown error"), "error");
+  }
+}
+
+async function _tdExportWord() {
+  if (!_tdAllItems.length) {
+    if (window.showToast) window.showToast("No tasks to export", "error");
+    return;
+  }
+  try {
+    const result = await window.electronAPI.exportTodoWord({
+      todos: _tdAllItems,
+      rangeLabel: _tdGetRangeLabel(),
+    });
+    if (result && result.success) {
+      if (window.showToast) window.showToast("Word report exported successfully", "success");
+    }
+  } catch (e) {
+    console.error("Todo Word export error:", e);
+    if (window.showToast) window.showToast("Export failed: " + (e.message || "unknown error"), "error");
+  }
 }
 
 // ============================================================================
@@ -1243,79 +1474,6 @@ function _tdEscape(str) {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
-}
-
-// ============================================================================
-// EXPORT (Excel + Word)
-// ============================================================================
-
-function _tdBindExport() {
-  const exportBtn  = document.getElementById("td-export-btn");
-  const exportMenu = document.getElementById("td-export-menu");
-  const excelItem  = document.getElementById("td-export-excel");
-  const wordItem   = document.getElementById("td-export-word");
-
-  if (!exportBtn || !exportMenu) return;
-
-  // Toggle dropdown
-  exportBtn.addEventListener("click", (e) => {
-    e.stopPropagation();
-    const open = exportMenu.style.display !== "none";
-    exportMenu.style.display = open ? "none" : "block";
-  });
-
-  // Close on outside click
-  document.addEventListener("click", () => {
-    if (exportMenu) exportMenu.style.display = "none";
-  });
-
-  if (excelItem) excelItem.addEventListener("click", () => {
-    exportMenu.style.display = "none";
-    _tdExportExcel();
-  });
-
-  if (wordItem) wordItem.addEventListener("click", () => {
-    exportMenu.style.display = "none";
-    _tdExportWord();
-  });
-}
-
-async function _tdExportExcel() {
-  if (!_tdAllItems.length) {
-    if (window.showToast) window.showToast("No to-dos to export", "error");
-    return;
-  }
-  try {
-    const result = await window.electronAPI.exportTodoExcel({
-      todos: _tdAllItems,
-      rangeLabel: _tdGetRangeLabel(),
-    });
-    if (result && result.success) {
-      if (window.showToast) window.showToast("Excel exported successfully", "success");
-    }
-  } catch (e) {
-    console.error("Todo Excel export error:", e);
-    if (window.showToast) window.showToast("Export failed: " + (e.message || "unknown error"), "error");
-  }
-}
-
-async function _tdExportWord() {
-  if (!_tdAllItems.length) {
-    if (window.showToast) window.showToast("No to-dos to export", "error");
-    return;
-  }
-  try {
-    const result = await window.electronAPI.exportTodoWord({
-      todos: _tdAllItems,
-      rangeLabel: _tdGetRangeLabel(),
-    });
-    if (result && result.success) {
-      if (window.showToast) window.showToast("Word report exported successfully", "success");
-    }
-  } catch (e) {
-    console.error("Todo Word export error:", e);
-    if (window.showToast) window.showToast("Export failed: " + (e.message || "unknown error"), "error");
-  }
 }
 
 // Expose to app.js
