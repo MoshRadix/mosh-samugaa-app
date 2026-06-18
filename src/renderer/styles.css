@@ -8114,9 +8114,9 @@ kbd {
 
 /* ── Sidebar ─────────────────────────────────────────────────────────────── */
 .td-sidebar {
-  width: 240px;
-  min-width: 220px;
-  max-width: 260px;
+  width: 280px;
+  min-width: 260px;
+  max-width: 300px;
   background: var(--bg-surface);
   border-right: 1px solid var(--border-light);
   display: flex;
@@ -9013,4 +9013,212 @@ kbd {
   padding: 14px 20px 16px;
   border-top: 1px solid var(--border-light);
   background: var(--bg-surface);
+}
+/* ── To-Do: Tag pills on items ── */
+.td-item-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.td-item-text { word-break: break-word; }
+.td-item-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.td-tag-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 7px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  background: var(--accent-primary-light, rgba(99,102,241,.12));
+  color: var(--accent-primary);
+  border: 1px solid transparent;
+  white-space: nowrap;
+  user-select: none;
+  line-height: 1.6;
+}
+.td-tag-pill--item {
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.td-tag-pill--item:hover {
+  border-color: var(--accent-primary);
+  background: var(--accent-primary-light, rgba(99,102,241,.2));
+}
+.td-tag-pill--removable {
+  padding-right: 3px;
+}
+.td-tag-pill-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: inherit;
+  opacity: 0.6;
+  border-radius: 50%;
+  padding: 0;
+  transition: opacity 0.15s, background 0.15s;
+}
+.td-tag-pill-remove:hover { opacity: 1; background: rgba(0,0,0,.1); }
+
+/* ── To-Do: Tag filter in sidebar ── */
+.td-tag-filter-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 2px;
+}
+.td-tag-filter-empty {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  font-style: italic;
+}
+.td-tag-filter-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 9px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 500;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-light);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+.td-tag-filter-btn:hover {
+  background: var(--accent-primary-light, rgba(99,102,241,.12));
+  color: var(--accent-primary);
+  border-color: var(--accent-primary);
+}
+.td-tag-filter-btn.active {
+  background: var(--accent-primary);
+  color: #fff;
+  border-color: var(--accent-primary);
+}
+
+/* ── To-Do: Tag input in modal ── */
+.td-tag-input-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+  min-height: 34px;
+  padding: 5px 10px;
+  border: 1px solid var(--border-medium);
+  border-radius: 6px;
+  background: var(--bg-input, var(--bg-surface));
+  cursor: text;
+  transition: border-color 0.15s;
+}
+.td-tag-input-wrap:focus-within { border-color: var(--accent-primary); }
+.td-modal-tag-pills { display: contents; }
+.td-tag-input {
+  flex: 1;
+  min-width: 80px;
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 12px;
+  color: var(--text-primary);
+  padding: 0;
+}
+.td-tag-input::placeholder { color: var(--text-tertiary); }
+.td-form-hint {
+  font-size: 10.5px;
+  color: var(--text-tertiary);
+  margin-top: 3px;
+  display: block;
+}
+
+/* ── To-Do: Priority — item left-border indicator ── */
+.td-item--priority-high  { border-left: 3.5px solid var(--accent-danger,  #ef4444); }
+.td-item--priority-medium{ border-left: 3.5px solid var(--accent-warning, #f59e0b); }
+.td-item--priority-low   { border-left: 3.5px solid var(--border-light);            }
+/* Already-done items soften the border */
+.td-item--done.td-item--priority-high,
+.td-item--done.td-item--priority-medium { border-left-color: var(--border-light); }
+
+/* ── To-Do: Priority — modal selector ── */
+.td-priority-selector {
+  display: flex;
+  gap: 5px;
+}
+.td-priority-btn {
+  flex: 1;
+  padding: 5px 0;
+  border-radius: 5px;
+  border: 1px solid var(--border-medium);
+  background: var(--bg-subtle);
+  color: var(--text-secondary);
+  font-size: 11.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.td-priority-btn[data-priority="high"].td-priority-btn--active {
+  background: #fee2e2; border-color: #ef4444; color: #b91c1c;
+}
+.td-priority-btn[data-priority="medium"].td-priority-btn--active {
+  background: #fef3c7; border-color: #f59e0b; color: #92400e;
+}
+.td-priority-btn[data-priority="low"].td-priority-btn--active {
+  background: var(--bg-hover); border-color: var(--border-medium); color: var(--text-secondary);
+}
+.td-priority-btn:not(.td-priority-btn--active):hover {
+  background: var(--bg-hover);
+  border-color: var(--border-medium);
+  color: var(--text-primary);
+}
+
+/* ── To-Do: Priority — sidebar filter ── */
+.td-priority-filter-list {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-top: 2px;
+}
+.td-priority-filter-btn {
+  padding: 2px 9px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 500;
+  border: 1px solid var(--border-light);
+  background: var(--bg-subtle);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.td-priority-filter-btn.active {
+  background: var(--bg-hover);
+  border-color: var(--border-medium);
+  color: var(--text-primary);
+}
+.td-priority-filter-btn--high.active  { background: #fee2e2; border-color: #ef4444; color: #b91c1c; }
+.td-priority-filter-btn--medium.active{ background: #fef3c7; border-color: #f59e0b; color: #92400e; }
+.td-priority-filter-btn--low.active   { background: var(--bg-hover); border-color: var(--border-medium); color: var(--text-secondary); }
+
+/* ── To-Do: modal row layout for date + priority ── */
+.td-form-group--row {
+  display: flex;
+  gap: 12px;
+}
+.td-form-group--inline {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin-bottom: 0;
 }

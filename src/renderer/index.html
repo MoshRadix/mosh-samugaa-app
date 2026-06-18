@@ -1819,6 +1819,25 @@
                 </div>
               </div>
 
+              <!-- Priority filter -->
+              <div class="td-sidebar-section">
+                <span class="td-section-label">Priority</span>
+                <div class="td-priority-filter-list" id="td-priority-filter-list">
+                  <button class="td-priority-filter-btn active" data-priority="all">All</button>
+                  <button class="td-priority-filter-btn td-priority-filter-btn--high" data-priority="high">High</button>
+                  <button class="td-priority-filter-btn td-priority-filter-btn--medium" data-priority="medium">Medium</button>
+                  <button class="td-priority-filter-btn td-priority-filter-btn--low" data-priority="low">Low</button>
+                </div>
+              </div>
+
+              <!-- Tags filter -->
+              <div class="td-sidebar-section" id="td-tags-filter-section">
+                <span class="td-section-label">Tags</span>
+                <div class="td-tag-filter-list" id="td-tag-filter-list">
+                  <span class="td-tag-filter-empty" id="td-tag-filter-empty">No tags yet</span>
+                </div>
+              </div>
+
               <!-- Time range filter -->
               <div class="td-sidebar-section td-sidebar-section--grow">
                 <span class="td-section-label">Time Range</span>
@@ -1935,9 +1954,27 @@
                   <textarea class="td-form-textarea" id="td-modal-text" rows="3" placeholder="What needs to be done?" maxlength="500"></textarea>
                   <span class="td-char-count" id="td-char-count">500 remaining</span>
                 </div>
+                <div class="td-form-group td-form-group--row">
+                  <div class="td-form-group td-form-group--inline">
+                    <label class="td-form-label" for="td-modal-date">Due Date</label>
+                    <input type="date" class="td-form-input" id="td-modal-date" />
+                  </div>
+                  <div class="td-form-group td-form-group--inline">
+                    <label class="td-form-label">Priority</label>
+                    <div class="td-priority-selector" id="td-priority-selector">
+                      <button class="td-priority-btn" data-priority="low" title="Low priority">Low</button>
+                      <button class="td-priority-btn td-priority-btn--active" data-priority="medium" title="Medium priority">Medium</button>
+                      <button class="td-priority-btn" data-priority="high" title="High priority">High</button>
+                    </div>
+                  </div>
+                </div>
                 <div class="td-form-group">
-                  <label class="td-form-label" for="td-modal-date">Due Date</label>
-                  <input type="date" class="td-form-input" id="td-modal-date" />
+                  <label class="td-form-label">Tags</label>
+                  <div class="td-tag-input-wrap" id="td-tag-input-wrap">
+                    <div class="td-tag-pills" id="td-modal-tag-pills"></div>
+                    <input type="text" class="td-tag-input" id="td-modal-tag-input" placeholder="Add tag…" autocomplete="off" maxlength="30" />
+                  </div>
+                  <span class="td-form-hint">Press Enter or comma to add a tag</span>
                 </div>
               </div>
               <div class="td-modal-footer">

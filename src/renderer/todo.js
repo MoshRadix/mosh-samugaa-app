@@ -11,13 +11,17 @@
 // ============================================================================
 
 let _tdInitialized = false;
-let _tdAllItems = []; // All loaded items [{id, date, text, done}]
+let _tdAllItems = []; // All loaded items [{id, date, text, done, tags}]
 let _tdFilter = "current-week";
 let _tdStatusFilter = "all"; // "all" | "pending" | "done"
 let _tdSearchQuery = "";
 let _tdSortMode = "date-asc"; // "date-asc" | "date-desc" | "alpha"
 let _tdYearSel = new Date().getFullYear();
 let _tdEditingId = null; // null = new todo, string = editing existing
+let _tdTagFilter = null; // null = show all, string = filter by this tag
+let _tdModalTags = []; // tags being edited in modal
+let _tdPriorityFilter = "all"; // "all" | "low" | "medium" | "high"
+let _tdModalPriority = "medium"; // priority being set in modal
 
 // Notion
 let _tdNotionToken = "";
@@ -43,6 +47,8 @@ async function initTodo() {
   _tdBindSortButton();
   _tdBindAddButton();
   _tdBindModal();
+  _tdBindTagFilter();
+  _tdBindPriorityFilter();
   _tdBindNotionButtons();
   _tdBindYearNav();
   _tdBindExport();
@@ -148,6 +154,16 @@ function _tdGetFiltered() {
   if (_tdStatusFilter === "pending") items = items.filter((i) => !i.done);
   else if (_tdStatusFilter === "done") items = items.filter((i) => i.done);
 
+  // Priority filter
+  if (_tdPriorityFilter !== "all") {
+    items = items.filter((i) => (i.priority || "medium") === _tdPriorityFilter);
+  }
+
+  // Tag filter
+  if (_tdTagFilter) {
+    items = items.filter((i) => Array.isArray(i.tags) && i.tags.includes(_tdTagFilter));
+  }
+
   // Search
   if (_tdSearchQuery) {
     const q = _tdSearchQuery.toLowerCase();
@@ -180,6 +196,8 @@ function _tdCountOverdue() {
 function _tdRender() {
   _tdUpdateStats();
   _tdUpdateRangeLabel();
+  _tdUpdateTagFilterSidebar();
+  _tdUpdatePriorityFilterSidebar();
 
   const items = _tdGetFiltered();
   const groups = document.getElementById("td-groups");
@@ -274,14 +292,22 @@ function _tdRender() {
 function _tdRenderItem(item) {
   const today = _tdFmtDate(new Date());
   const isOverdue = !item.done && item.date < today;
+  const priority = item.priority || "medium";
+  const tags = Array.isArray(item.tags) ? item.tags : [];
+  const tagPills = tags.length
+    ? `<div class="td-item-tags">${tags.map(t => `<span class="td-tag-pill td-tag-pill--item" data-tag="${_tdEscape(t)}">${_tdEscape(t)}</span>`).join("")}</div>`
+    : "";
   return `
-    <div class="td-item${item.done ? " td-item--done" : ""}${isOverdue ? " td-item--overdue" : ""}" data-id="${item.id}" data-date="${item.date}">
+    <div class="td-item${item.done ? " td-item--done" : ""}${isOverdue ? " td-item--overdue" : ""} td-item--priority-${priority}" data-id="${item.id}" data-date="${item.date}" data-priority="${priority}">
       <button class="td-check" data-id="${item.id}" data-done="${item.done}" title="${item.done ? "Mark pending" : "Mark done"}">
         <svg class="td-check-icon" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
           <polyline points="20 6 9 17 4 12"/>
         </svg>
       </button>
-      <span class="td-item-text">${_tdEscape(item.text)}</span>
+      <div class="td-item-body">
+        <span class="td-item-text">${_tdEscape(item.text)}</span>
+        ${tagPills}
+      </div>
       <div class="td-item-actions">
         <button class="td-action-btn td-edit-btn" data-id="${item.id}" title="Edit">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
@@ -444,6 +470,127 @@ function _tdBindYearNav() {
     });
 }
 
+
+
+// ============================================================================
+// PRIORITY — sidebar filter, modal selector
+// ============================================================================
+
+const TD_PRIORITY_ORDER = { high: 0, medium: 1, low: 2 };
+
+function _tdBindPriorityFilter() {
+  const list = document.getElementById("td-priority-filter-list");
+  if (!list) return;
+  list.addEventListener("click", (e) => {
+    const btn = e.target.closest(".td-priority-filter-btn");
+    if (!btn) return;
+    list.querySelectorAll(".td-priority-filter-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    _tdPriorityFilter = btn.dataset.priority;
+    _tdRender();
+  });
+}
+
+function _tdUpdatePriorityFilterSidebar() {
+  const list = document.getElementById("td-priority-filter-list");
+  if (!list) return;
+  list.querySelectorAll(".td-priority-filter-btn").forEach(btn => {
+    btn.classList.toggle("active", btn.dataset.priority === _tdPriorityFilter);
+  });
+}
+
+function _tdUpdateModalPriority() {
+  const selector = document.getElementById("td-priority-selector");
+  if (!selector) return;
+  selector.querySelectorAll(".td-priority-btn").forEach(btn => {
+    btn.classList.toggle("td-priority-btn--active", btn.dataset.priority === _tdModalPriority);
+  });
+}
+
+// ============================================================================
+// TAGS — sidebar filter, modal input, rendering
+// ============================================================================
+
+function _tdGetAllTags() {
+  const set = new Set();
+  for (const item of _tdAllItems) {
+    if (Array.isArray(item.tags)) item.tags.forEach(t => set.add(t));
+  }
+  return [...set].sort((a, b) => a.localeCompare(b));
+}
+
+function _tdUpdateTagFilterSidebar() {
+  const list = document.getElementById("td-tag-filter-list");
+  const empty = document.getElementById("td-tag-filter-empty");
+  if (!list) return;
+
+  const tags = _tdGetAllTags();
+  if (tags.length === 0) {
+    if (empty) empty.style.display = "block";
+    // Remove any existing tag buttons
+    list.querySelectorAll(".td-tag-filter-btn").forEach(b => b.remove());
+    if (_tdTagFilter) { _tdTagFilter = null; }
+    return;
+  }
+
+  if (empty) empty.style.display = "none";
+
+  // Rebuild tag buttons (clear old ones first)
+  list.querySelectorAll(".td-tag-filter-btn").forEach(b => b.remove());
+  for (const tag of tags) {
+    const btn = document.createElement("button");
+    btn.className = "td-tag-filter-btn" + (_tdTagFilter === tag ? " active" : "");
+    btn.dataset.tag = tag;
+    btn.textContent = tag;
+    btn.title = `Filter by "${tag}"`;
+    btn.addEventListener("click", () => {
+      _tdTagFilter = _tdTagFilter === tag ? null : tag;
+      _tdRender();
+    });
+    list.appendChild(btn);
+  }
+
+  // If current filter tag was deleted from all items, clear it
+  if (_tdTagFilter && !tags.includes(_tdTagFilter)) {
+    _tdTagFilter = null;
+  }
+}
+
+function _tdBindTagFilter() {
+  // Initial render handled by _tdUpdateTagFilterSidebar via _tdRender
+}
+
+function _tdRenderModalTags() {
+  const pillsEl = document.getElementById("td-modal-tag-pills");
+  if (!pillsEl) return;
+  pillsEl.innerHTML = _tdModalTags.map(t =>
+    `<span class="td-tag-pill td-tag-pill--removable" data-tag="${_tdEscape(t)}">
+      ${_tdEscape(t)}
+      <button class="td-tag-pill-remove" data-tag="${_tdEscape(t)}" type="button" title="Remove tag" tabindex="-1">
+        <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </span>`
+  ).join("");
+
+  pillsEl.querySelectorAll(".td-tag-pill-remove").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const tag = btn.dataset.tag;
+      _tdModalTags = _tdModalTags.filter(t => t !== tag);
+      _tdRenderModalTags();
+    });
+  });
+}
+
+function _tdAddModalTag(raw) {
+  const tag = raw.trim().replace(/[,;]+$/, "").trim().toLowerCase();
+  if (!tag || tag.length > 30) return;
+  if (!_tdModalTags.includes(tag)) {
+    _tdModalTags.push(tag);
+    _tdRenderModalTags();
+  }
+}
+
 // ============================================================================
 // EVENT BINDING — ADD / MODAL
 // ============================================================================
@@ -479,6 +626,41 @@ function _tdBindModal() {
       if (e.target === overlay) _tdCloseModal();
     });
   if (saveBtn) saveBtn.addEventListener("click", _tdSaveModal);
+
+  // Priority selector
+  const prioritySelector = document.getElementById("td-priority-selector");
+  if (prioritySelector) {
+    prioritySelector.addEventListener("click", (e) => {
+      const btn = e.target.closest(".td-priority-btn");
+      if (!btn) return;
+      _tdModalPriority = btn.dataset.priority;
+      _tdUpdateModalPriority();
+    });
+  }
+
+  // Tag input handling
+  const tagInput = document.getElementById("td-modal-tag-input");
+  if (tagInput) {
+    tagInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === ",") {
+        e.preventDefault();
+        _tdAddModalTag(tagInput.value);
+        tagInput.value = "";
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        _tdCloseModal();
+      } else if (e.key === "Backspace" && tagInput.value === "" && _tdModalTags.length) {
+        _tdModalTags.pop();
+        _tdRenderModalTags();
+      }
+    });
+    tagInput.addEventListener("blur", () => {
+      if (tagInput.value.trim()) {
+        _tdAddModalTag(tagInput.value);
+        tagInput.value = "";
+      }
+    });
+  }
 
   // Enter in textarea = save (Shift+Enter = newline), Esc = close
   const textarea = document.getElementById("td-modal-text");
@@ -518,12 +700,18 @@ function _tdOpenModal(editId, prefillDate) {
     if (title) title.textContent = "Edit To-Do";
     if (textarea) textarea.value = item ? item.text : "";
     if (dateInput) dateInput.value = item ? item.date : _tdFmtDate(new Date());
+    _tdModalTags = item && Array.isArray(item.tags) ? [...item.tags] : [];
+    _tdModalPriority = item ? (item.priority || "medium") : "medium";
   } else {
     if (title) title.textContent = "New To-Do";
     if (textarea) textarea.value = "";
     if (dateInput) dateInput.value = prefillDate || _tdFmtDate(new Date());
+    _tdModalTags = [];
+    _tdModalPriority = "medium";
   }
 
+  _tdRenderModalTags();
+  _tdUpdateModalPriority();
   if (overlay) overlay.style.display = "flex";
   setTimeout(() => textarea && textarea.focus(), 50);
 }
@@ -532,6 +720,9 @@ function _tdCloseModal() {
   const overlay = document.getElementById("td-modal-overlay");
   if (overlay) overlay.style.display = "none";
   _tdEditingId = null;
+  _tdModalTags = [];
+  const tagInput = document.getElementById("td-modal-tag-input");
+  if (tagInput) tagInput.value = "";
 }
 
 async function _tdSaveModal() {
@@ -549,13 +740,16 @@ async function _tdSaveModal() {
     return;
   }
 
+  const tags = [..._tdModalTags];
+  const priority = _tdModalPriority;
+
   try {
     if (_tdEditingId) {
       // Update existing
       const item = _tdAllItems.find((i) => i.id === _tdEditingId);
       if (item) {
         const oldDate = item.date;
-        await window.electronAPI.calTodoUpdate(_tdEditingId, { text });
+        await window.electronAPI.calTodoUpdate(_tdEditingId, { text, tags, priority });
         if (date !== oldDate) {
           await window.electronAPI.calTodoMove(_tdEditingId, date);
           _tdNotifyCalendar(oldDate);
@@ -563,10 +757,12 @@ async function _tdSaveModal() {
         }
         item.text = text;
         item.date = date;
+        item.tags = tags;
+        item.priority = priority;
       }
     } else {
       // New item
-      const newItem = await window.electronAPI.calTodoAdd(date, text);
+      const newItem = await window.electronAPI.calTodoAdd(date, text, tags, priority);
       _tdAllItems.push(newItem);
       _tdNotifyCalendar(date);
     }
@@ -689,6 +885,20 @@ function _tdBindItemEvents() {
     btn.addEventListener("click", (e) => {
       e.stopPropagation();
       _tdOpenModal(null, btn.dataset.date);
+    });
+  });
+
+  // Click tag pill on item to filter by that tag
+  groups.querySelectorAll(".td-tag-pill--item").forEach((pill) => {
+    pill.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const tag = pill.dataset.tag;
+      if (_tdTagFilter === tag) {
+        _tdTagFilter = null;
+      } else {
+        _tdTagFilter = tag;
+      }
+      _tdRender();
     });
   });
 }

@@ -282,9 +282,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
   /** Delete a single to-do item by id. */
   calTodoDelete: (id) => ipcRenderer.invoke("cal-todo-delete", { id }),
 
-  /** Insert a new to-do item. Returns the created item {id, date, text, done}. */
-  calTodoAdd: (date, text) =>
-    ipcRenderer.invoke("cal-todo-add", { date, text }),
+  /** Insert a new to-do item. Returns the created item {id, date, text, done, tags}. */
+  calTodoAdd: (date, text, tags, priority) =>
+    ipcRenderer.invoke("cal-todo-add", { date, text, tags, priority }),
 
   /**
    * Opens a native file dialog restricted to CSV / XLSX files (for batch generation).

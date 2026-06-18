@@ -155,6 +155,18 @@ async function initWorkLogsDB() {
     console.log("[WorkLogs DB] Added 'photoPath' column");
   }
 
+  // cal_todos migrations
+  const todoColsRes = wlDb.exec("PRAGMA table_info(cal_todos)");
+  const todoColNames = todoColsRes.length ? todoColsRes[0].values.map((r) => r[1]) : [];
+  if (!todoColNames.includes("tags")) {
+    wlDb.exec("ALTER TABLE cal_todos ADD COLUMN tags TEXT DEFAULT '[]'");
+    console.log("[WorkLogs DB] Added 'tags' column to cal_todos");
+  }
+  if (!todoColNames.includes("priority")) {
+    wlDb.exec("ALTER TABLE cal_todos ADD COLUMN priority TEXT DEFAULT 'medium'");
+    console.log("[WorkLogs DB] Added 'priority' column to cal_todos");
+  }
+
   // Ensure photos directory exists
   const photosDir = path.join(app.getPath("userData"), "worklog_photos");
   try {
@@ -1851,9 +1863,9 @@ ipcMain.handle("cal-todo-has", async (event, date) => {
   return !!(rows.length && rows[0].values[0][0] > 0);
 });
 
-/** Get all todos (optionally filtered by date range). Returns [{id, date, text, done}]. */
+/** Get all todos (optionally filtered by date range). Returns [{id, date, text, done, tags}]. */
 ipcMain.handle("cal-todo-get-all", async (event, { from, to } = {}) => {
-  let sql = "SELECT id, date, text, done, sort_order FROM cal_todos";
+  let sql = "SELECT id, date, text, done, sort_order, tags, priority FROM cal_todos";
   const params = [];
   if (from && to) {
     sql += " WHERE date >= ? AND date <= ?";
@@ -1865,12 +1877,14 @@ ipcMain.handle("cal-todo-get-all", async (event, { from, to } = {}) => {
   sql += " ORDER BY date ASC, sort_order ASC, rowid ASC";
   const rows = wlDb.exec(sql, params);
   if (!rows.length) return [];
-  return rows[0].values.map(([id, date, text, done, sort_order]) => ({
+  return rows[0].values.map(([id, date, text, done, sort_order, tags, priority]) => ({
     id,
     date,
     text,
     done: !!done,
     sort_order,
+    tags: (() => { try { return JSON.parse(tags || "[]"); } catch(_) { return []; } })(),
+    priority: priority || "medium",
   }));
 });
 
@@ -1881,18 +1895,17 @@ ipcMain.handle("cal-todo-move", async (event, { id, newDate }) => {
   return true;
 });
 
-/** Update text and/or done status of a single todo item. */
-ipcMain.handle("cal-todo-update", async (event, { id, text, done }) => {
-  if (text !== undefined && done !== undefined) {
-    wlDb.run("UPDATE cal_todos SET text = ?, done = ? WHERE id = ?", [
-      text,
-      done ? 1 : 0,
-      id,
-    ]);
-  } else if (text !== undefined) {
-    wlDb.run("UPDATE cal_todos SET text = ? WHERE id = ?", [text, id]);
-  } else if (done !== undefined) {
-    wlDb.run("UPDATE cal_todos SET done = ? WHERE id = ?", [done ? 1 : 0, id]);
+/** Update text and/or done status and/or tags and/or priority of a single todo item. */
+ipcMain.handle("cal-todo-update", async (event, { id, text, done, tags, priority }) => {
+  const parts = [];
+  const vals = [];
+  if (text !== undefined) { parts.push("text = ?"); vals.push(text); }
+  if (done !== undefined) { parts.push("done = ?"); vals.push(done ? 1 : 0); }
+  if (tags !== undefined) { parts.push("tags = ?"); vals.push(JSON.stringify(tags)); }
+  if (priority !== undefined) { parts.push("priority = ?"); vals.push(priority); }
+  if (parts.length) {
+    vals.push(id);
+    wlDb.run(`UPDATE cal_todos SET ${parts.join(", ")} WHERE id = ?`, vals);
   }
   await saveWorkLogsDB();
   return true;
@@ -1906,18 +1919,20 @@ ipcMain.handle("cal-todo-delete", async (event, { id }) => {
 });
 
 /** Insert a new todo item. */
-ipcMain.handle("cal-todo-add", async (event, { date, text }) => {
+ipcMain.handle("cal-todo-add", async (event, { date, text, tags, priority }) => {
   const id = uuidv4();
+  const tagsJson = JSON.stringify(Array.isArray(tags) ? tags : []);
+  const prio = ["low","medium","high"].includes(priority) ? priority : "medium";
   const rowsNow = wlDb.exec("SELECT COUNT(*) FROM cal_todos WHERE date = ?", [
     date,
   ]);
   const count = rowsNow.length ? rowsNow[0].values[0][0] : 0;
   wlDb.run(
-    "INSERT INTO cal_todos (id, date, text, done, sort_order) VALUES (?, ?, ?, 0, ?)",
-    [id, date, text, count],
+    "INSERT INTO cal_todos (id, date, text, done, sort_order, tags, priority) VALUES (?, ?, ?, 0, ?, ?, ?)",
+    [id, date, text, count, tagsJson, prio],
   );
   await saveWorkLogsDB();
-  return { id, date, text, done: false, sort_order: count };
+  return { id, date, text, done: false, sort_order: count, tags: Array.isArray(tags) ? tags : [], priority: prio };
 });
 
 ipcMain.handle("export-work-logs-excel", async (event, { rows }) => {
