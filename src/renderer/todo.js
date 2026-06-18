@@ -112,7 +112,8 @@ function _tdGetDateRange() {
 
   if (_tdFilter === "last-3-months") {
     const start = new Date(today.getFullYear(), today.getMonth() - 2, 1);
-    return { from: _tdFmtDate(start), to: todayStr };
+    const end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+    return { from: _tdFmtDate(start), to: _tdFmtDate(end) };
   }
 
   if (_tdFilter === "year") {
@@ -247,8 +248,8 @@ function _tdRender() {
             ${dateBadge}
           </div>
           <div class="td-group-meta">
-            <div class="td-progress-track" title="${progress}% complete">
-              <div class="td-progress-fill" style="width:${progress}%"></div>
+            <div class="td-progress-bar" title="${progress}% complete">
+              <div class="td-progress-fill" style="width:${progress}%;--pct:${progress}"></div>
             </div>
             <span class="td-group-count">${doneCount}/${dateItems.length}</span>
           </div>
@@ -316,6 +317,16 @@ function _tdUpdateStats() {
   if (elDone) elDone.textContent = done;
   if (elPending) elPending.textContent = pending;
   if (elOverdue) elOverdue.textContent = overdue;
+
+  // Global progress bar
+  const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+  const globalFill = document.getElementById("td-global-progress-fill");
+  const globalPct = document.getElementById("td-global-progress-pct");
+  if (globalFill) {
+    globalFill.style.width = pct + "%";
+    globalFill.style.setProperty("--pct", pct);
+  }
+  if (globalPct) globalPct.textContent = total > 0 ? `${pct}%` : "";
 }
 
 function _tdUpdateRangeLabel() {
