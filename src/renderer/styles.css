@@ -4367,6 +4367,144 @@ kbd {
   flex-shrink: 0;
   cursor: pointer;
 }
+
+/* ── Astronomical event dots ──────────────────────────────────────────────── */
+.cal-astro-dot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  font-size: 9px;
+  line-height: 1;
+  flex-shrink: 0;
+  cursor: default;
+  font-style: normal;
+  /* Subtle ring to separate from background */
+  outline: 1px solid rgba(255,255,255,0.6);
+}
+
+/* Meteor shower — deep indigo */
+.cal-astro-dot--meteor  { background: #4338ca; color: #e0e7ff; }
+/* Solar eclipse — amber */
+.cal-astro-dot--solar   { background: #b45309; color: #fef3c7; }
+/* Lunar eclipse — deep rose */
+.cal-astro-dot--lunar   { background: #7c3aed; color: #ede9fe; }
+/* Blue moon — steel blue */
+.cal-astro-dot--blue    { background: #1d4ed8; color: #dbeafe; }
+/* Supermoon — teal */
+.cal-astro-dot--super   { background: #0f766e; color: #ccfbf1; }
+
+/* Year view: shrink astro dots to match other dots */
+.cal-year-days .cal-astro-dot {
+  width: 11px;
+  height: 11px;
+  font-size: 7px;
+}
+
+/* ── Astro dot in legend ──────────────────────────────────────────────────── */
+.cal-legend-item--astro {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.cal-legend-astro-icons {
+  display: inline-flex;
+  gap: 2px;
+}
+.cal-legend-astro-dot {
+  width: 12px;
+  height: 12px;
+  font-size: 7px;
+}
+
+/* ── Sky Events toggle button ────────────────────────────────────────────── */
+.cal-legend-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.cal-astro-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 20px;
+  border: 1px solid #6366f1;
+  background: #eef2ff;
+  color: #4338ca;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s, opacity 0.15s;
+  white-space: nowrap;
+  letter-spacing: 0.01em;
+}
+.cal-astro-toggle-btn:hover {
+  background: #e0e7ff;
+  border-color: #4338ca;
+}
+.cal-astro-toggle-btn:focus-visible {
+  outline: 2px solid #6366f1;
+  outline-offset: 2px;
+}
+/* Off state */
+.cal-astro-toggle-btn.cal-astro-toggle--off {
+  background: var(--bg-secondary);
+  border-color: var(--border-medium);
+  color: var(--text-tertiary);
+  opacity: 0.7;
+}
+
+/* ── Astro event week-view label ─────────────────────────────────────────── */
+.cal-week-astro-label {
+  font-size: 10px;
+  font-weight: 600;
+  border-radius: 4px;
+  padding: 2px 5px;
+  margin-top: 4px;
+  line-height: 1.3;
+}
+.cal-week-astro-label.cal-astro-dot--meteor  { background: #eef2ff; color: #4338ca; }
+.cal-week-astro-label.cal-astro-dot--solar   { background: #fffbeb; color: #92400e; }
+.cal-week-astro-label.cal-astro-dot--lunar   { background: #f5f3ff; color: #5b21b6; }
+.cal-week-astro-label.cal-astro-dot--blue    { background: #eff6ff; color: #1e40af; }
+.cal-week-astro-label.cal-astro-dot--super   { background: #f0fdfa; color: #0f766e; }
+
+/* ── Astro events in day detail panel ───────────────────────────────────── */
+.cal-detail-astro-section {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.cal-detail-astro-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 7px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.3;
+}
+.cal-detail-astro-item.cal-astro-dot--meteor  { background: #eef2ff; color: #3730a3; }
+.cal-detail-astro-item.cal-astro-dot--solar   { background: #fffbeb; color: #92400e; }
+.cal-detail-astro-item.cal-astro-dot--lunar   { background: #f5f3ff; color: #5b21b6; }
+.cal-detail-astro-item.cal-astro-dot--blue    { background: #eff6ff; color: #1e40af; }
+.cal-detail-astro-item.cal-astro-dot--super   { background: #f0fdfa; color: #0f766e; }
+.cal-detail-astro-icon {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  flex-shrink: 0;
+  background: rgba(0,0,0,0.06);
+}
 .cal-day-observance-label {
   font-size: 9px;
   color: #166534;
@@ -4653,8 +4791,7 @@ kbd {
 .cal-year-days .cal-todo-dot {
   width: 4px;
   height: 4px;
-}
-.cal-year-days .cal-day-hijri { display: none; }
+}.cal-year-days .cal-day-hijri { display: none; }
 .cal-year-days .cal-day--today .cal-day-num {
   width: 18px;
   height: 18px;

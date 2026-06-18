@@ -1619,8 +1619,25 @@
                 <span class="cal-legend-item"><span class="cal-legend-swatch cal-legend-swatch--holiday"></span>Public Holiday</span>
                 <span class="cal-legend-item"><span class="cal-legend-swatch cal-legend-swatch--declared"></span>Declared Holiday</span>
                 <span class="cal-legend-item"><span class="cal-legend-swatch cal-legend-swatch--observance"></span>Int'l Day</span>
+                <span class="cal-legend-item cal-legend-item--astro">
+                  <span class="cal-legend-astro-icons">
+                    <span class="cal-astro-dot cal-astro-dot--meteor cal-legend-astro-dot">✦</span>
+                    <span class="cal-astro-dot cal-astro-dot--solar cal-legend-astro-dot">☀</span>
+                    <span class="cal-astro-dot cal-astro-dot--lunar cal-legend-astro-dot">🌑</span>
+                  </span>
+                  Astronomical
+                </span>
               </div>
-              <div id="cal-sync-status" class="cal-sync-status" data-status="idle"></div>
+              <div class="cal-legend-controls">
+                <button id="cal-astro-toggle-btn"
+                  class="cal-astro-toggle-btn"
+                  title="Hide astronomical events"
+                  aria-pressed="true"
+                  aria-label="Toggle astronomical events">
+                  ✦ Sky Events
+                </button>
+                <div id="cal-sync-status" class="cal-sync-status" data-status="idle"></div>
+              </div>
             </div>
 
             <!-- Main area -->

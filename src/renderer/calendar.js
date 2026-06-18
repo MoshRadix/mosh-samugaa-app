@@ -14,6 +14,219 @@ const CAL_REMOTE_URL = "https://api.npoint.io/8221abfb843e0b947998";
 const CAL_CACHE_KEY = "mto_cal_remote_holidays";
 const CAL_CACHE_TS_KEY = "mto_cal_remote_ts";
 const CAL_CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours in ms
+const CAL_ASTRO_VIS_KEY = "mto_cal_astro_visible";
+
+// ============================================================================
+// ASTRONOMICAL EVENTS DATA
+// Pre-computed events 2024–2030 (UTC dates, visible from Maldives region).
+// Sources: NASA eclipse predictions, IMO meteor shower calendar, USNO moon data.
+// type: "meteor" | "lunar_eclipse" | "solar_eclipse" | "supermoon" | "blue_moon"
+// ============================================================================
+const ASTRO_EVENTS_RAW = [
+  // ── 2024 ──────────────────────────────────────────────────────────────────
+  { date: "2024-01-04", type: "meteor",        en: "Quadrantids Meteor Shower",   dv: "ކުއަޑްރެންޓިޑްސް ތަރި ތިލަ" },
+  { date: "2024-03-25", type: "lunar_eclipse", en: "Penumbral Lunar Eclipse",     dv: "ހަނދުގަ ފަންތި ގުރަހަ ހިތިވެ" },
+  { date: "2024-04-08", type: "solar_eclipse", en: "Total Solar Eclipse",         dv: "ރަހިހަ ހިތިވެ (ފުރިހަ)" },
+  { date: "2024-04-21", type: "meteor",        en: "Lyrids Meteor Shower",        dv: "ލިރިޑްސް ތަރި ތިލަ" },
+  { date: "2024-05-05", type: "meteor",        en: "Eta Aquariids Meteor Shower", dv: "އީޓާ އެކުވެރިޑްސް ތަރި ތިލަ" },
+  { date: "2024-07-28", type: "meteor",        en: "Delta Aquariids Meteor Shower",dv: "ޑެލްޓާ އެކުވެރިޑްސް ތަރި ތިލަ" },
+  { date: "2024-08-12", type: "meteor",        en: "Perseids Meteor Shower",      dv: "ޕާސިޑްސް ތަރި ތިލަ" },
+  { date: "2024-09-18", type: "lunar_eclipse", en: "Partial Lunar Eclipse",       dv: "ހަނދުގަ ބައި ގުރަހަ ހިތިވެ" },
+  { date: "2024-10-02", type: "solar_eclipse", en: "Annular Solar Eclipse",       dv: "ރަހިހަ ހިތިވެ (ވަށް)" },
+  { date: "2024-10-07", type: "supermoon",     en: "Supermoon (Hunter's Moon)",   dv: "ސްޕަރ ހަނދު (ހަންޓަރ)" },
+  { date: "2024-10-21", type: "meteor",        en: "Orionids Meteor Shower",      dv: "އޮރިއޮނިޑްސް ތަރި ތިލަ" },
+  { date: "2024-11-05", type: "meteor",        en: "Taurids Meteor Shower",       dv: "ޓޯރިޑްސް ތަރި ތިލަ" },
+  { date: "2024-11-17", type: "meteor",        en: "Leonids Meteor Shower",       dv: "ލިއޮނިޑްސް ތަރި ތިލަ" },
+  { date: "2024-12-13", type: "meteor",        en: "Geminids Meteor Shower",      dv: "ޖެމިނިޑްސް ތަރި ތިލަ" },
+  { date: "2024-12-21", type: "meteor",        en: "Ursids Meteor Shower",        dv: "އާސިޑްސް ތަރި ތިލަ" },
+
+  // ── 2025 ──────────────────────────────────────────────────────────────────
+  { date: "2025-01-03", type: "meteor",        en: "Quadrantids Meteor Shower",   dv: "ކުއަޑްރެންޓިޑްސް ތަރި ތިލަ" },
+  { date: "2025-03-14", type: "lunar_eclipse", en: "Total Lunar Eclipse",         dv: "ހަނދުގަ ފުރިހަ ގުރަހަ ހިތިވެ" },
+  { date: "2025-03-29", type: "solar_eclipse", en: "Partial Solar Eclipse",       dv: "ރަހިހަ ހިތިވެ (ބައި)" },
+  { date: "2025-04-22", type: "meteor",        en: "Lyrids Meteor Shower",        dv: "ލިރިޑްސް ތަރި ތިލަ" },
+  { date: "2025-05-05", type: "meteor",        en: "Eta Aquariids Meteor Shower", dv: "އީޓާ އެކުވެރިޑްސް ތަރި ތިލަ" },
+  { date: "2025-07-28", type: "meteor",        en: "Delta Aquariids Meteor Shower",dv: "ޑެލްޓާ އެކުވެރިޑްސް ތަރި ތިލަ" },
+  { date: "2025-08-12", type: "meteor",        en: "Perseids Meteor Shower",      dv: "ޕާސިޑްސް ތަރި ތިލަ" },
+  { date: "2025-09-07", type: "lunar_eclipse", en: "Total Lunar Eclipse",         dv: "ހަނދުގަ ފުރިހަ ގުރަހަ ހިތިވެ" },
+  { date: "2025-09-21", type: "solar_eclipse", en: "Partial Solar Eclipse",       dv: "ރަހިހަ ހިތިވެ (ބައި)" },
+  { date: "2025-10-07", type: "supermoon",     en: "Supermoon",                   dv: "ސްޕަރ ހަނދު" },
+  { date: "2025-10-21", type: "meteor",        en: "Orionids Meteor Shower",      dv: "އޮރިއޮނިޑްސް ތަރި ތިލަ" },
+  { date: "2025-11-05", type: "meteor",        en: "Taurids Meteor Shower",       dv: "ޓޯރިޑްސް ތަރި ތިލަ" },
+  { date: "2025-11-17", type: "meteor",        en: "Leonids Meteor Shower",       dv: "ލިއޮނިޑްސް ތަރި ތިލަ" },
+  { date: "2025-12-13", type: "meteor",        en: "Geminids Meteor Shower",      dv: "ޖެމިނިޑްސް ތަރި ތިލަ" },
+  { date: "2025-12-21", type: "meteor",        en: "Ursids Meteor Shower",        dv: "އާސިޑްސް ތަރި ތިލަ" },
+
+  // ── 2026 ──────────────────────────────────────────────────────────────────
+  { date: "2026-01-03", type: "meteor",        en: "Quadrantids Meteor Shower",   dv: "ކުއަޑްރެންޓިޑްސް ތަރި ތިލަ" },
+  { date: "2026-02-17", type: "blue_moon",     en: "Blue Moon",                   dv: "ބްލޫ ހަނދު" },
+  { date: "2026-04-22", type: "meteor",        en: "Lyrids Meteor Shower",        dv: "ލިރިޑްސް ތަރި ތިލަ" },
+  { date: "2026-05-06", type: "meteor",        en: "Eta Aquariids Meteor Shower", dv: "އީޓާ އެކުވެރިޑްސް ތަރި ތިލަ" },
+  { date: "2026-07-28", type: "meteor",        en: "Delta Aquariids Meteor Shower",dv: "ޑެލްޓާ އެކުވެރިޑްސް ތަރި ތިލަ" },
+  { date: "2026-08-02", type: "lunar_eclipse", en: "Total Lunar Eclipse",         dv: "ހަނދުގަ ފުރިހަ ގުރަހަ ހިތިވެ" },
+  { date: "2026-08-12", type: "solar_eclipse", en: "Total Solar Eclipse",         dv: "ރަހިހަ ހިތިވެ (ފުރިހަ)" },
+  { date: "2026-08-12", type: "meteor",        en: "Perseids Meteor Shower",      dv: "ޕާސިޑްސް ތަރި ތިލަ" },
+  { date: "2026-10-21", type: "meteor",        en: "Orionids Meteor Shower",      dv: "އޮރިއޮނިޑްސް ތަރި ތިލަ" },
+  { date: "2026-11-05", type: "meteor",        en: "Taurids Meteor Shower",       dv: "ޓޯރިޑްސް ތަރި ތިލަ" },
+  { date: "2026-11-17", type: "meteor",        en: "Leonids Meteor Shower",       dv: "ލިއޮނިޑްސް ތަރި ތިލަ" },
+  { date: "2026-12-13", type: "meteor",        en: "Geminids Meteor Shower",      dv: "ޖެމިނިޑްސް ތަރި ތިލަ" },
+  { date: "2026-12-21", type: "meteor",        en: "Ursids Meteor Shower",        dv: "އާސިޑްސް ތަރި ތިލަ" },
+
+  // ── 2027 ──────────────────────────────────────────────────────────────────
+  { date: "2027-01-03", type: "meteor",        en: "Quadrantids Meteor Shower",   dv: "ކުއަޑްރެންޓިޑްސް ތަރި ތިލަ" },
+  { date: "2027-04-22", type: "meteor",        en: "Lyrids Meteor Shower",        dv: "ލިރިޑްސް ތަރި ތިލަ" },
+  { date: "2027-05-05", type: "meteor",        en: "Eta Aquariids Meteor Shower", dv: "އީޓާ އެކުވެރިޑްސް ތަރި ތިލަ" },
+  { date: "2027-06-26", type: "lunar_eclipse", en: "Total Lunar Eclipse",         dv: "ހަނދުގަ ފުރިހަ ގުރަހަ ހިތިވެ" },
+  { date: "2027-07-28", type: "meteor",        en: "Delta Aquariids Meteor Shower",dv: "ޑެލްޓާ އެކުވެރިޑްސް ތަރި ތިލަ" },
+  { date: "2027-08-02", type: "solar_eclipse", en: "Total Solar Eclipse",         dv: "ރަހިހަ ހިތިވެ (ފުރިހަ)" },
+  { date: "2027-08-12", type: "meteor",        en: "Perseids Meteor Shower",      dv: "ޕާސިޑްސް ތަރި ތިލަ" },
+  { date: "2027-08-17", type: "supermoon",     en: "Supermoon",                   dv: "ސްޕަރ ހަނދު" },
+  { date: "2027-10-21", type: "meteor",        en: "Orionids Meteor Shower",      dv: "އޮރިއޮނިޑްސް ތަރި ތިލަ" },
+  { date: "2027-11-17", type: "meteor",        en: "Leonids Meteor Shower",       dv: "ލިއޮނިޑްސް ތަރި ތިލަ" },
+  { date: "2027-12-13", type: "meteor",        en: "Geminids Meteor Shower",      dv: "ޖެމިނިޑްސް ތަރި ތިލަ" },
+  { date: "2027-12-21", type: "meteor",        en: "Ursids Meteor Shower",        dv: "އާސިޑްސް ތަރި ތިލަ" },
+
+  // ── 2028 ──────────────────────────────────────────────────────────────────
+  { date: "2028-01-04", type: "meteor",        en: "Quadrantids Meteor Shower",   dv: "ކުއަޑްރެންޓިޑްސް ތަރި ތިލަ" },
+  { date: "2028-01-12", type: "lunar_eclipse", en: "Total Lunar Eclipse",         dv: "ހަނދުގަ ފުރިހަ ގުރަހަ ހިތިވެ" },
+  { date: "2028-04-22", type: "meteor",        en: "Lyrids Meteor Shower",        dv: "ލިރިޑްސް ތަރި ތިލަ" },
+  { date: "2028-05-05", type: "meteor",        en: "Eta Aquariids Meteor Shower", dv: "އީޓާ އެކުވެރިޑްސް ތަރި ތިލަ" },
+  { date: "2028-07-06", type: "solar_eclipse", en: "Annular Solar Eclipse",       dv: "ރަހިހަ ހިތިވެ (ވަށް)" },
+  { date: "2028-07-22", type: "blue_moon",     en: "Blue Moon",                   dv: "ބްލޫ ހަނދު" },
+  { date: "2028-07-28", type: "meteor",        en: "Delta Aquariids Meteor Shower",dv: "ޑެލްޓާ އެކުވެރިޑްސް ތަރި ތިލަ" },
+  { date: "2028-08-12", type: "meteor",        en: "Perseids Meteor Shower",      dv: "ޕާސިޑްސް ތަރި ތިލަ" },
+  { date: "2028-12-05", type: "lunar_eclipse", en: "Partial Lunar Eclipse",       dv: "ހަނދުގަ ބައި ގުރަހަ ހިތިވެ" },
+  { date: "2028-12-13", type: "meteor",        en: "Geminids Meteor Shower",      dv: "ޖެމިނިޑްސް ތަރި ތިލަ" },
+  { date: "2028-12-21", type: "meteor",        en: "Ursids Meteor Shower",        dv: "އާސިޑްސް ތަރި ތިލަ" },
+
+  // ── 2029 ──────────────────────────────────────────────────────────────────
+  { date: "2029-01-04", type: "meteor",        en: "Quadrantids Meteor Shower",   dv: "ކުއަޑްރެންޓިޑްސް ތަރި ތިލަ" },
+  { date: "2029-04-22", type: "meteor",        en: "Lyrids Meteor Shower",        dv: "ލިރިޑްސް ތަރި ތިލަ" },
+  { date: "2029-05-05", type: "meteor",        en: "Eta Aquariids Meteor Shower", dv: "އީޓާ އެކުވެރިޑްސް ތަރި ތިލަ" },
+  { date: "2029-06-11", type: "lunar_eclipse", en: "Partial Lunar Eclipse",       dv: "ހަނދުގަ ބައި ގުރަހަ ހިތިވެ" },
+  { date: "2029-06-26", type: "solar_eclipse", en: "Annular Solar Eclipse",       dv: "ރަހިހަ ހިތިވެ (ވަށް)" },
+  { date: "2029-07-28", type: "meteor",        en: "Delta Aquariids Meteor Shower",dv: "ޑެލްޓާ އެކުވެރިޑްސް ތަރި ތިލަ" },
+  { date: "2029-08-12", type: "meteor",        en: "Perseids Meteor Shower",      dv: "ޕާސިޑްސް ތަރި ތިލަ" },
+  { date: "2029-10-21", type: "meteor",        en: "Orionids Meteor Shower",      dv: "އޮރިއޮނިޑްސް ތަރި ތިލަ" },
+  { date: "2029-11-17", type: "meteor",        en: "Leonids Meteor Shower",       dv: "ލިއޮނިޑްސް ތަރި ތިލަ" },
+  { date: "2029-12-05", type: "lunar_eclipse", en: "Total Lunar Eclipse",         dv: "ހަނދުގަ ފުރިހަ ގުރަހަ ހިތިވެ" },
+  { date: "2029-12-13", type: "meteor",        en: "Geminids Meteor Shower",      dv: "ޖެމިނިޑްސް ތަރި ތިލަ" },
+  { date: "2029-12-21", type: "meteor",        en: "Ursids Meteor Shower",        dv: "އާސިޑްސް ތަރި ތިލަ" },
+
+  // ── 2030 ──────────────────────────────────────────────────────────────────
+  { date: "2030-01-04", type: "meteor",        en: "Quadrantids Meteor Shower",   dv: "ކުއަޑްރެންޓިޑްސް ތަރި ތިލަ" },
+  { date: "2030-04-22", type: "meteor",        en: "Lyrids Meteor Shower",        dv: "ލިރިޑްސް ތަރި ތިލަ" },
+  { date: "2030-05-05", type: "meteor",        en: "Eta Aquariids Meteor Shower", dv: "އީޓާ އެކުވެރިޑްސް ތަރި ތިލަ" },
+  { date: "2030-06-01", type: "lunar_eclipse", en: "Partial Lunar Eclipse",       dv: "ހަނދުގަ ބައި ގުރަހަ ހިތިވެ" },
+  { date: "2030-06-15", type: "solar_eclipse", en: "Annular Solar Eclipse",       dv: "ރަހިހަ ހިތިވެ (ވަށް)" },
+  { date: "2030-07-28", type: "meteor",        en: "Delta Aquariids Meteor Shower",dv: "ޑެލްޓާ އެކުވެރިޑްސް ތަރި ތިލަ" },
+  { date: "2030-08-12", type: "meteor",        en: "Perseids Meteor Shower",      dv: "ޕާސިޑްސް ތަރި ތިލަ" },
+  { date: "2030-11-25", type: "lunar_eclipse", en: "Total Lunar Eclipse",         dv: "ހަނދުގަ ފުރިހަ ގުރަހަ ހިތިވެ" },
+  { date: "2030-12-13", type: "meteor",        en: "Geminids Meteor Shower",      dv: "ޖެމިނިޑްސް ތަރި ތިލަ" },
+  { date: "2030-12-21", type: "meteor",        en: "Ursids Meteor Shower",        dv: "އާސިޑްސް ތަރި ތިލަ" },
+];
+
+/**
+ * Build a fast lookup map: "YYYY-MM-DD" → array of astro event objects.
+ * Multiple events can share the same date (e.g. Perseids + solar eclipse).
+ */
+function buildAstroMap() {
+  const map = {};
+  for (const ev of ASTRO_EVENTS_RAW) {
+    if (!map[ev.date]) map[ev.date] = [];
+    map[ev.date].push(ev);
+  }
+  return map;
+}
+
+const CAL_ASTRO_MAP = buildAstroMap();
+
+/** Return array of astro events for a given date, or empty array. */
+function getAstroEvents(year, month1, day) {
+  const key = `${year}-${String(month1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+  return CAL_ASTRO_MAP[key] || [];
+}
+
+/** Priority rank for choosing which icon to show when multiple events share a date. */
+const ASTRO_PRIORITY = { solar_eclipse: 0, lunar_eclipse: 1, blue_moon: 2, supermoon: 3, meteor: 4 };
+
+/** Return the emoji icon and CSS class for an astro event type. */
+function astroMeta(type) {
+  switch (type) {
+    case "solar_eclipse":  return { icon: "☀", cls: "cal-astro-dot--solar",  label: "Solar Eclipse" };
+    case "lunar_eclipse":  return { icon: "🌑", cls: "cal-astro-dot--lunar",  label: "Lunar Eclipse" };
+    case "blue_moon":      return { icon: "🌕", cls: "cal-astro-dot--blue",   label: "Blue Moon" };
+    case "supermoon":      return { icon: "🌕", cls: "cal-astro-dot--super",  label: "Supermoon" };
+    case "meteor":
+    default:               return { icon: "✦", cls: "cal-astro-dot--meteor", label: "Meteor Shower" };
+  }
+}
+
+/** Visibility toggle — persisted to localStorage. */
+let _calAstroVisible = true;
+
+function calAstroLoadVis() {
+  const stored = localStorage.getItem(CAL_ASTRO_VIS_KEY);
+  _calAstroVisible = stored === null ? true : stored === "1";
+}
+
+function calAstroSaveVis() {
+  localStorage.setItem(CAL_ASTRO_VIS_KEY, _calAstroVisible ? "1" : "0");
+}
+
+function _calAstroToggle() {
+  _calAstroVisible = !_calAstroVisible;
+  calAstroSaveVis();
+  const btn = document.getElementById("cal-astro-toggle-btn");
+  if (btn) {
+    btn.classList.toggle("cal-astro-toggle--off", !_calAstroVisible);
+    btn.title = _calAstroVisible ? "Hide astronomical events" : "Show astronomical events";
+    btn.setAttribute("aria-pressed", String(_calAstroVisible));
+  }
+  renderCalendar();
+}
+
+/**
+ * Build the astro dot HTML for a day cell.
+ * Returns "" when visibility is off, or no events on this date.
+ * When multiple events share a date, renders one dot per type (capped at 3).
+ */
+function _astroDotsHtml(year, month1, day, outsideMonth = false) {
+  if (outsideMonth || !_calAstroVisible) return "";
+  const events = getAstroEvents(year, month1, day);
+  if (!events.length) return "";
+
+  // Sort by priority, deduplicate by type (keep highest priority per type)
+  const byType = {};
+  for (const ev of events) {
+    if (!byType[ev.type]) byType[ev.type] = ev;
+  }
+  const sorted = Object.values(byType).sort(
+    (a, b) => (ASTRO_PRIORITY[a.type] ?? 99) - (ASTRO_PRIORITY[b.type] ?? 99)
+  );
+
+  return sorted.slice(0, 2).map((ev) => {
+    const { icon, cls } = astroMeta(ev.type);
+    return `<span class="cal-astro-dot ${cls}" title="${ev.en}" aria-label="${ev.en}" role="img">${icon}</span>`;
+  }).join("");
+}
+
+/**
+ * Build astro event detail HTML for the day detail panel.
+ */
+function _astroDetailHtml(year, month1, day, lang) {
+  if (!_calAstroVisible) return "";
+  const events = getAstroEvents(year, month1, day);
+  if (!events.length) return "";
+
+  return events.map((ev) => {
+    const { icon, cls } = astroMeta(ev.type);
+    return `<div class="cal-detail-astro-item ${cls}">
+      <span class="cal-detail-astro-icon">${icon}</span>
+      <span class="cal-detail-astro-label">${ev[lang]}</span>
+    </div>`;
+  }).join("");
+}
 
 const CAL_I18N = {
   en: {
@@ -1073,6 +1286,8 @@ async function _refreshDayCell(dateStr) {
         ? dotsEl.querySelector(".cal-observance-dot")
         : gregEl.querySelector(".cal-observance-dot");
       const todoDot = dotsEl ? dotsEl.querySelector(".cal-todo-dot") : null;
+      // Preserve existing astro dots (they don't change per-refresh)
+      const existingAstroDots = dotsEl ? Array.from(dotsEl.querySelectorAll(".cal-astro-dot")).map(n => n.cloneNode(true)) : [];
       if (hasTodos && !todoDot) {
         if (!dotsEl) {
           dotsEl = document.createElement("span");
@@ -1081,12 +1296,16 @@ async function _refreshDayCell(dateStr) {
             dotsEl.appendChild(obsDot.cloneNode(true));
             obsDot.remove();
           }
+          existingAstroDots.forEach(n => dotsEl.appendChild(n));
           gregEl.appendChild(dotsEl);
         }
         const d = document.createElement("span");
         d.className = "cal-todo-dot";
         d.title = "Has to-do items";
-        dotsEl.appendChild(d);
+        // Insert before astro dots if present
+        const firstAstro = dotsEl.querySelector(".cal-astro-dot");
+        if (firstAstro) dotsEl.insertBefore(d, firstAstro);
+        else dotsEl.appendChild(d);
       } else if (!hasTodos && todoDot) {
         todoDot.remove();
         dotsEl = gregEl.querySelector(".cal-day-dots");
@@ -1178,9 +1397,10 @@ function calDayCell(year, month1, day, opts = {}) {
   const todoDot = hasTodos
     ? `<span class="cal-todo-dot" title="Has to-do items"></span>`
     : "";
+  const astroDots = _astroDotsHtml(year, month1, day, outsideMonth);
   const dots =
-    observanceDot || todoDot
-      ? `<span class="cal-day-dots">${observanceDot}${todoDot}</span>`
+    observanceDot || todoDot || astroDots
+      ? `<span class="cal-day-dots">${observanceDot}${todoDot}${astroDots}</span>`
       : "";
   const hijriLabel = compact
     ? `<div class="cal-day-hijri">${hijri.day}</div>`
@@ -1297,7 +1517,7 @@ function renderWeekView(container) {
           <span class="cal-week-day-name">${L.dayNamesShort[dow]}</span>
           <span class="cal-week-day-num">
             <span class="cal-week-day-num-val">${day}</span>
-            ${observance || _calTodoDates.has(dateStr) ? `<span class="cal-week-dots">${observance ? `<span class="cal-observance-dot" title="${observance[lang]}"></span>` : ""}${_calTodoDates.has(dateStr) ? `<span class="cal-todo-dot" title="Has to-do items"></span>` : ""}</span>` : ""}
+            ${observance || _calTodoDates.has(dateStr) || (getAstroEvents(year, month1, day).length && _calAstroVisible) ? `<span class="cal-week-dots">${observance ? `<span class="cal-observance-dot" title="${observance[lang]}"></span>` : ""}${_calTodoDates.has(dateStr) ? `<span class="cal-todo-dot" title="Has to-do items"></span>` : ""}${_astroDotsHtml(year, month1, day)}</span>` : ""}
           </span>
           <span class="cal-week-month">${L.monthNames[d.getMonth()].slice(0, _calState.lang === "dv" ? 4 : 3)}</span>
         </div>
@@ -1305,6 +1525,7 @@ function renderWeekView(container) {
         ${holiday ? `<div class="cal-week-holiday-label">${holiday[lang]}</div>` : ""}
         ${!holiday && observance ? `<div class="cal-week-observance-label">🌐 ${observance[lang]}</div>` : ""}
         ${weekend && !holiday ? `<div class="cal-week-weekend-label">${t("weekend")}</div>` : ""}
+        ${(() => { const ae = getAstroEvents(year, month1, day); return _calAstroVisible && ae.length ? ae.slice(0, 2).map(ev => { const {icon, cls} = astroMeta(ev.type); return `<div class="cal-week-astro-label ${cls}">${icon} ${ev[lang]}</div>`; }).join("") : ""; })()}
       </div>
     `;
   }
@@ -1418,6 +1639,8 @@ function renderDayDetail() {
       ? `<div class="cal-detail-observance-name">🌐 ${observance[_calState.lang]}</div>`
       : "";
 
+  const astroDetailHtml = _astroDetailHtml(year, month1, day, _calState.lang);
+
   // Todo hint — tap the blue dot on the cell to open todos
   const hasTodos = _calTodoDates.has(_calState.selectedDate);
   const todoHint = `
@@ -1447,6 +1670,7 @@ function renderDayDetail() {
       ${holiday ? `<div class="cal-detail-holiday-name">${holiday[_calState.lang]}</div>` : ""}
       ${gazetteHtml}
       ${observanceHtml}
+      ${astroDetailHtml ? `<div class="cal-detail-astro-section">${astroDetailHtml}</div>` : ""}
     </div>
     <div class="cal-detail-todo-row">${todoHint}</div>
   `;
@@ -1681,6 +1905,7 @@ function initCalendar() {
   _calendarInitialized = true;
 
   calLoadState();
+  calAstroLoadVis();
   fetchRemoteHolidays();
 
   ["week", "month", "year"].forEach((v) => {
@@ -1704,6 +1929,16 @@ function initCalendar() {
     _calState.lang = _calState.lang === "en" ? "dv" : "en";
     calSaveLang();
     renderCalendar();
+  });
+
+  document.getElementById("cal-astro-toggle-btn")?.addEventListener("click", _calAstroToggle);
+  // Sync initial button state
+  requestAnimationFrame(() => {
+    const btn = document.getElementById("cal-astro-toggle-btn");
+    if (btn) {
+      btn.classList.toggle("cal-astro-toggle--off", !_calAstroVisible);
+      btn.setAttribute("aria-pressed", String(_calAstroVisible));
+    }
   });
 
   renderCalendar();
