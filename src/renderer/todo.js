@@ -45,6 +45,7 @@ async function initTodo() {
   _tdBindModal();
   _tdBindNotionButtons();
   _tdBindYearNav();
+  _tdBindExport();
   _tdLoadNotionCreds();
 
   await _tdLoadAll();
@@ -112,8 +113,7 @@ function _tdGetDateRange() {
 
   if (_tdFilter === "last-3-months") {
     const start = new Date(today.getFullYear(), today.getMonth() - 2, 1);
-    const end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-    return { from: _tdFmtDate(start), to: _tdFmtDate(end) };
+    return { from: _tdFmtDate(start), to: todayStr };
   }
 
   if (_tdFilter === "year") {
@@ -1033,6 +1033,79 @@ function _tdEscape(str) {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
+}
+
+// ============================================================================
+// EXPORT (Excel + Word)
+// ============================================================================
+
+function _tdBindExport() {
+  const exportBtn  = document.getElementById("td-export-btn");
+  const exportMenu = document.getElementById("td-export-menu");
+  const excelItem  = document.getElementById("td-export-excel");
+  const wordItem   = document.getElementById("td-export-word");
+
+  if (!exportBtn || !exportMenu) return;
+
+  // Toggle dropdown
+  exportBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const open = exportMenu.style.display !== "none";
+    exportMenu.style.display = open ? "none" : "block";
+  });
+
+  // Close on outside click
+  document.addEventListener("click", () => {
+    if (exportMenu) exportMenu.style.display = "none";
+  });
+
+  if (excelItem) excelItem.addEventListener("click", () => {
+    exportMenu.style.display = "none";
+    _tdExportExcel();
+  });
+
+  if (wordItem) wordItem.addEventListener("click", () => {
+    exportMenu.style.display = "none";
+    _tdExportWord();
+  });
+}
+
+async function _tdExportExcel() {
+  if (!_tdAllItems.length) {
+    if (window.showToast) window.showToast("No to-dos to export", "error");
+    return;
+  }
+  try {
+    const result = await window.electronAPI.exportTodoExcel({
+      todos: _tdAllItems,
+      rangeLabel: _tdGetRangeLabel(),
+    });
+    if (result && result.success) {
+      if (window.showToast) window.showToast("Excel exported successfully", "success");
+    }
+  } catch (e) {
+    console.error("Todo Excel export error:", e);
+    if (window.showToast) window.showToast("Export failed: " + (e.message || "unknown error"), "error");
+  }
+}
+
+async function _tdExportWord() {
+  if (!_tdAllItems.length) {
+    if (window.showToast) window.showToast("No to-dos to export", "error");
+    return;
+  }
+  try {
+    const result = await window.electronAPI.exportTodoWord({
+      todos: _tdAllItems,
+      rangeLabel: _tdGetRangeLabel(),
+    });
+    if (result && result.success) {
+      if (window.showToast) window.showToast("Word report exported successfully", "success");
+    }
+  } catch (e) {
+    console.error("Todo Word export error:", e);
+    if (window.showToast) window.showToast("Export failed: " + (e.message || "unknown error"), "error");
+  }
 }
 
 // Expose to app.js

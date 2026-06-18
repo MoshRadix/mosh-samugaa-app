@@ -3036,6 +3036,470 @@ function createWindow() {
   if (process.argv.includes("--dev")) mainWindow.webContents.openDevTools();
 }
 
+// ── Export To-Do list as Excel ────────────────────────────────────────────
+ipcMain.handle("export-todo-excel", async (event, { todos, rangeLabel }) => {
+  const dateStr = new Date().toISOString().slice(0, 10);
+  const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
+    title: "Export To-Do List to Excel",
+    defaultPath: path.join(app.getPath("documents"), `Todo_Export_${dateStr}.xlsx`),
+    filters: [{ name: "Excel Workbook", extensions: ["xlsx"] }],
+  });
+  if (canceled || !filePath) return null;
+
+  const workbook = new ExcelJS.Workbook();
+  workbook.creator = "MTO Document Generator";
+  workbook.created = new Date();
+
+  const NAVY   = "FF1B3A5C";
+  const GREEN  = "FF2E7D32";
+  const AMBER  = "FFE65100";
+  const WHITE  = "FFFFFFFF";
+  const LIGHT  = "FFF0F4FA";
+  const DONE_BG  = "FFEAF4EA";
+  const PEND_BG  = "FFFFF8E7";
+  const ODD_BG   = "FFF7F9FC";
+
+  function hdrCell(cell, text) {
+    cell.value = text;
+    cell.font = { bold: true, color: { argb: WHITE }, size: 11, name: "Arial" };
+    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: NAVY } };
+    cell.alignment = { vertical: "middle", horizontal: "center", wrapText: true };
+    cell.border = {
+      top: { style: "thin", color: { argb: WHITE } },
+      bottom: { style: "thin", color: { argb: WHITE } },
+      left: { style: "thin", color: { argb: WHITE } },
+      right: { style: "thin", color: { argb: WHITE } },
+    };
+  }
+
+  function thinBorder() {
+    const s = { style: "thin", color: { argb: "FFD0D7E2" } };
+    return { top: s, bottom: s, left: s, right: s };
+  }
+
+  function prettyDate(ds) {
+    if (!ds) return "";
+    const [y, m, d] = ds.split("-").map(Number);
+    return new Date(y, m - 1, d).toLocaleDateString("en-US", {
+      weekday: "short", day: "numeric", month: "short", year: "numeric",
+    });
+  }
+
+  const total     = todos.length;
+  const doneCount = todos.filter(t => t.done).length;
+  const pending   = total - doneCount;
+
+  // ── Sheet 1: All Tasks ──────────────────────────────────────────────────
+  const ws = workbook.addWorksheet("All Tasks");
+  ws.views = [{ showGridLines: false }];
+
+  // Title
+  ws.mergeCells("A1:F1");
+  const titleCell = ws.getCell("A1");
+  titleCell.value = "MTO — To-Do List Export";
+  titleCell.font = { bold: true, size: 16, color: { argb: WHITE }, name: "Arial" };
+  titleCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: NAVY } };
+  titleCell.alignment = { horizontal: "center", vertical: "middle" };
+  ws.getRow(1).height = 36;
+
+  ws.mergeCells("A2:F2");
+  const subCell = ws.getCell("A2");
+  subCell.value = rangeLabel ? `Range: ${rangeLabel}  ·  Generated: ${dateStr}` : `Generated: ${dateStr}`;
+  subCell.font = { size: 10, color: { argb: "FF8899AA" }, italic: true, name: "Arial" };
+  subCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: NAVY } };
+  subCell.alignment = { horizontal: "center", vertical: "middle" };
+  ws.getRow(2).height = 20;
+  ws.getRow(3).height = 8;
+
+  // Headers
+  const headers = ["#", "Due Date", "Task", "Status", "Done", "Category"];
+  const colWidths = [5, 16, 56, 12, 8, 14];
+  headers.forEach((h, i) => {
+    hdrCell(ws.getCell(4, i + 1), h);
+  });
+  ws.getRow(4).height = 24;
+  colWidths.forEach((w, i) => { ws.getColumn(i + 1).width = w; });
+
+  // Data rows
+  todos.forEach((t, i) => {
+    const row = ws.getRow(i + 5);
+    const fill = t.done ? DONE_BG : (i % 2 === 0 ? ODD_BG : "FFFFFFFF");
+    const fgColor = { argb: fill };
+    const statusText = t.done ? "Done" : "Pending";
+    const statusArgb = t.done ? GREEN : AMBER;
+
+    const vals = [i + 1, prettyDate(t.date), t.text, statusText, t.done ? "Yes" : "No", "General"];
+    vals.forEach((v, ci) => {
+      const cell = row.getCell(ci + 1);
+      cell.value = v;
+      cell.fill = { type: "pattern", pattern: "solid", fgColor };
+      cell.border = thinBorder();
+      cell.alignment = { vertical: "middle", horizontal: ci === 2 ? "left" : "center", wrapText: ci === 2 };
+      if (ci === 3) {
+        cell.font = { bold: true, color: { argb: statusArgb }, size: 10, name: "Arial" };
+      } else {
+        cell.font = { color: { argb: t.done ? "FF888888" : "FF222222" }, size: 10, name: "Arial",
+                      strike: t.done && ci === 2 };
+      }
+    });
+    row.height = 20;
+  });
+
+  // Summary block
+  const sumStart = todos.length + 6;
+  ws.getRow(sumStart - 1).height = 10;
+  [
+    ["Total Tasks", total, "FF222222"],
+    ["Completed",   doneCount, GREEN],
+    ["Pending",     pending,   AMBER],
+    [`Completion`,  `${Math.round(doneCount / (total || 1) * 100)}%`, doneCount === total ? GREEN : AMBER],
+  ].forEach(([label, val, argb], i) => {
+    const r = sumStart + i;
+    const lc = ws.getCell(r, 4);
+    const vc = ws.getCell(r, 5);
+    lc.value = label;
+    lc.font = { bold: true, size: 10, color: { argb: NAVY }, name: "Arial" };
+    lc.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE8EEF5" } };
+    lc.border = thinBorder();
+    lc.alignment = { horizontal: "right", vertical: "middle" };
+    vc.value = val;
+    vc.font = { bold: true, size: 10, color: { argb: argb }, name: "Arial" };
+    vc.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF0F4FA" } };
+    vc.border = thinBorder();
+    vc.alignment = { horizontal: "center", vertical: "middle" };
+    ws.getRow(r).height = 18;
+  });
+
+  ws.views = [{ state: "frozen", ySplit: 4, showGridLines: false }];
+
+  // ── Sheet 2: Pending ───────────────────────────────────────────────────
+  const pendingTodos = todos.filter(t => !t.done);
+  const ws2 = workbook.addWorksheet("Pending");
+  ws2.views = [{ showGridLines: false }];
+
+  ws2.mergeCells("A1:D1");
+  const pt = ws2.getCell("A1");
+  pt.value = `Pending Tasks (${pendingTodos.length})`;
+  pt.font = { bold: true, size: 14, color: { argb: WHITE }, name: "Arial" };
+  pt.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFB35C00" } };
+  pt.alignment = { horizontal: "center", vertical: "middle" };
+  ws2.getRow(1).height = 30;
+
+  ["#", "Due Date", "Task", "Overdue?"].forEach((h, i) => hdrCell(ws2.getCell(2, i + 1), h));
+  ws2.getRow(2).height = 22;
+  [5, 16, 56, 12].forEach((w, i) => { ws2.getColumn(i + 1).width = w; });
+
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  pendingTodos.forEach((t, i) => {
+    const row = ws2.getRow(i + 3);
+    const fill = { argb: i % 2 === 0 ? "FFFFF3E0" : "FFFFFFFF" };
+    const due = new Date(t.date); due.setHours(0, 0, 0, 0);
+    const overdue = due < today;
+    const diff = Math.round((due - today) / 86400000);
+    const overdueText = overdue ? `Overdue (${Math.abs(diff)}d)` : diff === 0 ? "Today" : `${diff}d left`;
+    const overdueArgb = overdue ? "FFCC0000" : diff <= 2 ? AMBER : GREEN;
+
+    [i + 1, prettyDate(t.date), t.text, overdueText].forEach((v, ci) => {
+      const cell = row.getCell(ci + 1);
+      cell.value = v;
+      cell.fill = { type: "pattern", pattern: "solid", fgColor: fill };
+      cell.border = thinBorder();
+      cell.alignment = { vertical: "middle", horizontal: ci === 2 ? "left" : "center", wrapText: ci === 2 };
+      cell.font = { size: 10, name: "Arial",
+        color: { argb: ci === 3 ? overdueArgb : (ci === 1 && overdue ? "FFCC0000" : "FF222222") },
+        bold: ci === 3 };
+    });
+    row.height = 20;
+  });
+  ws2.views = [{ state: "frozen", ySplit: 2, showGridLines: false }];
+
+  // ── Sheet 3: Completed ─────────────────────────────────────────────────
+  const doneTodos = todos.filter(t => t.done);
+  const ws3 = workbook.addWorksheet("Completed");
+  ws3.views = [{ showGridLines: false }];
+
+  ws3.mergeCells("A1:C1");
+  const ct = ws3.getCell("A1");
+  ct.value = `Completed Tasks (${doneTodos.length})`;
+  ct.font = { bold: true, size: 14, color: { argb: WHITE }, name: "Arial" };
+  ct.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF2E7D32" } };
+  ct.alignment = { horizontal: "center", vertical: "middle" };
+  ws3.getRow(1).height = 30;
+
+  ["#", "Due Date", "Task"].forEach((h, i) => hdrCell(ws3.getCell(2, i + 1), h));
+  ws3.getRow(2).height = 22;
+  [5, 16, 60].forEach((w, i) => { ws3.getColumn(i + 1).width = w; });
+
+  doneTodos.forEach((t, i) => {
+    const row = ws3.getRow(i + 3);
+    const fill = { argb: i % 2 === 0 ? "FFEAF4EA" : "FFFFFFFF" };
+    [i + 1, prettyDate(t.date), t.text].forEach((v, ci) => {
+      const cell = row.getCell(ci + 1);
+      cell.value = v;
+      cell.fill = { type: "pattern", pattern: "solid", fgColor: fill };
+      cell.border = thinBorder();
+      cell.alignment = { vertical: "middle", horizontal: ci === 2 ? "left" : "center", wrapText: ci === 2 };
+      cell.font = { size: 10, name: "Arial", color: { argb: ci === 0 ? "FF888888" : "FF666666" },
+                    strike: ci === 2 };
+    });
+    row.height = 20;
+  });
+  ws3.views = [{ state: "frozen", ySplit: 2, showGridLines: false }];
+
+  await workbook.xlsx.writeFile(filePath);
+  return { success: true, path: filePath };
+});
+
+// ── Export To-Do list as Word report ─────────────────────────────────────
+ipcMain.handle("export-todo-word", async (event, { todos, rangeLabel }) => {
+  const dateStr = new Date().toLocaleDateString("en-US", {
+    day: "numeric", month: "long", year: "numeric", timeZone: "Indian/Maldives",
+  });
+  const fileDateStr = new Date().toISOString().slice(0, 10);
+  const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
+    title: "Export To-Do List to Word",
+    defaultPath: path.join(app.getPath("documents"), `Todo_Report_${fileDateStr}.docx`),
+    filters: [{ name: "Word Document", extensions: ["docx"] }],
+  });
+  if (canceled || !filePath) return null;
+
+  const total     = todos.length;
+  const doneCount = todos.filter(t => t.done).length;
+  const pending   = total - doneCount;
+  const pct       = total ? Math.round(doneCount / total * 100) : 0;
+
+  function xmlEsc(s) {
+    return String(s || "")
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;").replace(/'/g, "&apos;");
+  }
+
+  function prettyDate(ds) {
+    if (!ds) return "";
+    const [y, m, d] = ds.split("-").map(Number);
+    return new Date(y, m - 1, d).toLocaleDateString("en-US", {
+      weekday: "short", day: "numeric", month: "short", year: "numeric",
+    });
+  }
+
+  // Table borders snippet
+  const tblBorders = `
+    <w:tblBorders>
+      <w:top    w:val="single" w:sz="4" w:space="0" w:color="D0D7E2"/>
+      <w:left   w:val="single" w:sz="4" w:space="0" w:color="D0D7E2"/>
+      <w:bottom w:val="single" w:sz="4" w:space="0" w:color="D0D7E2"/>
+      <w:right  w:val="single" w:sz="4" w:space="0" w:color="D0D7E2"/>
+      <w:insideH w:val="single" w:sz="4" w:space="0" w:color="D0D7E2"/>
+      <w:insideV w:val="single" w:sz="4" w:space="0" w:color="D0D7E2"/>
+    </w:tblBorders>
+    <w:tblCellMar>
+      <w:top w:w="80" w:type="dxa"/><w:left w:w="120" w:type="dxa"/>
+      <w:bottom w:w="80" w:type="dxa"/><w:right w:w="120" w:type="dxa"/>
+    </w:tblCellMar>`;
+
+  function hdrTc(text, w) {
+    return `<w:tc><w:tcPr><w:tcW w:w="${w}" w:type="dxa"/>
+      <w:shd w:val="clear" w:color="auto" w:fill="1B3A5C"/></w:tcPr>
+      <w:p><w:pPr><w:jc w:val="center"/></w:pPr>
+      <w:r><w:rPr><w:b/><w:color w:val="FFFFFF"/><w:sz w:val="18"/><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/></w:rPr>
+      <w:t>${xmlEsc(text)}</w:t></w:r></w:p></w:tc>`;
+  }
+
+  function dataTc(text, w, opts = {}) {
+    const { bold = false, color = "222222", fill = "FFFFFF", center = false, strike = false } = opts;
+    return `<w:tc><w:tcPr><w:tcW w:w="${w}" w:type="dxa"/>
+      <w:shd w:val="clear" w:color="auto" w:fill="${fill}"/></w:tcPr>
+      <w:p><w:pPr>${center ? "<w:jc w:val=\"center\"/>" : ""}</w:pPr>
+      <w:r><w:rPr>${bold ? "<w:b/>" : ""}${strike ? "<w:strike/>" : ""}
+        <w:color w:val="${color}"/><w:sz w:val="18"/>
+        <w:rFonts w:ascii="Arial" w:hAnsi="Arial"/></w:rPr>
+      <w:t xml:space="preserve">${xmlEsc(text)}</w:t></w:r></w:p></w:tc>`;
+  }
+
+  // Summary table (4-row, 2-col)
+  const todayD = new Date(); todayD.setHours(0, 0, 0, 0);
+  const summaryRows = [
+    ["Total Tasks", String(total), "222222"],
+    ["Completed",   String(doneCount), "2E7D32"],
+    ["Pending",     String(pending),   "E65100"],
+    ["Completion",  `${pct}%`,         pct >= 75 ? "2E7D32" : "E65100"],
+  ].map(([label, val, color]) => `
+    <w:tr>
+      ${dataTc(label, 2800, { bold: true, color: "1B3A5C", fill: "F0F4FA", center: false })}
+      ${dataTc(val,   1400, { bold: true, color, fill: "FFFFFF", center: true })}
+    </w:tr>`).join("");
+
+  // Main tasks table
+  const COL = [480, 1440, 5040, 1000, 800];
+  const mainRows = todos.map((t, i) => {
+    const fill = t.done ? "EAF4EA" : (i % 2 === 0 ? "F7F9FC" : "FFFFFF");
+    const statusText = t.done ? "Done" : "Pending";
+    const statusColor = t.done ? "2E7D32" : "E65100";
+    return `<w:tr>
+      ${dataTc(String(i + 1),        COL[0], { fill, color: "888888", center: true })}
+      ${dataTc(prettyDate(t.date),   COL[1], { fill, color: "444444", center: true })}
+      ${dataTc(t.text,               COL[2], { fill, color: t.done ? "888888" : "222222", strike: t.done })}
+      ${dataTc(statusText,           COL[3], { fill, color: statusColor, bold: true, center: true })}
+      ${dataTc(t.done ? "Yes" : "No",COL[4], { fill, color: statusColor, center: true })}
+    </w:tr>`;
+  }).join("");
+
+  // Pending tasks table
+  const pendingTodos = todos.filter(t => !t.done);
+  const COL2 = [480, 1440, 7840];
+  const pendingRows = pendingTodos.map((t, i) => {
+    const due = new Date(t.date); due.setHours(0, 0, 0, 0);
+    const overdue = due < todayD;
+    const fill = overdue ? "FFF3F3" : (i % 2 === 0 ? "FFF8E7" : "FFFFFF");
+    const dateColor = overdue ? "CC0000" : "444444";
+    return `<w:tr>
+      ${dataTc(String(i + 1),      COL2[0], { fill, color: "888888", center: true })}
+      ${dataTc(prettyDate(t.date), COL2[1], { fill, color: dateColor, center: true })}
+      ${dataTc(t.text,             COL2[2], { fill })}
+    </w:tr>`;
+  }).join("");
+
+  // Completed tasks table
+  const doneTodos = todos.filter(t => t.done);
+  const COL3 = [480, 1440, 7840];
+  const completedRows = doneTodos.map((t, i) => {
+    const fill = i % 2 === 0 ? "EAF4EA" : "FFFFFF";
+    return `<w:tr>
+      ${dataTc(String(i + 1),      COL3[0], { fill, color: "888888", center: true })}
+      ${dataTc(prettyDate(t.date), COL3[1], { fill, color: "555555", center: true })}
+      ${dataTc(t.text,             COL3[2], { fill, color: "666666", strike: true })}
+    </w:tr>`;
+  }).join("");
+
+  const rangeNote = rangeLabel
+    ? `<w:p><w:pPr><w:spacing w:after="40"/></w:pPr>
+        <w:r><w:rPr><w:sz w:val="20"/><w:color w:val="666666"/><w:i/>
+          <w:rFonts w:ascii="Arial" w:hAnsi="Arial"/></w:rPr>
+          <w:t>Range: ${xmlEsc(rangeLabel)}</w:t></w:r></w:p>`
+    : "";
+
+  const docXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+            xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+  <w:body>
+
+    <!-- ── Title block ── -->
+    <w:p><w:pPr><w:spacing w:before="0" w:after="80"/>
+        <w:rPr><w:b/><w:sz w:val="52"/><w:color w:val="1B3A5C"/>
+          <w:rFonts w:ascii="Arial" w:hAnsi="Arial"/></w:rPr></w:pPr>
+      <w:r><w:rPr><w:b/><w:sz w:val="52"/><w:color w:val="1B3A5C"/>
+        <w:rFonts w:ascii="Arial" w:hAnsi="Arial"/></w:rPr>
+        <w:t>MTO To-Do Report</w:t></w:r></w:p>
+
+    <w:p><w:pPr><w:spacing w:after="40"/></w:pPr>
+      <w:r><w:rPr><w:sz w:val="20"/><w:color w:val="666666"/><w:i/>
+        <w:rFonts w:ascii="Arial" w:hAnsi="Arial"/></w:rPr>
+        <w:t>Generated: ${xmlEsc(dateStr)}</w:t></w:r></w:p>
+
+    ${rangeNote}
+
+    <w:p><w:pPr><w:spacing w:before="200" w:after="360"/>
+      <w:pBdr><w:bottom w:val="single" w:sz="12" w:space="1" w:color="1B3A5C"/></w:pBdr>
+    </w:pPr></w:p>
+
+    <!-- ── 1. Summary ── -->
+    <w:p><w:pPr><w:spacing w:before="0" w:after="160"/></w:pPr>
+      <w:r><w:rPr><w:b/><w:sz w:val="32"/><w:color w:val="1B3A5C"/>
+        <w:rFonts w:ascii="Arial" w:hAnsi="Arial"/></w:rPr>
+        <w:t>1. Summary</w:t></w:r></w:p>
+
+    <w:p><w:pPr><w:spacing w:after="200"/></w:pPr>
+      <w:r><w:rPr><w:sz w:val="20"/><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/></w:rPr>
+        <w:t xml:space="preserve">This report covers ${total} to-do item${total !== 1 ? "s" : ""}. Of these, ${doneCount} ${doneCount === 1 ? "has" : "have"} been completed and ${pending} remain pending, giving a completion rate of ${pct}%.</w:t></w:r></w:p>
+
+    <w:tbl>
+      <w:tblPr><w:tblW w:w="4200" w:type="dxa"/>${tblBorders}</w:tblPr>
+      ${summaryRows}
+    </w:tbl>
+
+    <!-- ── 2. All Tasks ── -->
+    <w:p><w:pPr><w:spacing w:before="480" w:after="160"/></w:pPr>
+      <w:r><w:rPr><w:b/><w:sz w:val="32"/><w:color w:val="1B3A5C"/>
+        <w:rFonts w:ascii="Arial" w:hAnsi="Arial"/></w:rPr>
+        <w:t>2. All Tasks (${total})</w:t></w:r></w:p>
+
+    <w:p><w:pPr><w:spacing w:after="200"/></w:pPr>
+      <w:r><w:rPr><w:sz w:val="20"/><w:color w:val="555555"/>
+        <w:rFonts w:ascii="Arial" w:hAnsi="Arial"/></w:rPr>
+        <w:t>Full list sorted by due date. Completed tasks appear in strikethrough.</w:t></w:r></w:p>
+
+    <w:tbl>
+      <w:tblPr><w:tblW w:w="8760" w:type="dxa"/>${tblBorders}</w:tblPr>
+      <w:tr>${hdrTc("#", COL[0])}${hdrTc("Due Date", COL[1])}${hdrTc("Task", COL[2])}${hdrTc("Status", COL[3])}${hdrTc("Done", COL[4])}</w:tr>
+      ${mainRows}
+    </w:tbl>
+
+    <!-- ── 3. Pending ── -->
+    <w:p><w:pPr><w:spacing w:before="480" w:after="160"/></w:pPr>
+      <w:r><w:rPr><w:b/><w:sz w:val="32"/><w:color w:val="1B3A5C"/>
+        <w:rFonts w:ascii="Arial" w:hAnsi="Arial"/></w:rPr>
+        <w:t>3. Pending Tasks (${pending})</w:t></w:r></w:p>
+
+    <w:p><w:pPr><w:spacing w:after="200"/></w:pPr>
+      <w:r><w:rPr><w:sz w:val="20"/><w:color w:val="555555"/>
+        <w:rFonts w:ascii="Arial" w:hAnsi="Arial"/></w:rPr>
+        <w:t>Tasks not yet completed. Overdue items are highlighted.</w:t></w:r></w:p>
+
+    <w:tbl>
+      <w:tblPr><w:tblW w:w="9760" w:type="dxa"/>${tblBorders}</w:tblPr>
+      <w:tr>${hdrTc("#", COL2[0])}${hdrTc("Due Date", COL2[1])}${hdrTc("Task", COL2[2])}</w:tr>
+      ${pendingRows || `<w:tr>${dataTc("No pending tasks.", 9760, { color: "888888" })}</w:tr>`}
+    </w:tbl>
+
+    <!-- ── 4. Completed ── -->
+    <w:p><w:pPr><w:spacing w:before="480" w:after="160"/></w:pPr>
+      <w:r><w:rPr><w:b/><w:sz w:val="32"/><w:color w:val="1B3A5C"/>
+        <w:rFonts w:ascii="Arial" w:hAnsi="Arial"/></w:rPr>
+        <w:t>4. Completed Tasks (${doneCount})</w:t></w:r></w:p>
+
+    <w:p><w:pPr><w:spacing w:after="200"/></w:pPr>
+      <w:r><w:rPr><w:sz w:val="20"/><w:color w:val="555555"/>
+        <w:rFonts w:ascii="Arial" w:hAnsi="Arial"/></w:rPr>
+        <w:t>Tasks marked as done.</w:t></w:r></w:p>
+
+    <w:tbl>
+      <w:tblPr><w:tblW w:w="9760" w:type="dxa"/>${tblBorders}</w:tblPr>
+      <w:tr>${hdrTc("#", COL3[0])}${hdrTc("Due Date", COL3[1])}${hdrTc("Task", COL3[2])}</w:tr>
+      ${completedRows || `<w:tr>${dataTc("No completed tasks.", 9760, { color: "888888" })}</w:tr>`}
+    </w:tbl>
+
+    <w:p><w:pPr><w:spacing w:before="600" w:after="0"/><w:jc w:val="center"/></w:pPr>
+      <w:r><w:rPr><w:sz w:val="18"/><w:color w:val="AAAAAA"/><w:i/>
+        <w:rFonts w:ascii="Arial" w:hAnsi="Arial"/></w:rPr>
+        <w:t>— End of Report —</w:t></w:r></w:p>
+
+    <w:sectPr>
+      <w:pgSz w:w="12240" w:h="15840"/>
+      <w:pgMar w:top="1080" w:right="1080" w:bottom="1080" w:left="1080"/>
+    </w:sectPr>
+  </w:body>
+</w:document>`;
+
+  const zip = new PizZip();
+  zip.file("_rels/.rels", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+</Relationships>`);
+  zip.file("[Content_Types].xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+</Types>`);
+  zip.file("word/document.xml", docXml);
+  zip.file("word/_rels/document.xml.rels", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>`);
+
+  const buffer = zip.generate({ type: "nodebuffer", compression: "DEFLATE" });
+  await fs.writeFile(filePath, buffer);
+  return { success: true, path: filePath };
+});
+
 app.whenReady().then(async () => {
   Menu.setApplicationMenu(null);
   await loadConfig();

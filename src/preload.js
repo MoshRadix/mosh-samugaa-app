@@ -339,6 +339,12 @@ contextBridge.exposeInMainWorld("electronAPI", {
   docsRestore: () => ipcRenderer.invoke("docs-restore"),
   fullBackup: (notesJson) => ipcRenderer.invoke("full-backup", notesJson),
   fullRestore: () => ipcRenderer.invoke("full-restore"),
+
+  /** Export current to-do list as a formatted Excel workbook. */
+  exportTodoExcel: (data) => ipcRenderer.invoke("export-todo-excel", data),
+
+  /** Export current to-do list as a Word report document. */
+  exportTodoWord: (data) => ipcRenderer.invoke("export-todo-word", data),
 });
 
 //OLD ONE
