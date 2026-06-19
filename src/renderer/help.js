@@ -1,6 +1,8 @@
 /**
  * @file help.js
  * @description Help page content and initialization for MTO Samugaa.
+ *              Redesigned with full feature coverage, improved UX/accessibility,
+ *              collapsible sections, search, and visual hierarchy.
  */
 
 window.initHelp = function () {
@@ -10,135 +12,156 @@ window.initHelp = function () {
   container.innerHTML = `
 
     <!-- ══ HELP HERO ═══════════════════════════════════════════════════ -->
-    <div class="help-hero">
-      <div class="help-hero-icon">🧭</div>
+    <div class="help-hero" role="banner">
+      <div class="help-hero-icon" aria-hidden="true">🧭</div>
       <div class="help-hero-text">
         <h1 class="help-hero-title">MTO Samugaa — User Guide</h1>
-        <p class="help-hero-sub">Complete reference for templates, batch generation, social media graphics, notes, tools, prayer times, placeholders, and more</p>
+        <p class="help-hero-sub">Complete reference for all features: documents, to-dos, work logs, calendar, utilities, and more</p>
       </div>
-      <div class="help-hero-version" id="help-hero-version"></div>
+      <div class="help-hero-version" id="help-hero-version" aria-label="Application version"></div>
     </div>
 
     <!-- ══ SEARCH BAR ═══════════════════════════════════════════════════ -->
-    <div class="help-search-bar">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" class="help-search-icon"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-      <input type="text" id="help-search-input" class="help-search-input" placeholder="Search help…" autocomplete="off" />
-      <button class="help-search-clear" id="help-search-clear" title="Clear search" style="display:none">✕</button>
+    <div class="help-search-bar" role="search">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" class="help-search-icon" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" id="help-search-input" class="help-search-input"
+             placeholder="Search help topics…" autocomplete="off"
+             aria-label="Search help topics" role="searchbox" />
+      <button class="help-search-clear" id="help-search-clear" title="Clear search" aria-label="Clear search" style="display:none">✕</button>
     </div>
-    <div id="help-search-results" class="help-search-results" style="display:none"></div>
+    <div id="help-search-results" class="help-search-results" role="region" aria-label="Search results" aria-live="polite" style="display:none"></div>
+
+    <!-- ══ CATEGORY TABS ════════════════════════════════════════════════ -->
+    <nav class="help-tabs" id="help-tabs" aria-label="Help categories">
+      <button class="help-tab help-tab--active" data-tab="all"        aria-selected="true"  role="tab">All</button>
+      <button class="help-tab" data-tab="documents"  aria-selected="false" role="tab">📄 Documents</button>
+      <button class="help-tab" data-tab="tasks"      aria-selected="false" role="tab">✅ Tasks &amp; Logs</button>
+      <button class="help-tab" data-tab="tools"      aria-selected="false" role="tab">🔧 Tools</button>
+      <button class="help-tab" data-tab="app"        aria-selected="false" role="tab">⚙️ App</button>
+    </nav>
 
     <!-- ══ QUICK-NAV PILLS ════════════════════════════════════════════ -->
-    <div class="help-quicknav" id="help-quicknav">
-      <span class="help-quicknav-label">Jump to:</span>
-      <a href="#hn-overview"      class="help-pill">Overview</a>
-      <a href="#hn-navigation"    class="help-pill">Navigation</a>
-      <a href="#hn-templates"     class="help-pill">Templates</a>
-      <a href="#hn-search"        class="help-pill">Search &amp; Print</a>
-      <a href="#hn-fillform"      class="help-pill">Fill Form</a>
-      <a href="#hn-batch"         class="help-pill">⚡ Batch</a>
-      <a href="#hn-placeholders"  class="help-pill">Placeholders</a>
-      <a href="#hn-socialmedia"   class="help-pill">🖼 Social Media</a>
-      <a href="#hn-notes"         class="help-pill">📓 Notes</a>
-      <a href="#hn-watermark"     class="help-pill">Watermark</a>
-      <a href="#hn-worklogs"      class="help-pill">Work Logs</a>
-      <a href="#hn-utilities"     class="help-pill">Utilities</a>
-      <a href="#hn-prayertimes"   class="help-pill">🕌 Prayer Times</a>
-      <a href="#hn-randompicker"  class="help-pill">🎲 Random Picker</a>
-      <a href="#hn-calendar"      class="help-pill">📅 Calendar</a>
-      <a href="#hn-backup"        class="help-pill">Backup</a>
-      <a href="#hn-settings"      class="help-pill">Settings</a>
-      <a href="#hn-tips"          class="help-pill">💡 Tips</a>
+    <div class="help-quicknav" id="help-quicknav" aria-label="Quick navigation">
+      <span class="help-quicknav-label" aria-hidden="true">Jump to:</span>
+      <a href="#hn-overview"      class="help-pill" data-tab="all">Overview</a>
+      <a href="#hn-navigation"    class="help-pill" data-tab="all">Navigation</a>
+      <a href="#hn-templates"     class="help-pill" data-tab="documents">Templates</a>
+      <a href="#hn-search"        class="help-pill" data-tab="documents">Search &amp; Print</a>
+      <a href="#hn-fillform"      class="help-pill" data-tab="documents">Fill Form</a>
+      <a href="#hn-batch"         class="help-pill" data-tab="documents">⚡ Batch</a>
+      <a href="#hn-placeholders"  class="help-pill" data-tab="documents">Placeholders</a>
+      <a href="#hn-socialmedia"   class="help-pill" data-tab="documents">🖼 Social Media</a>
+      <a href="#hn-todo"          class="help-pill" data-tab="tasks">✅ To-Do</a>
+      <a href="#hn-worklogs"      class="help-pill" data-tab="tasks">📋 Work Logs</a>
+      <a href="#hn-notes"         class="help-pill" data-tab="tasks">📓 Notes</a>
+      <a href="#hn-calendar"      class="help-pill" data-tab="tools">📅 Calendar</a>
+      <a href="#hn-prayertimes"   class="help-pill" data-tab="tools">🕌 Prayer Times</a>
+      <a href="#hn-utilities"     class="help-pill" data-tab="tools">🔧 Utilities</a>
+      <a href="#hn-watermark"     class="help-pill" data-tab="tools">Watermark</a>
+      <a href="#hn-randompicker"  class="help-pill" data-tab="tools">🎲 Random Picker</a>
+      <a href="#hn-backup"        class="help-pill" data-tab="app">Backup</a>
+      <a href="#hn-settings"      class="help-pill" data-tab="app">Settings</a>
+      <a href="#hn-tips"          class="help-pill" data-tab="app">💡 Tips</a>
     </div>
 
-    <!-- ══ OVERVIEW ══════════════════════════════════════════════════ -->
-    <div class="help-section" id="hn-overview">
-      <h2 class="help-section-title">📄 Overview</h2>
+    <!-- ══════════════════════════════════════════════════════════════════
+         SECTION: OVERVIEW
+    ══════════════════════════════════════════════════════════════════════ -->
+    <section class="help-section" id="hn-overview" data-tab="all" aria-labelledby="hn-overview-title">
+      <h2 class="help-section-title" id="hn-overview-title">📄 Overview</h2>
       <p>
-        <strong>MTO Samugaa</strong> is a desktop productivity suite for Addu City Council staff.
-        It generates filled Word (<code>.docx</code>) and Excel (<code>.xlsx</code>) documents from
-        reusable templates, creates branded social media graphics, maintains a personal notebook,
-        logs daily work activities, and bundles a growing set of built-in tools — all without
-        leaving the app.
+        <strong>MTO Samugaa</strong> ("MTO's compass") is a desktop productivity suite for
+        Addu City Council staff. It generates filled Word (<code>.docx</code>) and Excel
+        (<code>.xlsx</code>) documents from reusable templates, manages to-do tasks, logs
+        daily work activities, creates branded social media graphics, maintains a personal
+        notebook, and bundles a set of built-in tools — all offline, in one app.
       </p>
       <p>
-        Templates can be <strong>fillable</strong> (contain <code>{placeholder}</code> tags that
-        produce a guided form) or <strong>static</strong> (printed as-is). The app supports
-        Dhivehi (Thaana) and English text, bilingual date formatting, Hijri dates, image embedding,
-        batch document generation, and Notion sync for notes.
+        Templates can be <strong>fillable</strong> (contain <code>{placeholder}</code> tags
+        that produce a guided form) or <strong>static</strong> (printed as-is). The app
+        supports Dhivehi (Thaana) and English text, bilingual date formatting, Hijri dates,
+        image embedding, batch document generation, and Notion sync for both Notes and To-Dos.
       </p>
-      <div class="help-feature-grid">
-        <div class="help-feature-card">
-          <span class="help-feature-icon">📝</span>
+      <div class="help-feature-grid" role="list">
+        <div class="help-feature-card" role="listitem">
+          <span class="help-feature-icon" aria-hidden="true">📝</span>
           <strong>Template Forms</strong>
-          <span>Fill placeholders through a guided UI</span>
+          <span>Fill placeholders through a guided UI and generate Word / Excel documents</span>
         </div>
-        <div class="help-feature-card">
-          <span class="help-feature-icon">⚡</span>
+        <div class="help-feature-card" role="listitem">
+          <span class="help-feature-icon" aria-hidden="true">⚡</span>
           <strong>Batch Generate</strong>
-          <span>Generate hundreds of documents from CSV / Excel</span>
+          <span>Generate hundreds of documents at once from a CSV or Excel data file</span>
         </div>
-        <div class="help-feature-card">
-          <span class="help-feature-icon">🖼️</span>
+        <div class="help-feature-card" role="listitem">
+          <span class="help-feature-icon" aria-hidden="true">✅</span>
+          <strong>To-Do</strong>
+          <span>Task manager with priorities, tags, filters, and Notion two-way sync</span>
+        </div>
+        <div class="help-feature-card" role="listitem">
+          <span class="help-feature-icon" aria-hidden="true">📋</span>
+          <strong>Work Logs</strong>
+          <span>Timestamped activity journal with photo attachments and Excel export</span>
+        </div>
+        <div class="help-feature-card" role="listitem">
+          <span class="help-feature-icon" aria-hidden="true">🖼️</span>
           <strong>Social Media</strong>
           <span>Canvas-based image editor with text overlays &amp; PNG export</span>
         </div>
-        <div class="help-feature-card">
-          <span class="help-feature-icon">🌐</span>
+        <div class="help-feature-card" role="listitem">
+          <span class="help-feature-icon" aria-hidden="true">🌐</span>
           <strong>Bilingual</strong>
-          <span>Dhivehi &amp; English dates, Thaana script, Hijri calendar</span>
+          <span>Dhivehi &amp; English dates, Thaana script, Hijri calendar throughout</span>
         </div>
-        <div class="help-feature-card">
-          <span class="help-feature-icon">📓</span>
+        <div class="help-feature-card" role="listitem">
+          <span class="help-feature-icon" aria-hidden="true">📓</span>
           <strong>Notes</strong>
           <span>Personal notebook with optional Notion sync</span>
         </div>
-        <div class="help-feature-card">
-          <span class="help-feature-icon">🖼️</span>
-          <strong>Watermark</strong>
-          <span>Batch-stamp images in one click</span>
-        </div>
-        <div class="help-feature-card">
-          <span class="help-feature-icon">📋</span>
-          <strong>Work Logs</strong>
-          <span>Timestamped activity journal with Excel export</span>
-        </div>
-        <div class="help-feature-card">
-          <span class="help-feature-icon">🔧</span>
-          <strong>Utilities</strong>
-          <span>Unit converter, date calc, tides &amp; more</span>
-        </div>
-        <div class="help-feature-card">
-          <span class="help-feature-icon">🕌</span>
-          <strong>Prayer Times</strong>
-          <span>Daily schedule, Qibla, countdown &amp; Hijri date</span>
-        </div>
-        <div class="help-feature-card">
-          <span class="help-feature-icon">🎲</span>
-          <strong>Random Picker</strong>
-          <span>Fair, animated shuffled assignment</span>
-        </div>
-        <div class="help-feature-card">
-          <span class="help-feature-icon">📅</span>
+        <div class="help-feature-card" role="listitem">
+          <span class="help-feature-icon" aria-hidden="true">📅</span>
           <strong>Calendar</strong>
-          <span>Maldives holidays, Hijri dates, bilingual</span>
+          <span>Maldives public holidays, Hijri dates, international days, bilingual</span>
         </div>
-        <div class="help-feature-card">
-          <span class="help-feature-icon">💾</span>
+        <div class="help-feature-card" role="listitem">
+          <span class="help-feature-icon" aria-hidden="true">🕌</span>
+          <strong>Prayer Times</strong>
+          <span>Daily schedule for Addu City (Gan), Qibla compass, countdown &amp; Hijri date</span>
+        </div>
+        <div class="help-feature-card" role="listitem">
+          <span class="help-feature-icon" aria-hidden="true">🔧</span>
+          <strong>Utilities</strong>
+          <span>Unit converter, date calc, scientific calculator, moon phase &amp; tides</span>
+        </div>
+        <div class="help-feature-card" role="listitem">
+          <span class="help-feature-icon" aria-hidden="true">🖼️</span>
+          <strong>Watermark</strong>
+          <span>Batch-stamp images with a watermark in corner or full-width mode</span>
+        </div>
+        <div class="help-feature-card" role="listitem">
+          <span class="help-feature-icon" aria-hidden="true">🎲</span>
+          <strong>Random Picker</strong>
+          <span>Fair, animated shuffled assignment for duty rosters and draws</span>
+        </div>
+        <div class="help-feature-card" role="listitem">
+          <span class="help-feature-icon" aria-hidden="true">💾</span>
           <strong>Backup &amp; Restore</strong>
-          <span>Export and import all your data safely</span>
+          <span>Export and import all your data safely across machines</span>
         </div>
       </div>
-    </div>
+    </section>
 
-    <!-- ══ NAVIGATION ════════════════════════════════════════════════ -->
-    <div class="help-section" id="hn-navigation">
-      <h2 class="help-section-title">🧭 Navigation</h2>
-      <p>The header bar has two dropdown groups (<strong>Documents</strong> and <strong>Tools</strong>) plus direct-link buttons for Calendar, Work Logs, Notes, and Help.</p>
+    <!-- ══════════════════════════════════════════════════════════════════
+         SECTION: NAVIGATION
+    ══════════════════════════════════════════════════════════════════════ -->
+    <section class="help-section" id="hn-navigation" data-tab="all" aria-labelledby="hn-navigation-title">
+      <h2 class="help-section-title" id="hn-navigation-title">🧭 Navigation</h2>
+      <p>The header bar contains two dropdown groups (<strong>Documents</strong> and <strong>Tools</strong>) plus direct-link buttons for Calendar, Work Logs, To-Do, Notes, and Help.</p>
 
       <h3 class="help-subsection-title">Documents Group</h3>
       <div class="help-table-wrapper">
         <table class="help-table">
-          <thead><tr><th>Item</th><th>Purpose</th></tr></thead>
+          <thead><tr><th scope="col">Item</th><th scope="col">Purpose</th></tr></thead>
           <tbody>
             <tr><td><strong>Search &amp; Print</strong></td><td>Find any template by name, description, or category and print, fill, or batch-generate immediately.</td></tr>
             <tr><td><strong>Fill Form</strong></td><td>Active form for the currently selected fillable template. Only accessible after choosing a template.</td></tr>
@@ -151,7 +174,7 @@ window.initHelp = function () {
       <h3 class="help-subsection-title">Tools Group</h3>
       <div class="help-table-wrapper">
         <table class="help-table">
-          <thead><tr><th>Item</th><th>Purpose</th></tr></thead>
+          <thead><tr><th scope="col">Item</th><th scope="col">Purpose</th></tr></thead>
           <tbody>
             <tr><td><strong>Utilities</strong></td><td>Unit Converter, Date Calculator, Scientific Calculator, Moon Phase, and Tide Chart — all in one tabbed workspace.</td></tr>
             <tr><td><strong>Watermark</strong></td><td>Batch-apply a watermark image to multiple photos — corner or full-width overlay.</td></tr>
@@ -164,21 +187,24 @@ window.initHelp = function () {
       <h3 class="help-subsection-title">Direct Links</h3>
       <div class="help-table-wrapper">
         <table class="help-table">
-          <thead><tr><th>Button</th><th>Purpose</th></tr></thead>
+          <thead><tr><th scope="col">Button</th><th scope="col">Purpose</th></tr></thead>
           <tbody>
             <tr><td><strong>📅 Calendar</strong></td><td>Maldives public holidays, Hijri dates, month / week / year views.</td></tr>
-            <tr><td><strong>📋 Work Logs</strong></td><td>Timestamped activity journal — add, search, filter, and export to Excel.</td></tr>
+            <tr><td><strong>📋 Work Logs</strong></td><td>Timestamped activity journal — add, search, filter, attach photos, and export to Excel.</td></tr>
+            <tr><td><strong>✅ To-Do</strong></td><td>Task manager with priorities, tags, status filters, and Notion two-way sync.</td></tr>
             <tr><td><strong>📓 Notes</strong></td><td>Personal notebook with English / Dhivehi support and optional Notion sync.</td></tr>
             <tr><td><strong>⚙️ Settings</strong></td><td>Storage directories, Notion integration, app info, and Backup &amp; Restore.</td></tr>
             <tr><td><strong>❓ Help</strong></td><td>This page.</td></tr>
           </tbody>
         </table>
       </div>
-    </div>
+    </section>
 
-    <!-- ══ TEMPLATES PAGE ════════════════════════════════════════════ -->
-    <div class="help-section" id="hn-templates">
-      <h2 class="help-section-title">🗂️ Templates Page</h2>
+    <!-- ══════════════════════════════════════════════════════════════════
+         SECTION: TEMPLATES
+    ══════════════════════════════════════════════════════════════════════ -->
+    <section class="help-section" id="hn-templates" data-tab="documents" aria-labelledby="hn-templates-title">
+      <h2 class="help-section-title" id="hn-templates-title">🗂️ Templates Page</h2>
 
       <h3 class="help-subsection-title">Uploading a Template</h3>
       <ol class="help-list">
@@ -197,7 +223,7 @@ window.initHelp = function () {
       Inactive templates are dimmed and excluded from the Search page.</p>
       <div class="help-table-wrapper">
         <table class="help-table">
-          <thead><tr><th>Button</th><th>Action</th></tr></thead>
+          <thead><tr><th scope="col">Button</th><th scope="col">Action</th></tr></thead>
           <tbody>
             <tr><td><strong>Fill Form</strong></td><td>Open the fill form (shown only when the template has fields).</td></tr>
             <tr><td><strong>⚡ Batch</strong></td><td>Open the Batch Generator wizard — produce multiple documents from a CSV or Excel file.</td></tr>
@@ -215,7 +241,7 @@ window.initHelp = function () {
       <p>For each detected placeholder you can configure:</p>
       <div class="help-table-wrapper">
         <table class="help-table">
-          <thead><tr><th>Setting</th><th>Effect</th></tr></thead>
+          <thead><tr><th scope="col">Setting</th><th scope="col">Effect</th></tr></thead>
           <tbody>
             <tr><td><strong>Label</strong></td><td>Friendly name shown on the fill form.</td></tr>
             <tr>
@@ -246,11 +272,13 @@ window.initHelp = function () {
         The field key badge (<code>{key}</code>) is shown next to each field header so you can
         confirm it matches the placeholder in your template exactly.
       </p>
-    </div>
+    </section>
 
-    <!-- ══ SEARCH & PRINT ════════════════════════════════════════════ -->
-    <div class="help-section" id="hn-search">
-      <h2 class="help-section-title">🔍 Search &amp; Print</h2>
+    <!-- ══════════════════════════════════════════════════════════════════
+         SECTION: SEARCH & PRINT
+    ══════════════════════════════════════════════════════════════════════ -->
+    <section class="help-section" id="hn-search" data-tab="documents" aria-labelledby="hn-search-title">
+      <h2 class="help-section-title" id="hn-search-title">🔍 Search &amp; Print</h2>
       <p>
         Type in the search bar to filter templates by name, description, or category in real time.
         Use the <strong>Type</strong> dropdown (DOCX / XLSX) and the <strong>Fillable</strong>
@@ -258,7 +286,7 @@ window.initHelp = function () {
       </p>
       <div class="help-table-wrapper">
         <table class="help-table">
-          <thead><tr><th>Button</th><th>Action</th></tr></thead>
+          <thead><tr><th scope="col">Button</th><th scope="col">Action</th></tr></thead>
           <tbody>
             <tr><td><strong>Fill Form</strong></td><td>Open the fill form for a fillable template.</td></tr>
             <tr><td><strong>⚡ Batch</strong></td><td>Open the Batch Generator wizard — available on all fillable templates.</td></tr>
@@ -271,11 +299,13 @@ window.initHelp = function () {
         💡 Only <strong>active</strong> templates appear here. Mark a template Inactive in the
         Templates page to hide it without deleting it.
       </p>
-    </div>
+    </section>
 
-    <!-- ══ FILL FORM ═════════════════════════════════════════════════ -->
-    <div class="help-section" id="hn-fillform">
-      <h2 class="help-section-title">📝 Fill Form</h2>
+    <!-- ══════════════════════════════════════════════════════════════════
+         SECTION: FILL FORM
+    ══════════════════════════════════════════════════════════════════════ -->
+    <section class="help-section" id="hn-fillform" data-tab="documents" aria-labelledby="hn-fillform-title">
+      <h2 class="help-section-title" id="hn-fillform-title">📝 Fill Form</h2>
       <p>
         After selecting a fillable template, every visible placeholder is shown as a labelled input
         field. Hidden and auto-computed fields are never displayed — they are resolved automatically
@@ -285,7 +315,7 @@ window.initHelp = function () {
       <h3 class="help-subsection-title">Form Actions</h3>
       <div class="help-table-wrapper">
         <table class="help-table">
-          <thead><tr><th>Button</th><th>Action</th></tr></thead>
+          <thead><tr><th scope="col">Button</th><th scope="col">Action</th></tr></thead>
           <tbody>
             <tr><td><strong>Generate &amp; Print</strong></td><td>Fill all placeholders, create the document, and send it directly to the default printer.</td></tr>
             <tr><td><strong>Generate Only (Save)</strong></td><td>Create the document and save it to the Outputs directory without printing.</td></tr>
@@ -338,11 +368,13 @@ window.initHelp = function () {
         Date fields whose placeholder key contains common words like <code>today</code>,
         <code>start</code>, or <code>end</code> open with a sensible default date already set.
       </p>
-    </div>
+    </section>
 
-    <!-- ══ BATCH GENERATION ══════════════════════════════════════════ -->
-    <div class="help-section" id="hn-batch">
-      <h2 class="help-section-title">⚡ Batch Document Generation</h2>
+    <!-- ══════════════════════════════════════════════════════════════════
+         SECTION: BATCH GENERATION
+    ══════════════════════════════════════════════════════════════════════ -->
+    <section class="help-section" id="hn-batch" data-tab="documents" aria-labelledby="hn-batch-title">
+      <h2 class="help-section-title" id="hn-batch-title">⚡ Batch Document Generation</h2>
       <p>
         The <strong>Batch Generator</strong> lets you produce many filled documents at once from a
         spreadsheet — ideal for issuing the same form to multiple employees, generating monthly
@@ -354,17 +386,17 @@ window.initHelp = function () {
         Clicking it opens a four-step wizard:
       </p>
 
-      <div class="help-steps">
-        <div class="help-step">
-          <div class="help-step-num">1</div>
+      <div class="help-steps" role="list">
+        <div class="help-step" role="listitem">
+          <div class="help-step-num" aria-hidden="true">1</div>
           <div class="help-step-body">
             <strong>Upload Data File</strong>
             <p>Drag-and-drop or browse to a <code>.csv</code>, <code>.xlsx</code>, or <code>.xls</code> file.
             Each row will become one generated document. The first row must be a header row with column names.</p>
           </div>
         </div>
-        <div class="help-step">
-          <div class="help-step-num">2</div>
+        <div class="help-step" role="listitem">
+          <div class="help-step-num" aria-hidden="true">2</div>
           <div class="help-step-body">
             <strong>Map Columns to Fields</strong>
             <p>A mapping table appears with every template field on the left.
@@ -372,8 +404,8 @@ window.initHelp = function () {
             Columns can be left unmapped — those fields will be blank in the output.</p>
           </div>
         </div>
-        <div class="help-step">
-          <div class="help-step-num">3</div>
+        <div class="help-step" role="listitem">
+          <div class="help-step-num" aria-hidden="true">3</div>
           <div class="help-step-body">
             <strong>Generate</strong>
             <p>Click <strong>Generate</strong>. A native folder picker lets you choose the output directory.
@@ -384,8 +416,8 @@ window.initHelp = function () {
             (requires Microsoft Word to be installed on the machine).</p>
           </div>
         </div>
-        <div class="help-step">
-          <div class="help-step-num">4</div>
+        <div class="help-step" role="listitem">
+          <div class="help-step-num" aria-hidden="true">4</div>
           <div class="help-step-body">
             <strong>Review Results</strong>
             <p>A summary shows how many documents succeeded and how many failed.
@@ -413,49 +445,39 @@ window.initHelp = function () {
         ℹ️ The Combine into PDF option requires Microsoft Word to be installed and accessible on the machine.
         If Word is not found, individual <code>.docx</code> files are still saved successfully.
       </p>
-    </div>
+    </section>
 
-    <!-- ══ PLACEHOLDER REFERENCE ═════════════════════════════════════ -->
-    <div class="help-section" id="hn-placeholders">
-      <h2 class="help-section-title">🏷️ Placeholder Reference</h2>
+    <!-- ══════════════════════════════════════════════════════════════════
+         SECTION: PLACEHOLDER REFERENCE
+    ══════════════════════════════════════════════════════════════════════ -->
+    <section class="help-section" id="hn-placeholders" data-tab="documents" aria-labelledby="hn-placeholders-title">
+      <h2 class="help-section-title" id="hn-placeholders-title">🏷️ Placeholder Reference</h2>
       <p>
-        Placeholders are written inside curly braces in your Word or Excel template —
-        e.g. <code>{person_name}</code>. The app replaces every placeholder with the value you enter
-        in the form. Several special naming patterns trigger <strong>automatic computation</strong>,
-        so no user input is needed at all for those fields.
+        Placeholders are written directly into your <code>.docx</code> or <code>.xlsx</code>
+        template using curly-brace syntax: <code>{key_name}</code>. When a document is generated,
+        every placeholder is replaced with either user-supplied data or an automatically computed value.
       </p>
 
-      <div class="help-note" style="margin-bottom:1.25rem;">
-        <strong>Naming rules</strong> — All placeholder keys must be:
-        <ul class="help-list" style="margin-top:0.4rem;margin-bottom:0;">
-          <li>Fully <strong>lowercase</strong> with <strong>underscores</strong> as separators (snake_case).</li>
-          <li>Starting with a <strong>category prefix</strong> — this is how the app infers the field type automatically on upload.</li>
-          <li>No spaces, dots, dashes, or special characters. Maximum 64 characters.</li>
-          <li>Append <code>_divehi</code> to any key to make it a <strong>Thaana / RTL field</strong>.</li>
-        </ul>
-      </div>
-
-      <!-- ── Category Prefix Overview ──────────────────────────── -->
-      <h3 class="help-subsection-title">Category Prefixes — Auto-Detection</h3>
+      <!-- ── Prefix Table ──────────────────────────────────── -->
+      <h3 class="help-subsection-title">Key Prefixes &amp; Auto-detected Types</h3>
       <div class="help-table-wrapper">
         <table class="help-table">
-          <thead><tr><th>Prefix</th><th>Auto-detected type</th><th>Example key</th><th>Notes</th></tr></thead>
+          <thead><tr><th scope="col">Prefix</th><th scope="col">Auto-type</th><th scope="col">Example key</th><th scope="col">Notes</th></tr></thead>
           <tbody>
-            <tr><td><code>person_</code></td><td>string</td><td><code>{person_name}</code></td><td>Names, IDs, designations. Append <code>_divehi</code> for Thaana.</td></tr>
-            <tr><td><code>org_</code></td><td>string</td><td><code>{org_office}</code></td><td>Office, department, reference number, address.</td></tr>
-            <tr><td><code>date_</code></td><td>date</td><td><code>{date_issue}</code></td><td>Calendar picker. Formatted at generation time.</td></tr>
-            <tr><td><code>range_</code></td><td>auto-computed</td><td><code>{range_divehi_1}</code></td><td>Date-range series — filled automatically. See §&nbsp;Date Range.</td></tr>
-            <tr><td><code>text_</code></td><td>textarea</td><td><code>{text_notes}</code></td><td>Multi-line / paragraph content. Append <code>_divehi</code> for Thaana.</td></tr>
-            <tr><td><code>num_</code></td><td>number</td><td><code>{num_days}</code></td><td>Numeric input. <code>num_serial</code> stays as string.</td></tr>
+            <tr><td><code>person_</code></td><td>string</td><td><code>{person_name}</code></td><td>Plain text.</td></tr>
+            <tr><td><code>org_</code></td><td>string</td><td><code>{org_office}</code></td><td>Plain text.</td></tr>
+            <tr><td><code>date_</code></td><td>date</td><td><code>{date_issue}</code></td><td>Calendar picker. Add <code>_divehi</code>, <code>_short</code> suffixes for locale variants.</td></tr>
+            <tr><td><code>text_</code></td><td>textarea</td><td><code>{text_remarks}</code></td><td>Multi-line. Add <code>_divehi</code> for RTL.</td></tr>
+            <tr><td><code>num_</code></td><td>number</td><td><code>{num_days}</code></td><td>Numeric input.</td></tr>
             <tr><td><code>bool_</code></td><td>boolean</td><td><code>{bool_approved}</code></td><td>Yes / No dropdown.</td></tr>
-            <tr><td><code>img_</code></td><td>image</td><td><code>{%img_photo}</code></td><td>PNG/JPG embed. Use <code>%</code> prefix in the template tag (see §&nbsp;Images).</td></tr>
+            <tr><td><code>img_</code></td><td>image</td><td><code>{%img_photo}</code></td><td>PNG/JPG embed. Use <code>%</code> prefix in the template tag.</td></tr>
             <tr><td><code>meta_</code></td><td>auto-computed</td><td><code>{meta_generated_date}</code></td><td>Filled automatically at generation time. Never shown in the form.</td></tr>
           </tbody>
         </table>
       </div>
       <p class="help-note">
         💡 Keys without a recognised prefix still work — they are inferred as <code>string</code>
-        fields and marked Divehi only if the word <em>divehi</em> appears in the key.
+        fields and marked Dhivehi only if the word <em>divehi</em> appears in the key.
         This keeps all older templates fully compatible.
       </p>
 
@@ -463,7 +485,7 @@ window.initHelp = function () {
       <h3 class="help-subsection-title">Field Types</h3>
       <div class="help-table-wrapper">
         <table class="help-table">
-          <thead><tr><th>Type</th><th>Form control</th><th>Validation</th></tr></thead>
+          <thead><tr><th scope="col">Type</th><th scope="col">Form control</th><th scope="col">Validation</th></tr></thead>
           <tbody>
             <tr><td><code>string</code></td><td>Text input</td><td>—</td></tr>
             <tr><td><code>number</code></td><td>Numeric input</td><td>Must be a valid number</td></tr>
@@ -482,7 +504,7 @@ window.initHelp = function () {
       <p>Date fields are stored as <code>YYYY-MM-DD</code> internally and automatically formatted when the document is generated. The locale is determined by suffixes on the key:</p>
       <div class="help-table-wrapper">
         <table class="help-table">
-          <thead><tr><th>Key pattern</th><th>Output example</th></tr></thead>
+          <thead><tr><th scope="col">Key pattern</th><th scope="col">Output example</th></tr></thead>
           <tbody>
             <tr><td><code>{date_issue}</code></td><td>15 June 2026 <em>(English; RTL flag controls locale)</em></td></tr>
             <tr><td><code>{date_issue_divehi}</code></td><td>15 ޖޫން 2026</td></tr>
@@ -495,13 +517,10 @@ window.initHelp = function () {
       </div>
 
       <h4 class="help-subsubsection-title">Preset date placeholders</h4>
-      <p>
-        Keys with <code>_current_N</code> or <code>_next_N</code> open the date picker
-        <strong>pre-filled</strong> to the N-th day of the current or next month.
-      </p>
+      <p>Keys with <code>_current_N</code> or <code>_next_N</code> open the date picker <strong>pre-filled</strong> to the N-th day of the current or next month.</p>
       <div class="help-table-wrapper">
         <table class="help-table">
-          <thead><tr><th>Placeholder</th><th>Pre-filled to</th></tr></thead>
+          <thead><tr><th scope="col">Placeholder</th><th scope="col">Pre-filled to</th></tr></thead>
           <tbody>
             <tr><td><code>{date_issue_current_25}</code></td><td>25th of the current month</td></tr>
             <tr><td><code>{date_issue_next_1}</code></td><td>1st of next month</td></tr>
@@ -528,7 +547,7 @@ window.initHelp = function () {
       </p>
       <div class="help-table-wrapper">
         <table class="help-table">
-          <thead><tr><th>Template syntax</th><th>What it produces</th></tr></thead>
+          <thead><tr><th scope="col">Template syntax</th><th scope="col">What it produces</th></tr></thead>
           <tbody>
             <tr>
               <td style="font-family:monospace;white-space:pre;">{#text_body_paragraphs}
@@ -544,7 +563,7 @@ window.initHelp = function () {
       <h3 class="help-subsection-title">Image Placeholders (<code>img_</code>)</h3>
       <div class="help-table-wrapper">
         <table class="help-table">
-          <thead><tr><th>Field key</th><th>Template tag</th><th>Notes</th></tr></thead>
+          <thead><tr><th scope="col">Field key</th><th scope="col">Template tag</th><th scope="col">Notes</th></tr></thead>
           <tbody>
             <tr><td><code>img_photo</code></td><td><code>{%img_photo}</code></td><td>Portrait / ID photo</td></tr>
             <tr><td><code>img_signature</code></td><td><code>{%img_signature}</code></td><td>Signature</td></tr>
@@ -563,7 +582,7 @@ window.initHelp = function () {
       <h3 class="help-subsection-title">Auto-computed &amp; Hidden Fields</h3>
       <div class="help-table-wrapper">
         <table class="help-table">
-          <thead><tr><th>Category / Pattern</th><th>Filled from</th><th>Example</th></tr></thead>
+          <thead><tr><th scope="col">Category / Pattern</th><th scope="col">Filled from</th><th scope="col">Example</th></tr></thead>
           <tbody>
             <tr><td><code>meta_*</code></td><td>System clock (MVT) &amp; template metadata</td><td><code>{meta_generated_date}</code></td></tr>
             <tr><td><code>range_*</code> (except seed)</td><td>Seed date + offset</td><td><code>{range_divehi_3}</code></td></tr>
@@ -576,7 +595,7 @@ window.initHelp = function () {
       <h4 class="help-subsubsection-title">Metadata placeholders (<code>meta_</code>)</h4>
       <div class="help-table-wrapper">
         <table class="help-table">
-          <thead><tr><th>Placeholder</th><th>Value inserted</th></tr></thead>
+          <thead><tr><th scope="col">Placeholder</th><th scope="col">Value inserted</th></tr></thead>
           <tbody>
             <tr><td><code>{meta_generated_date}</code></td><td>Today's date in English — e.g. <em>8 June 2026</em></td></tr>
             <tr><td><code>{meta_generated_date_divehi}</code></td><td>Today's date in Divehi — e.g. <em>8 ޖޫން 2026</em></td></tr>
@@ -590,7 +609,7 @@ window.initHelp = function () {
         No user input is needed — just include the tag in your template.
       </p>
 
-      <!-- ── Date Range ─────────────────────────────────────── -->
+      <!-- ── Date Range ─────────────────────────── -->
       <h3 class="help-subsection-title">Date Range Placeholders</h3>
       <p>
         Add a <strong>single seed date field</strong> in your template (<code>{range_start_date}</code>),
@@ -600,7 +619,7 @@ window.initHelp = function () {
       <h4 class="help-subsubsection-title">New-style keys (recommended)</h4>
       <div class="help-table-wrapper">
         <table class="help-table">
-          <thead><tr><th>Seed field (user enters)</th><th>Series placeholders (auto-computed)</th><th>Output</th></tr></thead>
+          <thead><tr><th scope="col">Seed field (user enters)</th><th scope="col">Series placeholders (auto-computed)</th><th scope="col">Output</th></tr></thead>
           <tbody>
             <tr><td rowspan="4"><code>{range_start_date}</code></td><td><code>{range_english_1}</code> … <code>{range_english_N}</code></td><td>Day N, English full date</td></tr>
             <tr><td><code>{range_divehi_1}</code> … <code>{range_divehi_N}</code></td><td>Day N, Divehi full date</td></tr>
@@ -613,7 +632,7 @@ window.initHelp = function () {
       <h4 class="help-subsubsection-title">Legacy keys (still fully supported)</h4>
       <div class="help-table-wrapper">
         <table class="help-table">
-          <thead><tr><th>Seed field</th><th>Series placeholders</th><th>Output</th></tr></thead>
+          <thead><tr><th scope="col">Seed field</th><th scope="col">Series placeholders</th><th scope="col">Output</th></tr></thead>
           <tbody>
             <tr><td rowspan="5"><code>{date_range_start}</code></td><td><code>{date_range_divehi_1}</code> … <code>{date_range_divehi_N}</code></td><td>Day N, Divehi full date</td></tr>
             <tr><td><code>{date_range_english_1}</code> … <code>{date_range_english_N}</code></td><td>Day N, English full date</td></tr>
@@ -637,7 +656,7 @@ window.initHelp = function () {
       <h4 class="help-subsubsection-title">New-style: <code>range_weekday_</code></h4>
       <div class="help-table-wrapper">
         <table class="help-table">
-          <thead><tr><th>Placeholder pattern</th><th>Output (start = Wednesday)</th></tr></thead>
+          <thead><tr><th scope="col">Placeholder pattern</th><th scope="col">Output (start = Wednesday)</th></tr></thead>
           <tbody>
             <tr><td><code>{range_weekday_english_1}</code></td><td>Wednesday</td></tr>
             <tr><td><code>{range_weekday_divehi_1}</code></td><td>ބުދަ</td></tr>
@@ -657,7 +676,7 @@ window.initHelp = function () {
       <h4 class="help-subsubsection-title">Legacy-style: <code>weekday_*_hidden_</code></h4>
       <div class="help-table-wrapper">
         <table class="help-table">
-          <thead><tr><th>Placeholder</th><th>Output (start = Wednesday)</th></tr></thead>
+          <thead><tr><th scope="col">Placeholder</th><th scope="col">Output (start = Wednesday)</th></tr></thead>
           <tbody>
             <tr><td><code>{weekday_divehi_hidden_1}</code></td><td>ބުދަ</td></tr>
             <tr><td><code>{weekday_english_hidden_1}</code></td><td>Wednesday</td></tr>
@@ -677,7 +696,7 @@ window.initHelp = function () {
       <h3 class="help-subsection-title">Complete Placeholder Quick Reference</h3>
       <div class="help-table-wrapper">
         <table class="help-table">
-          <thead><tr><th>Category</th><th>Example placeholder</th><th>User enters?</th><th>Output</th></tr></thead>
+          <thead><tr><th scope="col">Category</th><th scope="col">Example placeholder</th><th scope="col">User enters?</th><th scope="col">Output</th></tr></thead>
           <tbody>
             <tr><td>Person</td><td><code>{person_name}</code></td><td>✅ Yes</td><td>Plain text</td></tr>
             <tr><td>Person (Divehi)</td><td><code>{person_name_divehi}</code></td><td>✅ Yes</td><td>Thaana text</td></tr>
@@ -699,11 +718,13 @@ window.initHelp = function () {
           </tbody>
         </table>
       </div>
-    </div>
+    </section>
 
-    <!-- ══ SOCIAL MEDIA TEMPLATES ════════════════════════════════════ -->
-    <div class="help-section" id="hn-socialmedia">
-      <h2 class="help-section-title">🖼️ Social Media Templates</h2>
+    <!-- ══════════════════════════════════════════════════════════════════
+         SECTION: SOCIAL MEDIA TEMPLATES
+    ══════════════════════════════════════════════════════════════════════ -->
+    <section class="help-section" id="hn-socialmedia" data-tab="documents" aria-labelledby="hn-socialmedia-title">
+      <h2 class="help-section-title" id="hn-socialmedia-title">🖼️ Social Media Templates</h2>
       <p>
         The <strong>Social Media</strong> page is a canvas-based image editor for creating branded
         announcement graphics and social posts. You design reusable templates — each with a
@@ -723,7 +744,7 @@ window.initHelp = function () {
       <h3 class="help-subsection-title">Canvas Editor</h3>
       <div class="help-table-wrapper">
         <table class="help-table">
-          <thead><tr><th>Action</th><th>How</th></tr></thead>
+          <thead><tr><th scope="col">Action</th><th scope="col">How</th></tr></thead>
           <tbody>
             <tr><td><strong>Select a field</strong></td><td>Click on it on the canvas. A selection border appears.</td></tr>
             <tr><td><strong>Move a field</strong></td><td>Drag it to any position on the canvas.</td></tr>
@@ -737,7 +758,7 @@ window.initHelp = function () {
       <h3 class="help-subsection-title">Text Field Properties</h3>
       <div class="help-table-wrapper">
         <table class="help-table">
-          <thead><tr><th>Property</th><th>Description</th></tr></thead>
+          <thead><tr><th scope="col">Property</th><th scope="col">Description</th></tr></thead>
           <tbody>
             <tr><td><strong>Label</strong></td><td>Name shown in the generate form (e.g. "Event Title", "Date").</td></tr>
             <tr><td><strong>Font Size</strong></td><td>Text size in pixels on the canvas.</td></tr>
@@ -770,7 +791,7 @@ window.initHelp = function () {
       <h3 class="help-subsection-title">Managing Templates</h3>
       <div class="help-table-wrapper">
         <table class="help-table">
-          <thead><tr><th>Control</th><th>Action</th></tr></thead>
+          <thead><tr><th scope="col">Control</th><th scope="col">Action</th></tr></thead>
           <tbody>
             <tr><td><strong>Search bar</strong></td><td>Filter the template list by name in real time.</td></tr>
             <tr><td><strong>Edit (pencil icon)</strong></td><td>Reopen the canvas editor to change layout, fields, or background image.</td></tr>
@@ -783,11 +804,222 @@ window.initHelp = function () {
         💡 Social Media templates are stored in the <code>social-media/</code> subfolder inside your Templates directory.
         Back them up via <strong>Settings → Backup</strong> like any other app data.
       </p>
-    </div>
+    </section>
 
-    <!-- ══ NOTES ══════════════════════════════════════════════════ -->
-    <div class="help-section" id="hn-notes">
-      <h2 class="help-section-title">📓 Notes</h2>
+    <!-- ══════════════════════════════════════════════════════════════════
+         SECTION: TO-DO  ✅  (NEW)
+    ══════════════════════════════════════════════════════════════════════ -->
+    <section class="help-section" id="hn-todo" data-tab="tasks" aria-labelledby="hn-todo-title">
+      <h2 class="help-section-title" id="hn-todo-title">✅ To-Do</h2>
+      <p>
+        The <strong>To-Do</strong> page is a full-featured task manager. Tasks can be organised by
+        priority and tags, filtered by status or date, exported to Excel or Word, and optionally
+        synced two-way with a Notion database.
+      </p>
+
+      <div class="help-badge-row">
+        <span class="help-badge help-badge--new">New Feature</span>
+        <span class="help-badge-caption">Integrated with Work Logs — marking a task done can automatically create a work log entry.</span>
+      </div>
+
+      <h3 class="help-subsection-title">Layout</h3>
+      <p>The page is split into a <strong>left sidebar</strong> (filters, tags, priorities, Notion sync) and a <strong>main task list</strong> (toolbar, task items).</p>
+
+      <h3 class="help-subsection-title">Adding a Task</h3>
+      <ol class="help-list">
+        <li>Click the <strong>+ Add Task</strong> button (toolbar or bottom of list) or press <kbd>N</kbd> anywhere on the page.</li>
+        <li>A modal opens. Enter the <strong>Task</strong> text.</li>
+        <li>Optionally set a <strong>Priority</strong> (Low · Medium · High · Urgent), <strong>Due Date</strong>, and <strong>Tags</strong>.</li>
+        <li>Click <strong>Save</strong> or press <kbd>Enter</kbd>.</li>
+      </ol>
+
+      <h3 class="help-subsection-title">Priority Levels</h3>
+      <div class="help-table-wrapper">
+        <table class="help-table">
+          <thead><tr><th scope="col">Priority</th><th scope="col">Colour indicator</th><th scope="col">Usage</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Urgent</strong></td><td>Red left border + dot</td><td>Must be done immediately</td></tr>
+            <tr><td><strong>High</strong></td><td>Orange left border + dot</td><td>Important, do today</td></tr>
+            <tr><td><strong>Medium</strong></td><td>Blue left border + dot <em>(default)</em></td><td>Normal tasks</td></tr>
+            <tr><td><strong>Low</strong></td><td>Grey left border + dot</td><td>Nice-to-have</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 class="help-subsection-title">Status Tabs</h3>
+      <div class="help-table-wrapper">
+        <table class="help-table">
+          <thead><tr><th scope="col">Tab</th><th scope="col">Shows</th></tr></thead>
+          <tbody>
+            <tr><td><strong>All</strong></td><td>Every task regardless of completion</td></tr>
+            <tr><td><strong>Active</strong></td><td>Incomplete tasks only</td></tr>
+            <tr><td><strong>Completed</strong></td><td>Completed tasks only</td></tr>
+            <tr><td><strong>Overdue</strong></td><td>Incomplete tasks past their due date</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 class="help-subsection-title">Tags</h3>
+      <ul class="help-list">
+        <li>Add custom tags to a task in the Add / Edit modal (type and press <kbd>Enter</kbd> to add).</li>
+        <li>All tags in use appear in the sidebar — click any tag to filter the list to only that tag.</li>
+        <li>Multiple tags can be added to a single task. Click a tag badge on a task to remove it.</li>
+      </ul>
+
+      <h3 class="help-subsection-title">Filtering &amp; Sorting</h3>
+      <div class="help-table-wrapper">
+        <table class="help-table">
+          <thead><tr><th scope="col">Control</th><th scope="col">Behaviour</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Search box</strong></td><td>Filters tasks in real time by any text in the task or tags.</td></tr>
+            <tr><td><strong>Priority filter</strong> (sidebar)</td><td>Show only tasks of a selected priority (Low / Medium / High / Urgent / All).</td></tr>
+            <tr><td><strong>Tag filter</strong> (sidebar)</td><td>Show only tasks that have a specific tag.</td></tr>
+            <tr><td><strong>Year navigation ‹ ›</strong></td><td>Browse tasks by year. Use the arrows to move between years.</td></tr>
+            <tr><td><strong>Sort button</strong></td><td>Toggle sort between <em>date added</em>, <em>due date</em>, and <em>priority</em>.</td></tr>
+            <tr><td><strong>Active filter pill</strong></td><td>A pill in the toolbar shows any active tag or priority filter. Click ✕ on the pill to clear it.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 class="help-subsection-title">Completing &amp; Editing Tasks</h3>
+      <ul class="help-list">
+        <li>Click the <strong>circular checkbox</strong> on the left of a task to mark it done. Click again to reopen it.</li>
+        <li>Completed tasks show a strikethrough and are dimmed.</li>
+        <li>Overdue tasks (past due date, not completed) are shown with a red <em>Overdue</em> indicator.</li>
+        <li>Hover over a task to reveal the <strong>Edit</strong> (pencil) and <strong>Delete</strong> (bin) action buttons.</li>
+      </ul>
+
+      <h3 class="help-subsection-title">To-Do ↔ Work Log Integration</h3>
+      <div class="help-badge-row">
+        <span class="help-badge help-badge--new">New</span>
+      </div>
+      <p>When you mark a To-Do task as <strong>done</strong>, the app can automatically create a matching <strong>Work Log entry</strong> so your completion is recorded in the work journal.</p>
+      <ul class="help-list">
+        <li>A <strong>"Logged" badge</strong> appears on tasks that have been linked to a work log entry.</li>
+        <li>If you reopen (un-complete) a task, the work log shows an amber <strong>"To-Do reopened"</strong> badge as an audit trail.</li>
+        <li>The link is <strong>idempotent</strong> — toggling done/undone multiple times creates only one work log entry per task, not duplicates.</li>
+      </ul>
+
+      <h3 class="help-subsection-title">Statistics Bar</h3>
+      <p>At the top of the task list, a stats bar shows: <strong>Total</strong> tasks for the current view, <strong>Completed</strong> count, <strong>Overdue</strong> count, and <strong>Due Today</strong> count.</p>
+
+      <h3 class="help-subsection-title">Export</h3>
+      <div class="help-table-wrapper">
+        <table class="help-table">
+          <thead><tr><th scope="col">Option</th><th scope="col">Output</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Export to Excel</strong></td><td>Saves the currently visible tasks as an <code>.xlsx</code> file with task, priority, status, due date, and tags columns.</td></tr>
+            <tr><td><strong>Export to Word</strong></td><td>Saves the task list as a formatted <code>.docx</code> document.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="help-note">💡 Export respects active filters — apply filters before exporting to get only the tasks you need.</p>
+
+      <h3 class="help-subsection-title">Notion Two-Way Sync <span class="help-notion-badge">N</span></h3>
+      <p>
+        To-Do tasks can be synced to and from a <strong>Notion database</strong>. The same
+        Notion integration token used for Notes is shared — set it up once in <strong>Settings → Notion Integration</strong>.
+      </p>
+      <div class="help-table-wrapper">
+        <table class="help-table">
+          <thead><tr><th scope="col">Button</th><th scope="col">Action</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Push to Notion</strong></td><td>Sends all visible tasks to the Notion database. Creates new pages for new tasks, updates existing ones.</td></tr>
+            <tr><td><strong>Pull from Notion</strong></td><td>Fetches tasks from Notion and imports any that don't already exist locally, preserving existing mappings.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="help-note-info">
+        ℹ️ Your Notion database needs a <strong>Name</strong> (title) property, a <strong>Status</strong> checkbox or select property, and a <strong>Priority</strong> select property for full sync.
+      </p>
+    </section>
+
+    <!-- ══════════════════════════════════════════════════════════════════
+         SECTION: WORK LOGS
+    ══════════════════════════════════════════════════════════════════════ -->
+    <section class="help-section" id="hn-worklogs" data-tab="tasks" aria-labelledby="hn-worklogs-title">
+      <h2 class="help-section-title" id="hn-worklogs-title">📋 Work Logs</h2>
+      <p>
+        The <strong>Work Logs</strong> page is a timestamped activity journal for staff.
+        Each entry records a task description, optional notes, an optional photo attachment,
+        and an automatic date and time captured in <strong>Maldives Time (MVT, UTC+5)</strong>.
+        Logs can be searched, filtered by date range, and exported to Excel.
+      </p>
+
+      <h3 class="help-subsection-title">Summary Stats</h3>
+      <div class="help-table-wrapper">
+        <table class="help-table">
+          <thead><tr><th scope="col">Counter</th><th scope="col">Meaning</th></tr></thead>
+          <tbody>
+            <tr><td><strong>This Month</strong></td><td>Number of logs recorded in the current calendar month.</td></tr>
+            <tr><td><strong>This Year</strong></td><td>Number of logs recorded in the current calendar year.</td></tr>
+            <tr><td><strong>Total</strong></td><td>Grand total of all logs ever saved.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 class="help-subsection-title">Adding a Log Entry</h3>
+      <ol class="help-list">
+        <li>The <strong>Date</strong> and <strong>Time</strong> fields are filled automatically using the live MVT clock.</li>
+        <li>Type a <strong>Task</strong> description (required).</li>
+        <li>Optionally add <strong>Notes</strong> for additional context.</li>
+        <li>Click <strong>Save Log</strong> — or press <kbd>Enter</kbd> in the Task field — to save immediately.</li>
+      </ol>
+      <p class="help-note">
+        💡 Timestamps are fixed at the moment you press Save and cannot be back-dated,
+        ensuring an accurate audit trail.
+      </p>
+
+      <h3 class="help-subsection-title">Photo Attachments</h3>
+      <div class="help-badge-row">
+        <span class="help-badge help-badge--new">New</span>
+      </div>
+      <ul class="help-list">
+        <li>Each log entry has a <strong>photo column</strong>. Click the camera icon <strong>📷 Add</strong> on a row to attach a photo after saving.</li>
+        <li>If a photo is already attached, a small <strong>thumbnail button</strong> appears instead — click it to view the full image in a lightbox.</li>
+        <li>You can also attach or replace a photo via the <strong>Edit / Enrich</strong> (pencil icon) modal on any row, which lets you update the notes and photo simultaneously.</li>
+        <li>Photos are stored in the <code>userData/worklog_photos/</code> folder and are included in backups.</li>
+      </ul>
+
+      <h3 class="help-subsection-title">To-Do Link Badge</h3>
+      <p>
+        Log entries that were automatically created when a To-Do task was completed show a
+        <strong>badge indicating the linked task</strong>. If the original To-Do was later
+        reopened, an amber <strong>"To-Do reopened"</strong> badge is shown as an audit indicator.
+      </p>
+
+      <h3 class="help-subsection-title">Searching and Filtering</h3>
+      <div class="help-table-wrapper">
+        <table class="help-table">
+          <thead><tr><th scope="col">Control</th><th scope="col">Behaviour</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Search box</strong></td><td>Filters rows in real time by any text in the Task or Notes columns.</td></tr>
+            <tr><td><strong>From date</strong></td><td>Shows only logs on or after the selected date.</td></tr>
+            <tr><td><strong>To date</strong></td><td>Shows only logs on or before the selected date.</td></tr>
+            <tr><td><strong>Clear Filters</strong></td><td>Resets both keyword search and date range, restoring the full list.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 class="help-subsection-title">Deleting a Log</h3>
+      <p>Each row has a <strong>🗑 delete</strong> button. Click it and confirm to permanently remove that entry. Deletion cannot be undone.</p>
+
+      <h3 class="help-subsection-title">Exporting to Excel</h3>
+      <p>
+        Click <strong>Export to Excel</strong> to save the currently visible logs as an
+        <code>.xlsx</code> spreadsheet including: <em>No., Date, Time, Task,</em> and <em>Notes</em>.
+      </p>
+      <p class="help-note">
+        💡 If a filter is active when you export, only filtered results are included.
+        Clear all filters first to export every log.
+      </p>
+    </section>
+
+    <!-- ══════════════════════════════════════════════════════════════════
+         SECTION: NOTES
+    ══════════════════════════════════════════════════════════════════════ -->
+    <section class="help-section" id="hn-notes" data-tab="tasks" aria-labelledby="hn-notes-title">
+      <h2 class="help-section-title" id="hn-notes-title">📓 Notes</h2>
       <p>
         The <strong>Notes</strong> page is a personal notebook built into the app.
         Notes support both <strong>English</strong> and <strong>Dhivehi (Thaana)</strong> text,
@@ -830,7 +1062,7 @@ window.initHelp = function () {
       </ol>
       <div class="help-table-wrapper">
         <table class="help-table">
-          <thead><tr><th>Button</th><th>Action</th></tr></thead>
+          <thead><tr><th scope="col">Button</th><th scope="col">Action</th></tr></thead>
           <tbody>
             <tr><td><strong>⇅ Sync</strong> (per note)</td><td>Push the currently open note to Notion. Creates a new page if it hasn't been synced before, or updates the existing page.</td></tr>
             <tr><td><strong>⇅ Sync All</strong></td><td>Push every note in the sidebar to Notion in one operation.</td></tr>
@@ -838,135 +1070,113 @@ window.initHelp = function () {
         </table>
       </div>
       <p class="help-note-info">
-        ℹ️ Notion sync is one-way — changes made in Notion are not pulled back into the app.
+        ℹ️ Notes sync is one-way — changes made in Notion are not pulled back into the app.
         Your integration token is stored locally and never transmitted to any server other than Notion's own API.
       </p>
 
       <h3 class="help-subsection-title">Setting Up a Notion Integration</h3>
       <ol class="help-list">
-        <li>Go to <a href="https://www.notion.so/my-integrations" target="_blank">notion.so/my-integrations</a> and click <strong>+ New integration</strong>.</li>
+        <li>Go to <a href="https://www.notion.so/my-integrations" target="_blank" rel="noopener noreferrer">notion.so/my-integrations</a> and click <strong>+ New integration</strong>.</li>
         <li>Give it a name (e.g. <em>MTO Samugaa</em>), select your workspace, and click <strong>Submit</strong>.</li>
         <li>Copy the <strong>Internal Integration Token</strong> shown on the integration page.</li>
         <li>In Notion, open or create a database you want notes pushed to. Click <strong>⋯ Share</strong> → <strong>Invite</strong> → select your integration.</li>
         <li>Copy the Database ID from the database URL: <code>notion.so/&lt;workspace&gt;/<strong>DATABASE_ID</strong>?…</code></li>
         <li>Paste both values into <strong>Settings → Notion Integration</strong> in the app.</li>
       </ol>
-    </div>
+    </section>
 
-    <!-- ══ WATERMARK TOOL ════════════════════════════════════════════ -->
-    <div class="help-section" id="hn-watermark">
-      <h2 class="help-section-title">🖼️ Watermark Tool</h2>
+    <!-- ══════════════════════════════════════════════════════════════════
+         SECTION: CALENDAR
+    ══════════════════════════════════════════════════════════════════════ -->
+    <section class="help-section" id="hn-calendar" data-tab="tools" aria-labelledby="hn-calendar-title">
+      <h2 class="help-section-title" id="hn-calendar-title">📅 Maldives Calendar</h2>
       <p>
-        Batch-stamp any number of images with a watermark graphic in one click —
-        no image editing software required.
+        A full calendar with Maldives public holidays, Hijri (Islamic) dates, international
+        observance days, and bilingual support in English and ދިވެހި.
       </p>
-
-      <h3 class="help-subsection-title">Workflow</h3>
-      <ol class="help-list">
-        <li>Click <strong>Add Images</strong> or drag and drop files onto the drop zone. Supported: <strong>PNG, JPG, WEBP, GIF</strong>.</li>
-        <li>Click <strong>Choose File</strong> in the Watermark Image card and pick your PNG/JPG watermark. A preview appears with an <strong>✓ Active</strong> badge.</li>
-        <li>Choose a <strong>Placement Mode</strong> (Corner or Full Width).</li>
-        <li>Click <strong>Apply Watermark</strong>. A native folder picker opens — choose your output directory.</li>
-        <li>The app saves each image into a <code>watermarked\</code> subfolder with <code>_wm</code> appended to the filename (e.g. <code>photo_wm.png</code>).</li>
-      </ol>
-
-      <h3 class="help-subsection-title">Placement Modes</h3>
       <div class="help-table-wrapper">
         <table class="help-table">
-          <thead><tr><th>Mode</th><th>Behaviour</th></tr></thead>
+          <thead><tr><th scope="col">Feature</th><th scope="col">Details</th></tr></thead>
           <tbody>
-            <tr>
-              <td><strong>Corner</strong></td>
-              <td>Watermark height = 15% of source image height, placed in the <strong>bottom-right corner</strong> with padding margin. Output dimensions unchanged.</td>
-            </tr>
-            <tr>
-              <td><strong>Full Width</strong></td>
-              <td>Watermark width = source image width, overlaid flush against the <strong>bottom edge</strong>. Output dimensions unchanged — the watermark overlaps the bottom portion of the photo.</td>
-            </tr>
+            <tr><td><strong>Views</strong></td><td>Switch between <strong>Month</strong>, <strong>Week</strong>, and <strong>Year</strong> views using the toggle buttons.</td></tr>
+            <tr><td><strong>Navigation</strong></td><td>Use ‹ / › arrows to go forward or backward; click <strong>Today</strong> to jump to the current date.</td></tr>
+            <tr><td><strong>Hijri dates</strong></td><td>Each day cell shows the corresponding Hijri calendar date in a smaller label.</td></tr>
+            <tr><td><strong>Public Holidays</strong></td><td>Maldives national holidays are highlighted and labelled directly on the calendar (blue styling with gazette references).</td></tr>
+            <tr><td><strong>International Days</strong></td><td>~75 UN and international observance days are marked with a subtle green dot.</td></tr>
+            <tr><td><strong>Language toggle</strong></td><td>Switch all labels between English and ދިވެހި. The setting is remembered between sessions.</td></tr>
+            <tr><td><strong>Weekends</strong></td><td>Friday and Saturday are highlighted as Maldivian weekend days.</td></tr>
+            <tr><td><strong>Past dates</strong></td><td>Days before today are shown with a faint diagonal strikethrough to help you orient quickly.</td></tr>
           </tbody>
         </table>
       </div>
-
-      <h3 class="help-subsection-title">Recent Watermarks</h3>
-      <p>
-        Your last <strong>6 watermark images</strong> are remembered for quick reuse. The most recently used always appears first. Click the small <strong>✕</strong> on a recent entry to remove it from the list.
-      </p>
       <p class="help-note">
-        💡 Use a <strong>PNG with a transparent background</strong> for the cleanest result. The output folder is remembered for the current session — click <strong>Clear All</strong> to reset it so the folder picker reappears.
+        💡 Holiday data is loaded from a remote JSON feed (GitHub) and cached locally for 24 hours.
+        The calendar works offline using the cached data. The week starts on <strong>Sunday</strong> to match Maldivian convention.
       </p>
-    </div>
+    </section>
 
-    <!-- ══ WORK LOGS ════════════════════════════════════════════════ -->
-    <div class="help-section" id="hn-worklogs">
-      <h2 class="help-section-title">📋 Work Logs</h2>
+    <!-- ══════════════════════════════════════════════════════════════════
+         SECTION: PRAYER TIMES
+    ══════════════════════════════════════════════════════════════════════ -->
+    <section class="help-section" id="hn-prayertimes" data-tab="tools" aria-labelledby="hn-prayertimes-title">
+      <h2 class="help-section-title" id="hn-prayertimes-title">🕌 Prayer Times</h2>
       <p>
-        The <strong>Work Logs</strong> page is a timestamped activity journal for staff.
-        Each entry records a task description, optional notes, and an automatic date and time
-        captured in <strong>Maldives Time (MVT, UTC+5)</strong>. Logs can be searched, filtered
-        by date range, and exported to Excel.
+        Shows the daily prayer schedule for <strong>Addu City (Gan), Maldives</strong> using the
+        pre-computed Namaadhu app database. All times are in <strong>MVT (UTC+5)</strong>.
       </p>
 
-      <h3 class="help-subsection-title">Summary Stats</h3>
+      <h3 class="help-subsection-title">Prayer Cards</h3>
+      <p>
+        Six time cards — Fajr, Sunrise, Dhuhr, Asr, Maghrib, and Isha — each displaying
+        12-hour and 24-hour formats. The <strong>current prayer</strong> (in progress) and
+        the <strong>next prayer</strong> are highlighted with colour badges.
+      </p>
+
+      <h3 class="help-subsection-title">Countdown Card</h3>
+      <p>
+        A live countdown panel shows the name, icon, and Arabic label of the upcoming
+        prayer along with a seconds-accurate timer. A progress ring and bar visualise
+        how far through the interval you currently are.
+      </p>
+
+      <h3 class="help-subsection-title">Sun Information</h3>
+      <p>A sun-info strip shows Sunrise, Solar Noon (Dhuhr), Sunset (Maghrib), and the total day length.</p>
+
+      <h3 class="help-subsection-title">Qibla Compass</h3>
+      <p>
+        A graphical compass needle points toward Makkah from Addu City coordinates,
+        together with the bearing in degrees and the nearest compass direction (e.g. <em>337.2° NNW</em>).
+      </p>
+
+      <h3 class="help-subsection-title">Date Navigation</h3>
       <div class="help-table-wrapper">
         <table class="help-table">
-          <thead><tr><th>Counter</th><th>Meaning</th></tr></thead>
+          <thead><tr><th scope="col">Control</th><th scope="col">Behaviour</th></tr></thead>
           <tbody>
-            <tr><td><strong>This Month</strong></td><td>Number of logs recorded in the current calendar month.</td></tr>
-            <tr><td><strong>This Year</strong></td><td>Number of logs recorded in the current calendar year.</td></tr>
-            <tr><td><strong>Total</strong></td><td>Grand total of all logs ever saved.</td></tr>
+            <tr><td><strong>‹ / ›</strong> arrows</td><td>Move one day backward or forward to look up prayer times for any date.</td></tr>
+            <tr><td><strong>Today</strong></td><td>Jump back to the current date immediately.</td></tr>
+            <tr><td><strong>Hijri date</strong></td><td>Shown next to the Gregorian date in the header and in the countdown card.</td></tr>
           </tbody>
         </table>
       </div>
-
-      <h3 class="help-subsection-title">Adding a Log Entry</h3>
-      <ol class="help-list">
-        <li>The <strong>Date</strong> and <strong>Time</strong> fields are filled automatically using the live MVT clock.</li>
-        <li>Type a <strong>Task</strong> description (required).</li>
-        <li>Optionally add <strong>Notes</strong> for additional context.</li>
-        <li>Click <strong>Save Log</strong> — or press <kbd>Enter</kbd> in the Task field — to save immediately.</li>
-      </ol>
       <p class="help-note">
-        💡 Timestamps are fixed at the moment you press Save and cannot be back-dated,
-        ensuring an accurate audit trail.
+        ℹ️ Times are fixed to Gan coordinates (0.629°N, 73.099°E) — they are not affected by GPS or device location.
+        The Hijri date is a calculated approximation; local moon-sighting announcements take precedence for religious purposes.
       </p>
+    </section>
 
-      <h3 class="help-subsection-title">Searching and Filtering</h3>
-      <div class="help-table-wrapper">
-        <table class="help-table">
-          <thead><tr><th>Control</th><th>Behaviour</th></tr></thead>
-          <tbody>
-            <tr><td><strong>Search box</strong></td><td>Filters rows in real time by any text in the Task or Notes columns.</td></tr>
-            <tr><td><strong>From date</strong></td><td>Shows only logs on or after the selected date.</td></tr>
-            <tr><td><strong>To date</strong></td><td>Shows only logs on or before the selected date.</td></tr>
-            <tr><td><strong>Clear Filters</strong></td><td>Resets both keyword search and date range, restoring the full list.</td></tr>
-          </tbody>
-        </table>
-      </div>
-
-      <h3 class="help-subsection-title">Deleting a Log</h3>
-      <p>Each row has a <strong>🗑 delete</strong> button. Click it and confirm to permanently remove that entry. Deletion cannot be undone.</p>
-
-      <h3 class="help-subsection-title">Exporting to Excel</h3>
-      <p>
-        Click <strong>Export to Excel</strong> to save the currently visible logs as an
-        <code>.xlsx</code> spreadsheet including: <em>No., Date, Time, Task,</em> and <em>Notes</em>.
-      </p>
-      <p class="help-note">
-        💡 If a filter is active when you export, only filtered results are included.
-        Clear all filters first to export every log.
-      </p>
-    </div>
-
-    <!-- ══ UTILITIES ════════════════════════════════════════════════ -->
-    <div class="help-section" id="hn-utilities">
-      <h2 class="help-section-title">🔧 Utilities</h2>
+    <!-- ══════════════════════════════════════════════════════════════════
+         SECTION: UTILITIES
+    ══════════════════════════════════════════════════════════════════════ -->
+    <section class="help-section" id="hn-utilities" data-tab="tools" aria-labelledby="hn-utilities-title">
+      <h2 class="help-section-title" id="hn-utilities-title">🔧 Utilities</h2>
       <p>The <strong>Utilities</strong> tab bundles five tools into a single tabbed workspace. Switch between them using the pill buttons at the top.</p>
 
       <h3 class="help-subsection-title">📏 Unit Converter</h3>
       <p>Convert values between units across ten measurement categories. Enter a value in any unit and all others update instantly.</p>
       <div class="help-table-wrapper">
         <table class="help-table">
-          <thead><tr><th>Category</th><th>Example units</th></tr></thead>
+          <thead><tr><th scope="col">Category</th><th scope="col">Example units</th></tr></thead>
           <tbody>
             <tr><td><strong>Length</strong></td><td>mm, cm, m, km, in, ft, yd, mi, nautical miles</td></tr>
             <tr><td><strong>Weight / Mass</strong></td><td>mg, g, kg, metric tons, oz, lb, stone</td></tr>
@@ -1010,7 +1220,7 @@ window.initHelp = function () {
       <p>Predicted tide heights for <strong>Addu City (Gan), Maldives</strong> using a harmonic tidal model. Times are in <strong>MVT (UTC+5)</strong>.</p>
       <div class="help-table-wrapper">
         <table class="help-table">
-          <thead><tr><th>Feature</th><th>Details</th></tr></thead>
+          <thead><tr><th scope="col">Feature</th><th scope="col">Details</th></tr></thead>
           <tbody>
             <tr><td><strong>Daily view</strong></td><td>Smooth curve for one day. Move the cursor to read exact height and time at any point.</td></tr>
             <tr><td><strong>Weekly view</strong></td><td>Seven-day overview with annotated high and low tide markers.</td></tr>
@@ -1023,59 +1233,58 @@ window.initHelp = function () {
       <p class="help-note-warn">
         ⚠️ Tide predictions are estimates from a mathematical harmonic model — always verify against official tables for navigation or safety decisions.
       </p>
-    </div>
+    </section>
 
-    <!-- ══ PRAYER TIMES ══════════════════════════════════════════════ -->
-    <div class="help-section" id="hn-prayertimes">
-      <h2 class="help-section-title">🕌 Prayer Times</h2>
+    <!-- ══════════════════════════════════════════════════════════════════
+         SECTION: WATERMARK
+    ══════════════════════════════════════════════════════════════════════ -->
+    <section class="help-section" id="hn-watermark" data-tab="tools" aria-labelledby="hn-watermark-title">
+      <h2 class="help-section-title" id="hn-watermark-title">🖼️ Watermark Tool</h2>
       <p>
-        Shows the daily prayer schedule for <strong>Addu City (Gan), Maldives</strong> using the
-        pre-computed Namaadhu app database. All times are in <strong>MVT (UTC+5)</strong>.
+        Batch-stamp any number of images with a watermark graphic in one click —
+        no image editing software required.
       </p>
 
-      <h3 class="help-subsection-title">Prayer Cards</h3>
-      <p>
-        Six time cards — Fajr, Sunrise, Dhuhr, Asr, Maghrib, and Isha — each displaying
-        12-hour and 24-hour formats. The <strong>current prayer</strong> (in progress) and
-        the <strong>next prayer</strong> are highlighted with colour badges.
-      </p>
+      <h3 class="help-subsection-title">Workflow</h3>
+      <ol class="help-list">
+        <li>Click <strong>Add Images</strong> or drag and drop files onto the drop zone. Supported: <strong>PNG, JPG, WEBP, GIF</strong>.</li>
+        <li>Click <strong>Choose File</strong> in the Watermark Image card and pick your PNG/JPG watermark. A preview appears with an <strong>✓ Active</strong> badge.</li>
+        <li>Choose a <strong>Placement Mode</strong> (Corner or Full Width).</li>
+        <li>Click <strong>Apply Watermark</strong>. A native folder picker opens — choose your output directory.</li>
+        <li>The app saves each image into a <code>watermarked\</code> subfolder with <code>_wm</code> appended to the filename (e.g. <code>photo_wm.png</code>).</li>
+      </ol>
 
-      <h3 class="help-subsection-title">Countdown Card</h3>
-      <p>
-        A live countdown panel shows the name, icon, and Arabic label of the upcoming
-        prayer along with a seconds-accurate timer. A progress ring and bar visualise
-        how far through the interval you currently are.
-      </p>
-
-      <h3 class="help-subsection-title">Sun Information</h3>
-      <p>A sun-info strip shows Sunrise, Solar Noon (Dhuhr), Sunset (Maghrib), and the total day length.</p>
-
-      <h3 class="help-subsection-title">Qibla Compass</h3>
-      <p>
-        A graphical compass needle points toward Makkah from Addu City coordinates,
-        together with the bearing in degrees and the nearest compass direction (e.g. <em>337.2° NNW</em>).
-      </p>
-
-      <h3 class="help-subsection-title">Date Navigation</h3>
+      <h3 class="help-subsection-title">Placement Modes</h3>
       <div class="help-table-wrapper">
         <table class="help-table">
-          <thead><tr><th>Control</th><th>Behaviour</th></tr></thead>
+          <thead><tr><th scope="col">Mode</th><th scope="col">Behaviour</th></tr></thead>
           <tbody>
-            <tr><td><strong>‹ / ›</strong> arrows</td><td>Move one day backward or forward to look up prayer times for any date.</td></tr>
-            <tr><td><strong>Today</strong></td><td>Jump back to the current date immediately.</td></tr>
-            <tr><td><strong>Hijri date</strong></td><td>Shown next to the Gregorian date in the header and in the countdown card.</td></tr>
+            <tr>
+              <td><strong>Corner</strong></td>
+              <td>Watermark height = 15% of source image height, placed in the <strong>bottom-right corner</strong> with padding margin. Output dimensions unchanged.</td>
+            </tr>
+            <tr>
+              <td><strong>Full Width</strong></td>
+              <td>Watermark width = source image width, overlaid flush against the <strong>bottom edge</strong>. Output dimensions unchanged — the watermark overlaps the bottom portion of the photo.</td>
+            </tr>
           </tbody>
         </table>
       </div>
-      <p class="help-note">
-        ℹ️ Times are fixed to Gan coordinates (0.629°N, 73.099°E) — they are not affected by GPS or device location.
-        The Hijri date is a calculated approximation; local moon-sighting announcements take precedence for religious purposes.
-      </p>
-    </div>
 
-    <!-- ══ RANDOM PICKER ════════════════════════════════════════════ -->
-    <div class="help-section" id="hn-randompicker">
-      <h2 class="help-section-title">🎲 Random Picker</h2>
+      <h3 class="help-subsection-title">Recent Watermarks</h3>
+      <p>
+        Your last <strong>6 watermark images</strong> are remembered for quick reuse. The most recently used always appears first. Click the small <strong>✕</strong> on a recent entry to remove it from the list.
+      </p>
+      <p class="help-note">
+        💡 Use a <strong>PNG with a transparent background</strong> for the cleanest result. The output folder is remembered for the current session — click <strong>Clear All</strong> to reset it so the folder picker reappears.
+      </p>
+    </section>
+
+    <!-- ══════════════════════════════════════════════════════════════════
+         SECTION: RANDOM PICKER
+    ══════════════════════════════════════════════════════════════════════ -->
+    <section class="help-section" id="hn-randompicker" data-tab="tools" aria-labelledby="hn-randompicker-title">
+      <h2 class="help-section-title" id="hn-randompicker-title">🎲 Random Picker</h2>
       <p>
         Randomly assigns a shuffled list of <em>choices</em> to a list of <em>names</em> — useful
         for duty rosters, task allocation, team formation, or any situation requiring a fair, impartial draw.
@@ -1092,7 +1301,7 @@ window.initHelp = function () {
       <h3 class="help-subsection-title">Assignment Modes</h3>
       <div class="help-table-wrapper">
         <table class="help-table">
-          <thead><tr><th>Situation</th><th>Behaviour</th></tr></thead>
+          <thead><tr><th scope="col">Situation</th><th scope="col">Behaviour</th></tr></thead>
           <tbody>
             <tr><td><strong>More choices than names</strong></td><td>A random subset of choices is selected and paired one-to-one with the names.</td></tr>
             <tr><td><strong>Equal choices and names</strong></td><td>Each choice is assigned to exactly one name — a perfect 1-to-1 shuffle.</td></tr>
@@ -1111,39 +1320,13 @@ window.initHelp = function () {
       <p class="help-note">
         💡 Each shuffle is completely random — re-clicking with the same inputs produces a different distribution every time.
       </p>
-    </div>
+    </section>
 
-    <!-- ══ CALENDAR ══════════════════════════════════════════════════ -->
-    <div class="help-section" id="hn-calendar">
-      <h2 class="help-section-title">📅 Maldives Calendar</h2>
-      <p>
-        A full calendar with Maldives public holidays, Hijri (Islamic) dates, international observance
-        days, and bilingual support in English and Divehi.
-      </p>
-      <div class="help-table-wrapper">
-        <table class="help-table">
-          <thead><tr><th>Feature</th><th>Details</th></tr></thead>
-          <tbody>
-            <tr><td><strong>Views</strong></td><td>Switch between <strong>Month</strong>, <strong>Week</strong>, and <strong>Year</strong> views using the toggle buttons.</td></tr>
-            <tr><td><strong>Navigation</strong></td><td>Use ‹ / › arrows to go forward or backward; click <strong>Today</strong> to jump to the current date.</td></tr>
-            <tr><td><strong>Hijri dates</strong></td><td>Each day cell shows the corresponding Hijri calendar date in a smaller label.</td></tr>
-            <tr><td><strong>Public Holidays</strong></td><td>Maldives national holidays are highlighted and labelled directly on the calendar (blue styling with gazette references).</td></tr>
-            <tr><td><strong>International Days</strong></td><td>~75 UN and international observance days are marked with a subtle green dot.</td></tr>
-            <tr><td><strong>Language toggle</strong></td><td>Switch all labels between English and ދިވެހި. The setting is remembered between sessions.</td></tr>
-            <tr><td><strong>Weekends</strong></td><td>Friday and Saturday are highlighted as Maldivian weekend days.</td></tr>
-            <tr><td><strong>Past dates</strong></td><td>Days before today are shown with a faint diagonal strikethrough to help you orient quickly.</td></tr>
-          </tbody>
-        </table>
-      </div>
-      <p class="help-note">
-        💡 Holiday data is loaded from a remote JSON feed (GitHub) and cached locally for 24 hours.
-        The calendar works offline using the cached data.
-      </p>
-    </div>
-
-    <!-- ══ BACKUP & RESTORE ══════════════════════════════════════════ -->
-    <div class="help-section" id="hn-backup">
-      <h2 class="help-section-title">💾 Backup &amp; Restore</h2>
+    <!-- ══════════════════════════════════════════════════════════════════
+         SECTION: BACKUP & RESTORE
+    ══════════════════════════════════════════════════════════════════════ -->
+    <section class="help-section" id="hn-backup" data-tab="app" aria-labelledby="hn-backup-title">
+      <h2 class="help-section-title" id="hn-backup-title">💾 Backup &amp; Restore</h2>
       <p>
         The <strong>Backup</strong> page (found under <strong>Settings → Backup</strong>) lets you
         export all your app data to a safe location and restore it later — useful when moving to
@@ -1153,11 +1336,11 @@ window.initHelp = function () {
       <h3 class="help-subsection-title">What Can Be Backed Up</h3>
       <div class="help-table-wrapper">
         <table class="help-table">
-          <thead><tr><th>Data set</th><th>Includes</th></tr></thead>
+          <thead><tr><th scope="col">Data set</th><th scope="col">Includes</th></tr></thead>
           <tbody>
             <tr><td><strong>Social Media Templates</strong></td><td>All canvas layouts, field configurations, and background images.</td></tr>
             <tr><td><strong>Notes</strong></td><td>All notes with their titles, content, and Notion page IDs.</td></tr>
-            <tr><td><strong>Work Logs</strong></td><td>All timestamped log entries and attached notes.</td></tr>
+            <tr><td><strong>Work Logs</strong></td><td>All timestamped log entries, notes, and attached photos.</td></tr>
             <tr><td><strong>Document Templates</strong></td><td>The template database (<code>mto_forms.db</code>) and all associated <code>.docx</code> / <code>.xlsx</code> source files.</td></tr>
           </tbody>
         </table>
@@ -1187,19 +1370,21 @@ window.initHelp = function () {
       <ul class="help-list">
         <li>Run a <strong>full backup</strong> (all sections) before any major change — new OS, app update, or restructuring templates.</li>
         <li>Store backups on a <strong>separate drive or cloud folder</strong>, not the same disk as the app data.</li>
-        <li>Label backup folders with the date (e.g. <code>MTO_Backup_2026-06-17</code>) so you can identify them later.</li>
+        <li>Label backup folders with the date (e.g. <code>MTO_Backup_2026-06-19</code>) so you can identify them later.</li>
       </ul>
-    </div>
+    </section>
 
-    <!-- ══ SETTINGS ═════════════════════════════════════════════════ -->
-    <div class="help-section" id="hn-settings">
-      <h2 class="help-section-title">⚙️ Settings</h2>
+    <!-- ══════════════════════════════════════════════════════════════════
+         SECTION: SETTINGS
+    ══════════════════════════════════════════════════════════════════════ -->
+    <section class="help-section" id="hn-settings" data-tab="app" aria-labelledby="hn-settings-title">
+      <h2 class="help-section-title" id="hn-settings-title">⚙️ Settings</h2>
       <p>The Settings page lets you change where the app stores its data and configure integrations.</p>
 
       <h3 class="help-subsection-title">Storage Directories</h3>
       <div class="help-table-wrapper">
         <table class="help-table">
-          <thead><tr><th>Setting</th><th>Description</th></tr></thead>
+          <thead><tr><th scope="col">Setting</th><th scope="col">Description</th></tr></thead>
           <tbody>
             <tr><td><strong>Templates Directory</strong></td><td>Where uploaded template files (<code>.docx</code>, <code>.xlsx</code>) are stored on disk.</td></tr>
             <tr><td><strong>Outputs Directory</strong></td><td>Where generated documents are saved when using <em>Generate Only</em>.</td></tr>
@@ -1215,15 +1400,17 @@ window.initHelp = function () {
       </p>
 
       <h3 class="help-subsection-title">Notion Integration</h3>
-      <p>Enter your <strong>Notion Integration Token</strong> and <strong>Database ID</strong> here to enable Notes → Notion sync. See the <a href="#hn-notes" class="help-inline-link">Notes section</a> for setup instructions.</p>
+      <p>Enter your <strong>Notion Integration Token</strong> and <strong>Database ID</strong> here to enable Notes and To-Do → Notion sync. See the <a href="#hn-notes" class="help-inline-link">Notes section</a> for full setup instructions.</p>
 
       <h3 class="help-subsection-title">About</h3>
       <p>Displays the app version, developer contact details, and repository link — useful when reporting bugs or requesting support.</p>
-    </div>
+    </section>
 
-    <!-- ══ TIPS & BEST PRACTICES ═════════════════════════════════════ -->
-    <div class="help-section" id="hn-tips">
-      <h2 class="help-section-title">💡 Tips &amp; Best Practices</h2>
+    <!-- ══════════════════════════════════════════════════════════════════
+         SECTION: TIPS & BEST PRACTICES
+    ══════════════════════════════════════════════════════════════════════ -->
+    <section class="help-section" id="hn-tips" data-tab="app" aria-labelledby="hn-tips-title">
+      <h2 class="help-section-title" id="hn-tips-title">💡 Tips &amp; Best Practices</h2>
 
       <h3 class="help-subsection-title">Naming Placeholders</h3>
       <ul class="help-list">
@@ -1240,6 +1427,23 @@ window.initHelp = function () {
         <li>Test your mapping with a <strong>2–3 row sample file</strong> first before running a large batch.</li>
         <li>Use a <strong>fresh empty folder</strong> for each batch run — the app overwrites files with the same name without warning.</li>
         <li>The <strong>Combine into PDF</strong> option requires Microsoft Word installed on the machine.</li>
+      </ul>
+
+      <h3 class="help-subsection-title">To-Do Tasks</h3>
+      <ul class="help-list">
+        <li>Use <strong>priority levels</strong> consistently — reserve Urgent for genuinely time-critical tasks so the red indicator stays meaningful.</li>
+        <li>Apply <strong>tags</strong> to group related tasks (e.g. "meeting", "report", "follow-up") for quick sidebar filtering.</li>
+        <li>Set <strong>due dates</strong> on tasks so the Overdue tab gives you a meaningful daily catch-up list.</li>
+        <li>After completing a task, check the Work Logs page — a linked entry will already be there, saving you from double-entry.</li>
+        <li>Use the <strong>Export to Excel</strong> feature at the end of a project cycle to produce a clean record of all completed tasks.</li>
+      </ul>
+
+      <h3 class="help-subsection-title">Work Logs</h3>
+      <ul class="help-list">
+        <li>Press <kbd>Enter</kbd> in the Task field to save quickly without reaching for the mouse.</li>
+        <li>Use <strong>From / To</strong> date filters to scope the view before exporting — only filtered rows are written to Excel.</li>
+        <li>Work log timestamps are fixed to <strong>MVT</strong> and cannot be edited, ensuring an accurate audit trail.</li>
+        <li>Attach a <strong>photo</strong> immediately after saving a log entry using the camera icon — this is useful for documenting site visits, inspections, or completed physical tasks.</li>
       </ul>
 
       <h3 class="help-subsection-title">Paragraph &amp; Multi-line Fields</h3>
@@ -1278,13 +1482,6 @@ window.initHelp = function () {
         <li>In <strong>Full Width</strong> mode, a <strong>wide, short banner</strong> graphic works best to avoid covering too much of the photo.</li>
       </ul>
 
-      <h3 class="help-subsection-title">Work Logs</h3>
-      <ul class="help-list">
-        <li>Press <kbd>Enter</kbd> in the Task field to save quickly without reaching for the mouse.</li>
-        <li>Use <strong>From / To</strong> date filters to scope the view before exporting — only filtered rows are written to Excel.</li>
-        <li>Work log timestamps are fixed to <strong>MVT</strong> and cannot be edited, ensuring an accurate audit trail.</li>
-      </ul>
-
       <h3 class="help-subsection-title">Prayer Times</h3>
       <ul class="help-list">
         <li>Times are fixed to <strong>Addu City (Gan) coordinates</strong> — they are not affected by GPS or device location.</li>
@@ -1298,7 +1495,7 @@ window.initHelp = function () {
         <li>Tide predictions are mathematical estimates — always cross-check against official tables for navigation or safety.</li>
         <li>In the Moon Phase view, spring tides occur around Full Moon and New Moon.</li>
       </ul>
-    </div>
+    </section>
 
   `;
 
@@ -1321,7 +1518,7 @@ window.initHelp = function () {
     });
   });
 
-  // ── Inline anchor links (e.g. "See Notes section") ───────────────
+  // ── Inline anchor links ───────────────────────────────────────────
   container.querySelectorAll('.help-inline-link[href^="#"]').forEach(link => {
     link.addEventListener('click', e => {
       e.preventDefault();
@@ -1330,17 +1527,50 @@ window.initHelp = function () {
     });
   });
 
+  // ── Category Tabs ─────────────────────────────────────────────────
+  const tabs     = container.querySelectorAll('.help-tab');
+  const sections = container.querySelectorAll('.help-section[data-tab]');
+  const pills    = container.querySelectorAll('.help-pill[data-tab]');
+
+  function _activateTab(tabName) {
+    tabs.forEach(t => {
+      const active = t.dataset.tab === tabName;
+      t.classList.toggle('help-tab--active', active);
+      t.setAttribute('aria-selected', active ? 'true' : 'false');
+    });
+
+    sections.forEach(sec => {
+      const show = tabName === 'all' || sec.dataset.tab === tabName;
+      sec.style.display = show ? '' : 'none';
+    });
+
+    // Filter quick-nav pills too
+    pills.forEach(pill => {
+      const show = tabName === 'all' || pill.dataset.tab === tabName || pill.dataset.tab === 'all';
+      pill.style.display = show ? '' : 'none';
+    });
+  }
+
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => _activateTab(tab.dataset.tab));
+    tab.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        _activateTab(tab.dataset.tab);
+      }
+    });
+  });
+
   // ── Active pill highlight on scroll ──────────────────────────────
-  const sections  = container.querySelectorAll('.help-section[id]');
-  const pills     = container.querySelectorAll('.help-pill[href]');
   const scrollRoot = container.closest('.settings-container') || container.parentElement;
 
   function _updateActivePill() {
     let current = null;
     sections.forEach(sec => {
+      if (sec.style.display === 'none') return;
       const rect = sec.getBoundingClientRect();
-      const parentRect = scrollRoot.getBoundingClientRect();
-      if (rect.top - parentRect.top <= 100) current = sec.id;
+      const parentRect = scrollRoot ? scrollRoot.getBoundingClientRect() : { top: 0 };
+      if (rect.top - parentRect.top <= 120) current = sec.id;
     });
     pills.forEach(pill => {
       const isActive = pill.getAttribute('href') === '#' + current;
@@ -1358,8 +1588,8 @@ window.initHelp = function () {
   const searchClear   = document.getElementById('help-search-clear');
   const searchResults = document.getElementById('help-search-results');
   const quicknav      = document.getElementById('help-quicknav');
+  const tabNav        = document.getElementById('help-tabs');
 
-  // Index: collect all text from sections for search
   function _buildSearchIndex() {
     const idx = [];
     sections.forEach(sec => {
@@ -1371,6 +1601,7 @@ window.initHelp = function () {
       idx.push({
         id:      sec.id,
         title:   title ? title.textContent.trim() : sec.id,
+        tab:     sec.dataset.tab || 'all',
         body:    body.toLowerCase(),
         subheads:[...subheads].map(s => s.textContent.trim())
       });
@@ -1384,11 +1615,16 @@ window.initHelp = function () {
     if (!q || q.length < 2) {
       searchResults.style.display = 'none';
       quicknav.style.display = '';
+      if (tabNav) tabNav.style.display = '';
       searchClear.style.display = 'none';
       return;
     }
     searchClear.style.display = '';
     quicknav.style.display = 'none';
+    if (tabNav) tabNav.style.display = 'none';
+
+    // Show all sections while searching
+    sections.forEach(sec => { sec.style.display = ''; });
 
     const ql = q.toLowerCase();
     const hits = _searchIndex.filter(item =>
@@ -1399,19 +1635,18 @@ window.initHelp = function () {
       searchResults.innerHTML = `<p class="help-search-noresult">No results for "<strong>${q}</strong>"</p>`;
     } else {
       searchResults.innerHTML = hits.map(h => {
-        // Extract a short snippet around the match
         const idx2 = h.body.indexOf(ql);
         let snippet = '';
         if (idx2 !== -1) {
           const start = Math.max(0, idx2 - 60);
           const end   = Math.min(h.body.length, idx2 + q.length + 80);
           snippet = '…' + h.body.slice(start, end).replace(
-            new RegExp(ql, 'gi'),
+            new RegExp(ql.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'),
             m => `<mark>${m}</mark>`
           ) + '…';
         }
         return `
-          <a href="#${h.id}" class="help-search-hit">
+          <a href="#${h.id}" class="help-search-hit" role="option">
             <span class="help-search-hit-title">${h.title}</span>
             ${snippet ? `<span class="help-search-hit-snippet">${snippet}</span>` : ''}
           </a>`;
@@ -1419,16 +1654,19 @@ window.initHelp = function () {
     }
     searchResults.style.display = 'block';
 
-    // Click on a result: smooth scroll + close
     searchResults.querySelectorAll('.help-search-hit').forEach(link => {
       link.addEventListener('click', e => {
         e.preventDefault();
-        const target = document.querySelector(link.getAttribute('href'));
+        const targetId = link.getAttribute('href');
+        const target = document.querySelector(targetId);
         if (target) {
+          // Show all sections first
+          sections.forEach(sec => { sec.style.display = ''; });
           target.scrollIntoView({ behavior: 'smooth', block: 'start' });
           searchInput.value = '';
           searchResults.style.display = 'none';
           quicknav.style.display = '';
+          if (tabNav) tabNav.style.display = '';
           searchClear.style.display = 'none';
         }
       });
@@ -1441,13 +1679,20 @@ window.initHelp = function () {
       clearTimeout(_searchDebounce);
       _searchDebounce = setTimeout(() => _runSearch(searchInput.value.trim()), 160);
     });
+    // Keyboard shortcut: Escape clears search
+    searchInput.addEventListener('keydown', e => {
+      if (e.key === 'Escape') {
+        searchInput.value = '';
+        _runSearch('');
+        searchInput.blur();
+      }
+    });
   }
+
   if (searchClear) {
     searchClear.addEventListener('click', () => {
       searchInput.value = '';
-      searchResults.style.display = 'none';
-      quicknav.style.display = '';
-      searchClear.style.display = 'none';
+      _runSearch('');
       searchInput.focus();
     });
   }

@@ -54,7 +54,11 @@
   /**
    * Assigns choices to names.
    *
-   * Multi-slot mode (choices < names OR allow repeats checked):
+   * Raffle mode (choices < names):
+   *   Pick exactly `choices.length` winners from the shuffled names pool —
+   *   one winner per choice. Non-winners are not included in the results.
+   *
+   * Multi-slot mode (choices < names AND multiSlot flag):
    *   Each choice can appear multiple times. We distribute slots so that
    *   each choice gets at least floor(names/choices) slots, with the
    *   remainder distributed randomly. Then shuffle and zip.
@@ -65,24 +69,31 @@
   function buildAssignments(names, choices, multiSlot) {
     if (!names.length || !choices.length) return [];
 
-    if (multiSlot || choices.length < names.length) {
-      // Build a pool: distribute choices across name-count slots
-      const n = names.length;
-      const c = choices.length;
-      const base = Math.floor(n / c);
-      const extra = n % c;
+    if (choices.length < names.length) {
+      if (multiSlot) {
+        // Multi-slot: distribute all names across choices (each choice can repeat)
+        const n = names.length;
+        const c = choices.length;
+        const base = Math.floor(n / c);
+        const extra = n % c;
 
-      let pool = [];
-      choices.forEach((ch, idx) => {
-        const count = base + (idx < extra ? 1 : 0);
-        for (let i = 0; i < count; i++) pool.push(ch);
-      });
+        let pool = [];
+        choices.forEach((ch, idx) => {
+          const count = base + (idx < extra ? 1 : 0);
+          for (let i = 0; i < count; i++) pool.push(ch);
+        });
 
-      pool = shuffle(pool);
-      const shuffledNames = shuffle(names);
-      return shuffledNames.map((name, i) => ({ name, choice: pool[i] }));
+        pool = shuffle(pool);
+        const shuffledNames = shuffle(names);
+        return shuffledNames.map((name, i) => ({ name, choice: pool[i] }));
+      } else {
+        // Raffle mode: pick only as many winners as there are choices
+        const winners = shuffle(names).slice(0, choices.length);
+        const shuffledChoices = shuffle(choices);
+        return winners.map((name, i) => ({ name, choice: shuffledChoices[i] }));
+      }
     } else {
-      // More choices than names → pick a random subset, shuffle it
+      // More choices than (or equal to) names → pick a random subset, shuffle it
       const subset = shuffle(choices).slice(0, names.length);
       const shuffledNames = shuffle(names);
       return shuffledNames.map((name, i) => ({ name, choice: subset[i] }));
@@ -209,14 +220,24 @@
     document.getElementById('rp-choices-count').textContent =
       choices.length ? `${choices.length} choice${choices.length !== 1 ? 's' : ''}` : '';
 
-    // Show multi-slot hint
+    // Show raffle-mode hint + everyone-gets-a-prize toggle
     const hint = document.getElementById('rp-multislot-hint');
+    const everyoneToggle = document.getElementById('rp-everyone-toggle');
     if (choices.length && names.length && names.length > choices.length) {
       hint.style.display = 'flex';
-      hint.querySelector('span').textContent =
-        `More names than choices — each choice may be assigned to multiple names.`;
+      everyoneToggle.style.display = 'flex';
+      const everyoneOn = document.getElementById('rp-everyone-checkbox')?.checked;
+      if (everyoneOn) {
+        hint.querySelector('span').textContent =
+          `Every participant will be randomly assigned one of the ${choices.length} choice${choices.length !== 1 ? 's' : ''}.`;
+      } else {
+        const winners = choices.length === 1 ? '1 winner' : `${choices.length} winners`;
+        hint.querySelector('span').textContent =
+          `More participants than choices — ${winners} will be randomly selected.`;
+      }
     } else {
       hint.style.display = 'none';
+      everyoneToggle.style.display = 'none';
     }
 
     validate();
@@ -309,7 +330,9 @@
     choiceColorMap.clear(); // fresh colour mapping each run
     choices.forEach((_, i) => choiceColorMap.set(choices[i], i % PILL_COLORS.length));
 
-    const assignments = buildAssignments(names, choices, false);
+    const everyoneMode = choices.length < names.length &&
+      document.getElementById('rp-everyone-checkbox')?.checked === true;
+    const assignments = buildAssignments(names, choices, everyoneMode);
 
     const countdownEnabled = !skipCountdown && document.getElementById('rp-countdown-checkbox')?.checked !== false;
     if (countdownEnabled) {
@@ -401,6 +424,12 @@
 
     namesInput.addEventListener('input', updateCounters);
     choicesInput.addEventListener('input', updateCounters);
+
+    document.getElementById('rp-everyone-checkbox').addEventListener('change', () => {
+      updateCounters();
+      const section = document.getElementById('rp-results-section');
+      if (section.style.display !== 'none') doShuffle(true);
+    });
 
     document.getElementById('rp-shuffle-btn').addEventListener('click', () => doShuffle());
     document.getElementById('rp-clear-btn').addEventListener('click', clearAll);
