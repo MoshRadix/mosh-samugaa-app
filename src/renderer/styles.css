@@ -9282,6 +9282,21 @@ kbd {
   display: flex;
   flex-direction: column;
   gap: 5px;
+  position: relative;
+  padding-left: 10px;
+}
+
+/* Faint vertical separator — only shown when tags/badge are present */
+.td-item-body--has-meta::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 4px;
+  bottom: 0;
+  width: 1px;
+  background: var(--border-light);
+  opacity: 0.6;
+  border-radius: 1px;
 }
 
 /* Text row — just the task text, full width */
@@ -10200,6 +10215,8 @@ kbd {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  position: relative;
+  padding-left: 10px;
 }
 .td-item-text { word-break: break-word; }
 .td-item-tags {
@@ -10563,4 +10580,15 @@ kbd {
   color: #4a7c63;
   flex-shrink: 0;
   margin-top: 1px;
+}
+/* ── Work Log: locked delete button for To-Do-linked entries ── */
+.wl-btn-delete--locked {
+  opacity: 0.3;
+  cursor: not-allowed;
+  pointer-events: none; /* block all mouse events */
+}
+.wl-btn-delete--locked:hover {
+  background: transparent;
+  color: var(--text-tertiary);
+  border-color: transparent;
 }

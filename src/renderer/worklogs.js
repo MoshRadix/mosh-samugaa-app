@@ -277,14 +277,19 @@ const WL = (() => {
             <button class="wl-btn-enrich" data-id="${log.id}" data-task="${escapeHtml(log.task||"")}" data-hasphoto="${hasPhoto}" title="Edit note or photo">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
             </button>
-            <button class="wl-btn-delete" data-id="${log.id}" title="Delete log">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-                <polyline points="3 6 5 6 21 6"/>
-                <path d="M19 6l-1 14H6L5 6"/>
-                <path d="M10 11v6M14 11v6"/>
-                <path d="M9 6V4h6v2"/>
-              </svg>
-            </button>
+            ${isLinked
+              ? `<button class="wl-btn-delete wl-btn-delete--locked" data-id="${log.id}" title="Delete from the To-Do page" disabled>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                </button>`
+              : `<button class="wl-btn-delete" data-id="${log.id}" title="Delete log">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                    <polyline points="3 6 5 6 21 6"/>
+                    <path d="M19 6l-1 14H6L5 6"/>
+                    <path d="M10 11v6M14 11v6"/>
+                    <path d="M9 6V4h6v2"/>
+                  </svg>
+                </button>`
+            }
           </div>
         </td>
       </tr>`;
@@ -429,6 +434,12 @@ const WL = (() => {
 
   // ── Delete log ──────────────────────────────────────────────────────────────
   async function deleteLog(id) {
+    // Linked entries are owned by their To-Do — prevent direct deletion here
+    const log = allLogs.find(l => l.id === id);
+    if (log && log.linkedTodoId) {
+      showNotification("This entry was created from a To-Do. Delete it from the To-Do page.", "error");
+      return;
+    }
     const confirmed = await showConfirm("Delete this work log? This cannot be undone.", "Delete");
     if (!confirmed) return;
     try {

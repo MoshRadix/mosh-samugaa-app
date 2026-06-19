@@ -2050,10 +2050,74 @@ ipcMain.handle("cal-todo-update", async (event, { id, text, done, tags, priority
   return true;
 });
 
-/** Delete a single todo item by id. */
+/** Delete a single todo item by id — also cascade-deletes the linked work log entry if one exists. */
 ipcMain.handle("cal-todo-delete", async (event, { id }) => {
+  // Find linked worklog before deleting todo
+  const linked = wlDb.exec(
+    "SELECT linkedWorklogId FROM cal_todos WHERE id = ?",
+    [id],
+  );
+  const worklogId = linked.length && linked[0].values.length
+    ? linked[0].values[0][0]
+    : null;
+
   wlDb.run("DELETE FROM cal_todos WHERE id = ?", [id]);
+
+  // Cascade-delete the linked work log entry
+  if (worklogId) {
+    wlDb.run("DELETE FROM work_logs WHERE id = ?", [worklogId]);
+  }
+
   await saveWorkLogsDB();
+  return true;
+});
+
+/**
+ * Sync a todo's edits to the linked work log entry (if one exists).
+ * Called whenever a todo's text, tags, or date is changed on the To-Do page.
+ * @param {Object} payload - { todoId, text, tags, date }
+ */
+ipcMain.handle("worklog-sync-from-todo", async (event, { todoId, text, tags, date }) => {
+  // Look up the linked worklog id
+  const linked = wlDb.exec(
+    "SELECT linkedWorklogId FROM cal_todos WHERE id = ?",
+    [todoId],
+  );
+  if (!linked.length || !linked[0].values.length) return false;
+  const worklogId = linked[0].values[0][0];
+  if (!worklogId) return false;
+
+  // Build update
+  const parts = [];
+  const vals = [];
+  if (text !== undefined && text !== null) {
+    parts.push("task = ?");
+    vals.push(text);
+  }
+  if (tags !== undefined && tags !== null) {
+    parts.push("tags = ?");
+    vals.push(JSON.stringify(Array.isArray(tags) ? tags : []));
+  }
+  if (date !== undefined && date !== null) {
+    // Preserve the time portion from the existing createdAt, replace only the date
+    const existing = wlDb.exec(
+      "SELECT createdAt FROM work_logs WHERE id = ?",
+      [worklogId],
+    );
+    const existingCreatedAt = existing.length && existing[0].values.length
+      ? existing[0].values[0][0] || ""
+      : "";
+    const timePart = existingCreatedAt.includes("T")
+      ? existingCreatedAt.split("T")[1]
+      : "00:00";
+    parts.push("createdAt = ?");
+    vals.push(`${date}T${timePart}`);
+  }
+  if (parts.length) {
+    vals.push(worklogId);
+    wlDb.run(`UPDATE work_logs SET ${parts.join(", ")} WHERE id = ?`, vals);
+    await saveWorkLogsDB();
+  }
   return true;
 });
 

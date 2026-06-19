@@ -336,12 +336,21 @@ function _tdSetLoggedBadge(itemEl, worklogId, show) {
         tagsRow = document.createElement("div");
         tagsRow.className = "td-item-tags";
         const body = itemEl.querySelector(".td-item-body");
-        if (body) body.appendChild(tagsRow);
+        if (body) {
+          body.appendChild(tagsRow);
+          body.classList.add("td-item-body--has-meta");
+        }
       }
       tagsRow.appendChild(badge);
     }
   } else if (badge) {
     badge.remove();
+    // Remove has-meta if tags row is now empty
+    const tagsRow = itemEl.querySelector(".td-item-tags");
+    const body = itemEl.querySelector(".td-item-body");
+    if (body && tagsRow && tagsRow.children.length === 0) {
+      body.classList.remove("td-item-body--has-meta");
+    }
   }
 }
 
@@ -379,7 +388,7 @@ function _tdRenderItem(item) {
         </svg>
       </button>
       <span class="td-priority-dot" style="background:${dotColour}" title="${priority} priority" aria-hidden="true"></span>
-      <div class="td-item-body">
+      <div class="td-item-body${hasMeta ? " td-item-body--has-meta" : ""}">
         <div class="td-item-text-row">
           <span class="td-item-text" data-id="${item.id}">${_tdEscape(item.text)}</span>
         </div>
@@ -887,6 +896,21 @@ async function _tdSaveModal() {
         item.date = date;
         item.tags = tags;
         item.priority = priority;
+
+        // ── Sync edit to linked Work Log ─────────────────────────────────
+        if (item.linkedWorklogId) {
+          try {
+            await window.electronAPI.worklogSyncFromTodo({
+              todoId: item.id,
+              text,
+              tags,
+              date,
+            });
+          } catch (syncErr) {
+            console.warn("Worklog sync after edit failed:", syncErr);
+          }
+        }
+        // ── End sync ─────────────────────────────────────────────────────
       }
     } else {
       const newItem = await window.electronAPI.calTodoAdd(date, text, tags, priority);
@@ -940,6 +964,19 @@ function _tdStartInlineEdit(textEl, itemId) {
         item.text = newText;
         // Re-render the text span only to re-escape it properly
         textEl.textContent = newText;
+
+        // ── Sync text edit to linked Work Log ────────────────────────────
+        if (item.linkedWorklogId) {
+          try {
+            await window.electronAPI.worklogSyncFromTodo({
+              todoId: item.id,
+              text: newText,
+            });
+          } catch (syncErr) {
+            console.warn("Worklog sync after inline edit failed:", syncErr);
+          }
+        }
+        // ── End sync ─────────────────────────────────────────────────────
       } catch (e) {
         console.error("Inline edit save error:", e);
         textEl.textContent = originalText;
@@ -1102,6 +1139,19 @@ function _tdBindItemEvents() {
           _tdNotifyCalendar(oldDate);
           _tdNotifyCalendar(newDate);
           _tdRender();
+
+          // ── Sync date change to linked Work Log ───────────────────────
+          if (item.linkedWorklogId) {
+            try {
+              await window.electronAPI.worklogSyncFromTodo({
+                todoId: item.id,
+                date: newDate,
+              });
+            } catch (syncErr) {
+              console.warn("Worklog sync after date change failed:", syncErr);
+            }
+          }
+          // ── End sync ──────────────────────────────────────────────────
         } catch (e) {
           console.error("Move date error:", e);
           if (window.showToast) window.showToast("Failed to update due date", "error");
@@ -1119,19 +1169,28 @@ function _tdBindItemEvents() {
     btn.addEventListener("click", async (e) => {
       e.stopPropagation();
       const id = btn.dataset.id;
+      const item = _tdAllItems.find((i) => i.id === id);
+      const hasLinkedLog = !!(item && item.linkedWorklogId);
+
+      const confirmMsg = hasLinkedLog
+        ? "Delete this task? The linked Work Log entry will also be removed."
+        : "Delete this task?";
+
       const confirmed = await (window.showConfirm
-        ? window.showConfirm("Delete this task?", "Delete")
-        : Promise.resolve(confirm("Delete this task?")));
+        ? window.showConfirm(confirmMsg, "Delete")
+        : Promise.resolve(confirm(confirmMsg)));
       if (!confirmed) return;
+
       try {
         await window.electronAPI.calTodoDelete(id);
-        const item = _tdAllItems.find((i) => i.id === id);
         if (item) _tdNotifyCalendar(item.date);
         _tdAllItems = _tdAllItems.filter((i) => i.id !== id);
         _tdRender();
-        if (window.showToast) window.showToast("Task deleted", "success");
+        const msg = hasLinkedLog ? "Task and Work Log entry deleted" : "Task deleted";
+        if (window.showToast) window.showToast(msg, "success");
       } catch (e) {
         console.error("Delete error:", e);
+        if (window.showToast) window.showToast("Failed to delete task", "error");
       }
     });
   });

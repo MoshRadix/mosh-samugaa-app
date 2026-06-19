@@ -265,6 +265,13 @@ contextBridge.exposeInMainWorld("electronAPI", {
   worklogEnrichPhoto: (data) => ipcRenderer.invoke("worklog-enrich-photo", data),
 
   /**
+   * Syncs a todo edit (text/tags/date) to the linked work log entry.
+   * @param {Object} data - { todoId, text?, tags?, date? }
+   * @returns {Promise<boolean>} true if a linked entry was found and updated
+   */
+  worklogSyncFromTodo: (data) => ipcRenderer.invoke("worklog-sync-from-todo", data),
+
+  /**
    * Exports a formatted monthly summary as a Word (.docx) report.
    * @param {Object} data - { rows, month, officer }
    * @returns {Promise<{success:boolean, path:string}|null>}
