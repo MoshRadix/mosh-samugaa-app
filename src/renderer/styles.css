@@ -4958,7 +4958,161 @@ kbd {
   flex-shrink: 0;
 }
 
-/* ── Todo popover ── */
+/* ── Weather section in day detail panel ── */
+.cal-weather-section {
+  margin-top: 12px;
+  border-top: 1px solid var(--border-light);
+  padding-top: 10px;
+}
+
+.cal-weather-section--empty .cal-weather-no-data {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  font-style: italic;
+  margin: 6px 0 8px;
+  line-height: 1.5;
+}
+
+.cal-weather-header {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 7px;
+}
+.cal-weather-title-icon {
+  display: flex;
+  align-items: center;
+  width: 14px;
+  height: 14px;
+  color: #f59e0b;
+  flex-shrink: 0;
+}
+.cal-weather-title-icon svg {
+  width: 14px;
+  height: 14px;
+}
+.cal-weather-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-tertiary);
+}
+
+/* Condition chip */
+.cal-weather-condition {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  padding: 6px 9px;
+  margin-bottom: 8px;
+}
+.cal-weather-cond-icon {
+  display: flex;
+  align-items: center;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+.cal-weather-cond-icon svg {
+  width: 18px;
+  height: 18px;
+}
+.cal-weather-cond-icon--clear   { color: #f59e0b; }
+.cal-weather-cond-icon--cloud   { color: #94a3b8; }
+.cal-weather-cond-icon--rain    { color: #3b82f6; }
+.cal-weather-cond-icon--storm   { color: #7c3aed; }
+.cal-weather-cond-icon--fog     { color: #9ca3af; }
+.cal-weather-cond-icon--drizzle { color: #60a5fa; }
+.cal-weather-cond-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* Data rows */
+.cal-weather-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+.cal-weather-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  color: var(--text-secondary);
+}
+.cal-weather-icon {
+  display: flex;
+  align-items: center;
+  width: 13px;
+  height: 13px;
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+}
+.cal-weather-icon svg {
+  width: 13px;
+  height: 13px;
+}
+.cal-weather-label {
+  color: var(--text-tertiary);
+  min-width: 62px;
+  font-size: 11px;
+}
+.cal-weather-value {
+  color: var(--text-primary);
+  font-weight: 500;
+  font-size: 11.5px;
+}
+
+/* Refresh button */
+.cal-weather-refresh-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--text-tertiary);
+  background: none;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  padding: 3px 8px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+.cal-weather-refresh-btn:hover {
+  color: var(--accent-primary);
+  border-color: var(--accent-primary);
+}
+.cal-weather-refresh-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Dhivehi RTL overrides for weather */
+.cal-lang--dv .cal-weather-title,
+.cal-lang--dv .cal-weather-cond-label,
+.cal-lang--dv .cal-weather-label,
+.cal-lang--dv .cal-weather-value {
+  font-family: 'MV Faruma', sans-serif;
+  font-size: 13px;
+  direction: rtl;
+}
+.cal-lang--dv .cal-weather-row {
+  flex-direction: row-reverse;
+}
+.cal-lang--dv .cal-weather-label {
+  text-align: right;
+}
+.cal-lang--dv .cal-weather-condition {
+  flex-direction: row-reverse;
+}
+
+
 .cal-todo-popover {
   position: fixed;
   z-index: 9999;

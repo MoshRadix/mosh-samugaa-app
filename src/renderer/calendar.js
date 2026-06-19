@@ -891,8 +891,205 @@ function isWeekend(dayOfWeek) {
 }
 
 // ============================================================================
-// STATE
+// WEATHER MODULE
+// Fetches forecasts from Open-Meteo via IPC, caches in cal_weather SQLite table.
 // ============================================================================
+
+const CAL_WEATHER_REFRESH_KEY = "mto_cal_weather_last_refresh";
+const CAL_WEATHER_REFRESH_TTL = 3 * 60 * 60 * 1000; // 3 hours
+
+/** In-memory weather cache for the session: { "YYYY-MM-DD": weatherRecord } */
+let _calWeatherCache = {};
+
+/** WMO weather code → icon (SVG path or emoji fallback) */
+const CAL_WEATHER_ICONS = {
+  clear:     `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="22"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="2" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="22" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>`,
+  cloud:     `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>`,
+  rain:      `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="16" y1="13" x2="16" y2="21"/><line x1="8" y1="13" x2="8" y2="21"/><line x1="12" y1="15" x2="12" y2="23"/><path d="M20 16.58A5 5 0 0 0 18 7h-1.26A8 8 0 1 0 4 15.25"/></svg>`,
+  storm:     `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 16.9A5 5 0 0 0 18 7h-1.26a8 8 0 1 0-11.62 9"/><polyline points="13 11 9 17 15 17 11 23"/></svg>`,
+  fog:       `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><path d="M3 12h18"/></svg>`,
+  drizzle:   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="19" x2="8" y2="21"/><line x1="8" y1="13" x2="8" y2="15"/><line x1="16" y1="19" x2="16" y2="21"/><line x1="16" y1="13" x2="16" y2="15"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="12" y1="15" x2="12" y2="17"/><path d="M20 16.58A5 5 0 0 0 18 7h-1.26A8 8 0 1 0 4 15.25"/></svg>`,
+  wind:      `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9.59 4.59A2 2 0 1 1 11 8H2m10.59 11.41A2 2 0 1 0 14 16H2m15.73-8.27A2.5 2.5 0 1 1 19.5 12H2"/></svg>`,
+  humidity:  `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>`,
+  sunrise:   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 18a5 5 0 0 0-10 0"/><line x1="12" y1="2" x2="12" y2="9"/><line x1="4.22" y1="10.22" x2="5.64" y2="11.64"/><line x1="1" y1="18" x2="3" y2="18"/><line x1="21" y1="18" x2="23" y2="18"/><line x1="18.36" y1="11.64" x2="19.78" y2="10.22"/><line x1="23" y1="22" x2="1" y2="22"/><polyline points="8 6 12 2 16 6"/></svg>`,
+  sunset:    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 18a5 5 0 0 0-10 0"/><line x1="12" y1="9" x2="12" y2="2"/><line x1="4.22" y1="10.22" x2="5.64" y2="11.64"/><line x1="1" y1="18" x2="3" y2="18"/><line x1="21" y1="18" x2="23" y2="18"/><line x1="18.36" y1="11.64" x2="19.78" y2="10.22"/><line x1="23" y1="22" x2="1" y2="22"/><polyline points="16 5 12 9 8 5"/></svg>`,
+  temp:      `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"/></svg>`,
+};
+
+/** Map WMO code to an icon key */
+function _wmoIconKey(wmo) {
+  if (wmo === 0 || wmo === 1) return "clear";
+  if (wmo === 2 || wmo === 3) return "cloud";
+  if (wmo === 45 || wmo === 48) return "fog";
+  if (wmo >= 51 && wmo <= 55) return "drizzle";
+  if (wmo >= 61 && wmo <= 65) return "rain";
+  if (wmo >= 80 && wmo <= 82) return "rain";
+  if (wmo >= 95) return "storm";
+  return "cloud";
+}
+
+/** Wind direction degrees → compass label (bilingual) */
+function _windDirLabel(deg, lang) {
+  if (deg == null) return "";
+  const dirs = lang === "dv"
+    ? ["އ", "އ-ˢ", "ˢ", "ˢ-ˢ", "ˢ", "ˢ-ˢ", "ˢ", "ˢ-ˢ"]
+    : ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
+  const idx = Math.round(deg / 45) % 8;
+  return dirs[idx];
+}
+
+/** Bilingual labels for the weather panel */
+const CAL_WI18N = {
+  en: {
+    title: "Addu City Forecast",
+    temp: "Temperature",
+    humidity: "Humidity",
+    wind: "Wind",
+    sunrise: "Sunrise",
+    sunset: "Sunset",
+    noData: "Weather data not available.",
+    refresh: "Refresh forecast",
+    loading: "Loading forecast…",
+    kmh: "km/h",
+  },
+  dv: {
+    title: "އައްޑޫ ސިޓީ ވިލާ ތަފްސީލު",
+    temp: "ހޫނުމިން",
+    humidity: "ތެތްކަން",
+    wind: "ވައި",
+    sunrise: "އިރުއެރި",
+    sunset: "އިރުއޮއްސި",
+    noData: "ވިލާ ދެ ތަފްސީލު ލިބިފައެއް ނެތް.",
+    refresh: "ތާޒާ ކުރޭ",
+    loading: "ލޯޑް ކުރަނީ…",
+    kmh: "ˢˢ/ˢ",
+  },
+};
+
+/**
+ * Fetch weather for a date from the DB (via IPC), with in-memory caching.
+ * @param {string} dateStr "YYYY-MM-DD"
+ * @returns {Promise<Object|null>}
+ */
+async function _calGetWeather(dateStr) {
+  if (_calWeatherCache[dateStr] !== undefined) return _calWeatherCache[dateStr];
+  try {
+    const rec = await window.electronAPI.calWeatherGet(dateStr);
+    _calWeatherCache[dateStr] = rec || null;
+    return _calWeatherCache[dateStr];
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Trigger a background refresh of weather data if stale (>3h old).
+ * After fetch, clears in-memory cache so next renderDayDetail picks up fresh data.
+ */
+async function _calMaybeRefreshWeather() {
+  const lastRefresh = parseInt(localStorage.getItem(CAL_WEATHER_REFRESH_KEY) || "0", 10);
+  if (Date.now() - lastRefresh < CAL_WEATHER_REFRESH_TTL) return;
+
+  try {
+    const result = await window.electronAPI.calWeatherRefresh();
+    if (result?.ok) {
+      localStorage.setItem(CAL_WEATHER_REFRESH_KEY, String(Date.now()));
+      _calWeatherCache = {}; // bust in-memory cache
+      console.log(`[Weather] Refreshed ${result.count} days`);
+      // Re-render detail panel if a date is selected
+      if (_calState.selectedDate) renderDayDetail();
+    }
+  } catch (err) {
+    console.warn("[Weather] Refresh error:", err.message);
+  }
+}
+
+/**
+ * Build the HTML for the weather section of the day detail panel.
+ * @param {string} dateStr
+ * @param {string} lang "en" | "dv"
+ * @returns {Promise<string>} HTML string
+ */
+async function _calWeatherHtml(dateStr, lang) {
+  const W = CAL_WI18N[lang] || CAL_WI18N.en;
+  const rec = await _calGetWeather(dateStr);
+
+  if (!rec) {
+    return `
+      <div class="cal-weather-section cal-weather-section--empty">
+        <div class="cal-weather-header">
+          <span class="cal-weather-title-icon">${CAL_WEATHER_ICONS.clear}</span>
+          <span class="cal-weather-title">${W.title}</span>
+        </div>
+        <div class="cal-weather-no-data">${W.noData}</div>
+        <button class="cal-weather-refresh-btn" id="cal-weather-refresh-btn">
+          ${CAL_WEATHER_ICONS.wind} ${W.refresh}
+        </button>
+      </div>`;
+  }
+
+  const iconKey = _wmoIconKey(rec.wmo_code);
+  const condLabel = lang === "dv" ? (rec.condition_dv || rec.condition) : rec.condition;
+  const windDir = _windDirLabel(rec.wind_dir, lang);
+
+  const tempRow = (rec.temp_min != null && rec.temp_max != null)
+    ? `<div class="cal-weather-row">
+        <span class="cal-weather-icon">${CAL_WEATHER_ICONS.temp}</span>
+        <span class="cal-weather-label">${W.temp}</span>
+        <span class="cal-weather-value">${Math.round(rec.temp_min)}° – ${Math.round(rec.temp_max)}°C</span>
+       </div>`
+    : "";
+
+  const humRow = rec.humidity != null
+    ? `<div class="cal-weather-row">
+        <span class="cal-weather-icon">${CAL_WEATHER_ICONS.humidity}</span>
+        <span class="cal-weather-label">${W.humidity}</span>
+        <span class="cal-weather-value">${rec.humidity}%</span>
+       </div>`
+    : "";
+
+  const windRow = rec.wind_speed != null
+    ? `<div class="cal-weather-row">
+        <span class="cal-weather-icon">${CAL_WEATHER_ICONS.wind}</span>
+        <span class="cal-weather-label">${W.wind}</span>
+        <span class="cal-weather-value">${Math.round(rec.wind_speed)} km/h${windDir ? ` ${windDir}` : ""}</span>
+       </div>`
+    : "";
+
+  const srRow = rec.sunrise
+    ? `<div class="cal-weather-row">
+        <span class="cal-weather-icon">${CAL_WEATHER_ICONS.sunrise}</span>
+        <span class="cal-weather-label">${W.sunrise}</span>
+        <span class="cal-weather-value">${rec.sunrise}</span>
+       </div>`
+    : "";
+
+  const ssRow = rec.sunset
+    ? `<div class="cal-weather-row">
+        <span class="cal-weather-icon">${CAL_WEATHER_ICONS.sunset}</span>
+        <span class="cal-weather-label">${W.sunset}</span>
+        <span class="cal-weather-value">${rec.sunset}</span>
+       </div>`
+    : "";
+
+  return `
+    <div class="cal-weather-section">
+      <div class="cal-weather-header">
+        <span class="cal-weather-title-icon">${CAL_WEATHER_ICONS[iconKey]}</span>
+        <span class="cal-weather-title">${W.title}</span>
+      </div>
+      <div class="cal-weather-condition">
+        <span class="cal-weather-cond-icon cal-weather-cond-icon--${iconKey}">${CAL_WEATHER_ICONS[iconKey]}</span>
+        <span class="cal-weather-cond-label">${condLabel}</span>
+      </div>
+      <div class="cal-weather-rows">
+        ${tempRow}${humRow}${windRow}${srRow}${ssRow}
+      </div>
+      <button class="cal-weather-refresh-btn" id="cal-weather-refresh-btn" title="${W.refresh}">↺</button>
+    </div>`;
+}
+
+
 
 let _calState = {
   view: "month",
@@ -1596,7 +1793,7 @@ function renderYearView(container) {
 // SELECTED DAY DETAIL PANEL
 // ============================================================================
 
-function renderDayDetail() {
+async function renderDayDetail() {
   const panel = document.getElementById("cal-detail-panel");
   if (!panel) return;
 
@@ -1641,6 +1838,9 @@ function renderDayDetail() {
 
   const astroDetailHtml = _astroDetailHtml(year, month1, day, _calState.lang);
 
+  // Weather section (async — fetched from DB cache)
+  const weatherHtml = await _calWeatherHtml(_calState.selectedDate, _calState.lang);
+
   // Todo hint — tap the blue dot on the cell to open todos
   const hasTodos = _calTodoDates.has(_calState.selectedDate);
   const todoHint = `
@@ -1672,8 +1872,19 @@ function renderDayDetail() {
       ${observanceHtml}
       ${astroDetailHtml ? `<div class="cal-detail-astro-section">${astroDetailHtml}</div>` : ""}
     </div>
+    ${weatherHtml}
     <div class="cal-detail-todo-row">${todoHint}</div>
   `;
+
+  // Wire weather refresh button
+  panel.querySelector("#cal-weather-refresh-btn")?.addEventListener("click", async (e) => {
+    e.stopPropagation();
+    const btn = panel.querySelector("#cal-weather-refresh-btn");
+    if (btn) { btn.disabled = true; btn.textContent = "…"; }
+    localStorage.removeItem(CAL_WEATHER_REFRESH_KEY); // force re-fetch
+    await _calMaybeRefreshWeather();
+    renderDayDetail();
+  });
 
   // Open popover anchored to the selected day cell
   panel.querySelector("#cal-detail-todo-btn")?.addEventListener("click", () => {
@@ -1907,6 +2118,7 @@ function initCalendar() {
   calLoadState();
   calAstroLoadVis();
   fetchRemoteHolidays();
+  _calMaybeRefreshWeather(); // background weather fetch (non-blocking)
 
   ["week", "month", "year"].forEach((v) => {
     document.getElementById(`cal-view-${v}`)?.addEventListener("click", () => {

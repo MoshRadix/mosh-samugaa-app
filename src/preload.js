@@ -286,6 +286,25 @@ contextBridge.exposeInMainWorld("electronAPI", {
   calTodoAdd: (date, text, tags, priority) =>
     ipcRenderer.invoke("cal-todo-add", { date, text, tags, priority }),
 
+  // ==========================================
+  // CALENDAR WEATHER
+  // ==========================================
+
+  /**
+   * Retrieve cached weather entry for a given date string (YYYY-MM-DD).
+   * Returns null if no data is cached for that date.
+   * @param {string} date
+   * @returns {Promise<Object|null>}
+   */
+  calWeatherGet: (date) => ipcRenderer.invoke("cal-weather-get", date),
+
+  /**
+   * Fetch a fresh 14-day forecast from Open-Meteo for Addu City and
+   * store results in the cal_weather table.
+   * @returns {Promise<{ ok: boolean, count?: number, records?: Array, error?: string }>}
+   */
+  calWeatherRefresh: () => ipcRenderer.invoke("cal-weather-refresh"),
+
   /**
    * Opens a native file dialog restricted to CSV / XLSX files (for batch generation).
    * @returns {Promise<string|null>} Absolute path of selected file, or null if cancelled.

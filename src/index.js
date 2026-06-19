@@ -141,6 +141,20 @@ async function initWorkLogsDB() {
       sort_order INTEGER NOT NULL DEFAULT 0
     );
     CREATE INDEX IF NOT EXISTS idx_cal_todos_date ON cal_todos(date);
+    CREATE TABLE IF NOT EXISTS cal_weather (
+      date TEXT PRIMARY KEY,
+      fetched_at TEXT NOT NULL,
+      condition TEXT,
+      condition_dv TEXT,
+      temp_min REAL,
+      temp_max REAL,
+      humidity INTEGER,
+      wind_speed REAL,
+      wind_dir INTEGER,
+      sunrise TEXT,
+      sunset TEXT,
+      wmo_code INTEGER
+    );
   `);
 
   // Schema migrations for existing databases
@@ -1933,6 +1947,111 @@ ipcMain.handle("cal-todo-add", async (event, { date, text, tags, priority }) => 
   );
   await saveWorkLogsDB();
   return { id, date, text, done: false, sort_order: count, tags: Array.isArray(tags) ? tags : [], priority: prio };
+});
+
+// ── Calendar Weather handlers ────────────────────────────────────────────────
+
+/**
+ * Retrieve cached weather for a date (YYYY-MM-DD). Returns null if not cached.
+ */
+ipcMain.handle("cal-weather-get", async (event, date) => {
+  const rows = wlDb.exec(
+    "SELECT date, fetched_at, condition, condition_dv, temp_min, temp_max, humidity, wind_speed, wind_dir, sunrise, sunset, wmo_code FROM cal_weather WHERE date = ?",
+    [date]
+  );
+  if (!rows.length || !rows[0].values.length) return null;
+  const [d, fa, cond, condDv, tMin, tMax, hum, ws, wd, sr, ss, wmo] = rows[0].values[0];
+  return { date: d, fetched_at: fa, condition: cond, condition_dv: condDv, temp_min: tMin, temp_max: tMax, humidity: hum, wind_speed: ws, wind_dir: wd, sunrise: sr, sunset: ss, wmo_code: wmo };
+});
+
+/**
+ * Fetch a 7-day weather forecast from Open-Meteo for Addu City (Gan, 0.629°N 73.099°E)
+ * and upsert into cal_weather. Returns array of inserted weather records.
+ * Uses the free, no-auth Open-Meteo API.
+ */
+ipcMain.handle("cal-weather-refresh", async () => {
+  const ADDU_LAT = 0.629;
+  const ADDU_LON = 73.099;
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${ADDU_LAT}&longitude=${ADDU_LON}` +
+    `&daily=weathercode,temperature_2m_max,temperature_2m_min,relative_humidity_2m_max,windspeed_10m_max,winddirection_10m_dominant,sunrise,sunset` +
+    `&timezone=Indian%2FMaldives&forecast_days=14`;
+
+  let json;
+  try {
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    json = await resp.json();
+  } catch (err) {
+    console.warn("[Weather] Fetch failed:", err.message);
+    return { ok: false, error: err.message };
+  }
+
+  const daily = json.daily;
+  if (!daily || !Array.isArray(daily.time)) return { ok: false, error: "Bad payload" };
+
+  const WMO_EN = {
+    0: "Clear sky", 1: "Mainly clear", 2: "Partly cloudy", 3: "Overcast",
+    45: "Fog", 48: "Icy fog", 51: "Light drizzle", 53: "Drizzle", 55: "Heavy drizzle",
+    61: "Light rain", 63: "Rain", 65: "Heavy rain",
+    71: "Light snow", 73: "Snow", 75: "Heavy snow", 77: "Snow grains",
+    80: "Light showers", 81: "Showers", 82: "Heavy showers",
+    85: "Snow showers", 86: "Heavy snow showers",
+    95: "Thunderstorm", 96: "Thunderstorm with hail", 99: "Thunderstorm with heavy hail",
+  };
+  // Dhivehi weather condition labels (Thaana for common codes, English fallback for rare ones)
+  const WMO_DV = {
+    0:  "ސާފު",
+    1:  "ގިނައިން ސާފު",
+    2:  "ތަންތަންކޮޅު ވިލާ",
+    3:  "ވިލާ",
+    45: "ދުން",
+    48: "ދުން",
+  };
+
+  const fetchedAt = new Date().toISOString();
+  const inserted = [];
+
+  for (let i = 0; i < daily.time.length; i++) {
+    const date = daily.time[i];
+    const wmo = daily.weathercode ? daily.weathercode[i] : null;
+    const condEn = WMO_EN[wmo] || "Unknown";
+
+    const sunrise = daily.sunrise ? daily.sunrise[i] : null;
+    const sunset = daily.sunset ? daily.sunset[i] : null;
+
+    // Sunrise/sunset come as full ISO strings; extract HH:MM
+    const srTime = sunrise ? sunrise.slice(11, 16) : null;
+    const ssTime = sunset ? sunset.slice(11, 16) : null;
+
+    const rec = {
+      date,
+      fetched_at: fetchedAt,
+      condition: condEn,
+      condition_dv: WMO_DV[wmo] || condEn,
+      temp_min: daily.temperature_2m_min ? daily.temperature_2m_min[i] : null,
+      temp_max: daily.temperature_2m_max ? daily.temperature_2m_max[i] : null,
+      humidity: daily.relative_humidity_2m_max ? daily.relative_humidity_2m_max[i] : null,
+      wind_speed: daily.windspeed_10m_max ? daily.windspeed_10m_max[i] : null,
+      wind_dir: daily.winddirection_10m_dominant ? daily.winddirection_10m_dominant[i] : null,
+      sunrise: srTime,
+      sunset: ssTime,
+      wmo_code: wmo,
+    };
+
+    wlDb.run(
+      `INSERT OR REPLACE INTO cal_weather
+        (date, fetched_at, condition, condition_dv, temp_min, temp_max, humidity, wind_speed, wind_dir, sunrise, sunset, wmo_code)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [rec.date, rec.fetched_at, rec.condition, rec.condition_dv,
+       rec.temp_min, rec.temp_max, rec.humidity, rec.wind_speed, rec.wind_dir,
+       rec.sunrise, rec.sunset, rec.wmo_code]
+    );
+    inserted.push(rec);
+  }
+
+  await saveWorkLogsDB();
+  console.log(`[Weather] Stored ${inserted.length} daily forecasts`);
+  return { ok: true, count: inserted.length, records: inserted };
 });
 
 ipcMain.handle("export-work-logs-excel", async (event, { rows }) => {
