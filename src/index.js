@@ -168,6 +168,18 @@ async function initWorkLogsDB() {
     wlDb.exec("ALTER TABLE work_logs ADD COLUMN photoPath TEXT");
     console.log("[WorkLogs DB] Added 'photoPath' column");
   }
+  if (!wlColNames.includes("linkedTodoId")) {
+    wlDb.exec("ALTER TABLE work_logs ADD COLUMN linkedTodoId TEXT");
+    console.log("[WorkLogs DB] Added 'linkedTodoId' column");
+  }
+  if (!wlColNames.includes("todoStatusHistory")) {
+    wlDb.exec("ALTER TABLE work_logs ADD COLUMN todoStatusHistory TEXT DEFAULT '[]'");
+    console.log("[WorkLogs DB] Added 'todoStatusHistory' column");
+  }
+  if (!wlColNames.includes("enrichNote")) {
+    wlDb.exec("ALTER TABLE work_logs ADD COLUMN enrichNote TEXT");
+    console.log("[WorkLogs DB] Added 'enrichNote' column");
+  }
 
   // cal_todos migrations
   const todoColsRes = wlDb.exec("PRAGMA table_info(cal_todos)");
@@ -179,6 +191,10 @@ async function initWorkLogsDB() {
   if (!todoColNames.includes("priority")) {
     wlDb.exec("ALTER TABLE cal_todos ADD COLUMN priority TEXT DEFAULT 'medium'");
     console.log("[WorkLogs DB] Added 'priority' column to cal_todos");
+  }
+  if (!todoColNames.includes("linkedWorklogId")) {
+    wlDb.exec("ALTER TABLE cal_todos ADD COLUMN linkedWorklogId TEXT");
+    console.log("[WorkLogs DB] Added 'linkedWorklogId' column to cal_todos");
   }
 
   // Ensure photos directory exists
@@ -1825,17 +1841,20 @@ ipcMain.handle(
 
 ipcMain.handle("get-work-logs", async () => {
   const rows = wlDb.exec(
-    "SELECT id, task, notes, createdAt, tags, photoPath FROM work_logs ORDER BY createdAt DESC",
+    "SELECT id, task, notes, createdAt, tags, photoPath, linkedTodoId, todoStatusHistory, enrichNote FROM work_logs ORDER BY createdAt DESC",
   );
   if (!rows.length) return [];
   return rows[0].values.map(
-    ([id, task, notes, createdAt, tags, photoPath]) => ({
+    ([id, task, notes, createdAt, tags, photoPath, linkedTodoId, todoStatusHistory, enrichNote]) => ({
       id,
       task,
       notes,
       createdAt,
       tags: tags || "[]",
       photoPath: photoPath || null,
+      linkedTodoId: linkedTodoId || null,
+      todoStatusHistory: (() => { try { return JSON.parse(todoStatusHistory || "[]"); } catch(_) { return []; } })(),
+      enrichNote: enrichNote || null,
     }),
   );
 });
@@ -1844,6 +1863,111 @@ ipcMain.handle("delete-work-log", async (event, id) => {
   wlDb.run("DELETE FROM work_logs WHERE id = ?", [id]);
   await saveWorkLogsDB();
   return true;
+});
+
+// ── Todo → Work Log integration ──────────────────────────────────────────────
+
+/**
+ * Called when a To-Do item is marked done.
+ * Creates a linked Work Log entry (idempotent — only one entry per todo).
+ * If one already exists, returns the existing entry and appends a status-history event.
+ * @param {Object} payload - { todoId, todoText, todoDate, todoTags, todoPriority }
+ * @returns {Object} { worklogId, isNew: boolean }
+ */
+ipcMain.handle("todo-complete-to-worklog", async (event, { todoId, todoText, todoDate, todoTags, todoPriority }) => {
+  // Check if a linked worklog already exists for this todo
+  const existing = wlDb.exec(
+    "SELECT id, todoStatusHistory FROM work_logs WHERE linkedTodoId = ?",
+    [todoId],
+  );
+
+  const nowIso = (() => {
+    const d = new Date(Date.now() + 5 * 60 * 60 * 1000); // MVT UTC+5
+    return `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,"0")}-${String(d.getUTCDate()).padStart(2,"0")}T${String(d.getUTCHours()).padStart(2,"0")}:${String(d.getUTCMinutes()).padStart(2,"0")}`;
+  })();
+
+  if (existing.length && existing[0].values.length) {
+    // Already linked — append a status history event (re-completed)
+    const [wlId, histRaw] = existing[0].values[0];
+    let hist = [];
+    try { hist = JSON.parse(histRaw || "[]"); } catch(_) {}
+    hist.push({ event: "completed", at: nowIso });
+    wlDb.run("UPDATE work_logs SET todoStatusHistory = ? WHERE id = ?", [JSON.stringify(hist), wlId]);
+    await saveWorkLogsDB();
+    return { worklogId: wlId, isNew: false };
+  }
+
+  // Create new linked work log entry
+  const id = uuidv4();
+  const tags = JSON.stringify(Array.isArray(todoTags) ? todoTags : []);
+  const history = JSON.stringify([{ event: "completed", at: nowIso }]);
+  // createdAt uses the todo's due date + current MVT time
+  const createdAt = `${todoDate}T${nowIso.split("T")[1]}`;
+
+  wlDb.run(
+    `INSERT INTO work_logs (id, task, notes, createdAt, tags, photoPath, linkedTodoId, todoStatusHistory, enrichNote)
+     VALUES (?, ?, ?, ?, ?, NULL, ?, ?, NULL)`,
+    [id, todoText, "", createdAt, tags, todoId, history],
+  );
+
+  // Store the worklog ID back on the todo for quick lookup
+  wlDb.run("UPDATE cal_todos SET linkedWorklogId = ? WHERE id = ?", [id, todoId]);
+
+  await saveWorkLogsDB();
+  return { worklogId: id, isNew: true };
+});
+
+/**
+ * Called when a To-Do item is un-done (reopened).
+ * Appends a "reopened" event to the linked worklog's status history.
+ * Does NOT delete the worklog entry.
+ * @param {string} todoId - The todo's ID.
+ */
+ipcMain.handle("todo-reopen-worklog", async (event, todoId) => {
+  const existing = wlDb.exec(
+    "SELECT id, todoStatusHistory FROM work_logs WHERE linkedTodoId = ?",
+    [todoId],
+  );
+  if (!existing.length || !existing[0].values.length) return false;
+  const [wlId, histRaw] = existing[0].values[0];
+  let hist = [];
+  try { hist = JSON.parse(histRaw || "[]"); } catch(_) {}
+  const nowIso = (() => {
+    const d = new Date(Date.now() + 5 * 60 * 60 * 1000);
+    return `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,"0")}-${String(d.getUTCDate()).padStart(2,"0")}T${String(d.getUTCHours()).padStart(2,"0")}:${String(d.getUTCMinutes()).padStart(2,"0")}`;
+  })();
+  hist.push({ event: "reopened", at: nowIso });
+  wlDb.run("UPDATE work_logs SET todoStatusHistory = ? WHERE id = ?", [JSON.stringify(hist), wlId]);
+  await saveWorkLogsDB();
+  return true;
+});
+
+/**
+ * Enriches a linked work log entry with an additional note.
+ * @param {Object} payload - { worklogId, note }
+ */
+ipcMain.handle("worklog-add-note", async (event, { worklogId, note }) => {
+  wlDb.run("UPDATE work_logs SET enrichNote = ? WHERE id = ?", [note || null, worklogId]);
+  await saveWorkLogsDB();
+  return true;
+});
+
+/**
+ * Enriches a linked work log entry with a photo (saves file, stores path).
+ * @param {Object} payload - { worklogId, dataUrl, fileName, mimeType }
+ */
+ipcMain.handle("worklog-enrich-photo", async (event, { worklogId, dataUrl, fileName, mimeType }) => {
+  if (!dataUrl) return { success: false };
+  const photosDir = path.join(app.getPath("userData"), "worklog_photos");
+  try { await fs.mkdir(photosDir, { recursive: true }); } catch(_) {}
+  const ext = fileName ? path.extname(fileName) : ".jpg";
+  const safeName = `wl_${worklogId.slice(0, 8)}_${Date.now()}${ext}`;
+  const destPath = path.join(photosDir, safeName);
+  const base64Data = dataUrl.replace(/^data:[^;]+;base64,/, "");
+  await fs.writeFile(destPath, Buffer.from(base64Data, "base64"));
+  wlDb.run("UPDATE work_logs SET photoPath = ? WHERE id = ?", [destPath, worklogId]);
+  await saveWorkLogsDB();
+  return { success: true, path: destPath };
 });
 
 // ── Calendar To-Do handlers ──────────────────────────────────────────────────
@@ -1877,9 +2001,9 @@ ipcMain.handle("cal-todo-has", async (event, date) => {
   return !!(rows.length && rows[0].values[0][0] > 0);
 });
 
-/** Get all todos (optionally filtered by date range). Returns [{id, date, text, done, tags}]. */
+/** Get all todos (optionally filtered by date range). Returns [{id, date, text, done, tags, linkedWorklogId}]. */
 ipcMain.handle("cal-todo-get-all", async (event, { from, to } = {}) => {
-  let sql = "SELECT id, date, text, done, sort_order, tags, priority FROM cal_todos";
+  let sql = "SELECT id, date, text, done, sort_order, tags, priority, linkedWorklogId FROM cal_todos";
   const params = [];
   if (from && to) {
     sql += " WHERE date >= ? AND date <= ?";
@@ -1891,7 +2015,7 @@ ipcMain.handle("cal-todo-get-all", async (event, { from, to } = {}) => {
   sql += " ORDER BY date ASC, sort_order ASC, rowid ASC";
   const rows = wlDb.exec(sql, params);
   if (!rows.length) return [];
-  return rows[0].values.map(([id, date, text, done, sort_order, tags, priority]) => ({
+  return rows[0].values.map(([id, date, text, done, sort_order, tags, priority, linkedWorklogId]) => ({
     id,
     date,
     text,
@@ -1899,6 +2023,7 @@ ipcMain.handle("cal-todo-get-all", async (event, { from, to } = {}) => {
     sort_order,
     tags: (() => { try { return JSON.parse(tags || "[]"); } catch(_) { return []; } })(),
     priority: priority || "medium",
+    linkedWorklogId: linkedWorklogId || null,
   }));
 });
 

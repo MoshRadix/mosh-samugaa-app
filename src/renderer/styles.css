@@ -2616,7 +2616,7 @@ kbd {
 .wl-col-time  { width: 90px;  white-space: nowrap; color: var(--text-secondary); }
 .wl-col-task  { min-width: 200px; }
 .wl-col-notes { min-width: 140px; }
-.wl-col-actions { width: 40px; text-align: center; }
+.wl-col-actions { width: 72px; text-align: center; }
 .wl-notes-cell { color: var(--text-secondary); font-size: 12.5px; }
 .wl-empty-notes { color: var(--text-tertiary); }
 .wl-date-badge {
@@ -9196,7 +9196,7 @@ kbd {
 /* ── Individual to-do item ───────────────────────────────────────────────── */
 .td-item {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
   padding: 9px 14px;
   border-bottom: 1px solid var(--border-light);
@@ -9245,6 +9245,7 @@ kbd {
   cursor: pointer;
   transition: all var(--transition-fast);
   color: transparent;
+  margin-top: 1px; /* optical alignment with text cap-height */
 }
 .td-item--done .td-check {
   background: var(--accent-primary);
@@ -9269,6 +9270,7 @@ kbd {
   border-radius: 50%;
   opacity: 0.85;
   transition: opacity var(--transition-fast), transform var(--transition-fast);
+  margin-top: 5px; /* optical alignment with text cap-height */
 }
 .td-item--done .td-priority-dot { opacity: 0.3; }
 .td-item:hover .td-priority-dot { opacity: 1; transform: scale(1.2); }
@@ -9279,7 +9281,14 @@ kbd {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 5px;
+}
+
+/* Text row — just the task text, full width */
+.td-item-text-row {
+  display: flex;
+  align-items: flex-start;
+  min-width: 0;
 }
 
 .td-item-text {
@@ -9301,9 +9310,11 @@ kbd {
   background: var(--bg-elevated);
 }
 
+/* Metadata row: tag pills + logged badge sit here together */
 .td-item-tags {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 4px;
 }
 
@@ -9312,9 +9323,11 @@ kbd {
   display: flex;
   align-items: center;
   gap: 2px;
-  opacity: 0.2;           /* ← always visible at low opacity */
+  opacity: 0.2;
   transition: opacity var(--transition-fast);
   flex-shrink: 0;
+  margin-top: 0px; /* aligns with first text line */
+  align-self: flex-start;
 }
 .td-item:hover .td-item-actions { opacity: 1; }
 .td-item-actions--visible { opacity: 1; } /* keyboard focus */
@@ -10387,4 +10400,167 @@ kbd {
   flex-direction: column;
   gap: 0;
   margin-bottom: 0;
+}
+/* ============================================================================
+   TODO ↔ WORKLOG INTEGRATION
+   ============================================================================ */
+
+/* ── To-Do: "Logged" badge on done items ── */
+.td-logged-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #1e5a8a;
+  background: #dbeafe;
+  border: 1px solid #93c5fd;
+  border-radius: 10px;
+  padding: 1px 6px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  line-height: 1.4;
+  opacity: 0.95;
+}
+.td-item:not(.td-item--done) .td-logged-badge {
+  display: none;
+}
+
+/* ── Work Log: linked-row highlight ── */
+.wl-row--linked {
+  background: linear-gradient(90deg, rgba(106,139,122,0.04) 0%, transparent 40px);
+}
+.wl-row--linked:hover {
+  background: linear-gradient(90deg, rgba(106,139,122,0.08) 0%, var(--bg-hover) 40px);
+}
+
+/* ── Work Log: source badge "From To-Do" ── */
+.wl-source-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 500;
+  border-radius: 8px;
+  padding: 1px 6px;
+  margin-bottom: 3px;
+  white-space: nowrap;
+}
+.wl-source-badge--todo {
+  background: #dbeafe;
+  color: #1e5a8a;
+  border: 1px solid #93c5fd;
+}
+
+/* ── Work Log: "To-Do reopened" banner in cell ── */
+.wl-reopen-banner {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 500;
+  color: #92400e;
+  background: #fef3c7;
+  border: 1px solid #f59e0b;
+  border-radius: 8px;
+  padding: 1px 7px;
+  margin-bottom: 3px;
+  white-space: nowrap;
+}
+
+/* ── Work Log: enrich note preview in cell ── */
+.wl-enrich-note-preview {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  font-style: italic;
+  margin-top: 3px;
+  line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 260px;
+}
+
+/* ── Work Log: task text wrapper ── */
+.wl-task-text {
+  display: block;
+}
+
+/* ── Work Log: actions cell row (edit + delete always together) ── */
+.wl-actions-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+}
+
+/* ── Work Log: enrich/edit action button ── */
+.wl-btn-enrich {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid var(--border-light);
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  flex-shrink: 0;
+}
+.wl-btn-enrich:hover {
+  background: var(--accent-primary-light, #e2ece7);
+  border-color: var(--accent-primary, #6c8b7a);
+  color: var(--accent-primary, #6c8b7a);
+}
+
+/* ── Work Log: add-photo icon button (shown when no photo attached) ── */
+.wl-photo-add-btn {
+  background: transparent;
+  border: 1px dashed var(--border-medium);
+  border-radius: var(--radius-sm);
+  padding: 4px 6px;
+  cursor: pointer;
+  color: var(--text-tertiary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+}
+.wl-photo-add-btn:hover {
+  background: var(--accent-primary-light, #e2ece7);
+  color: var(--accent-primary, #6c8b7a);
+  border-color: var(--accent-primary, #6c8b7a);
+  border-style: solid;
+}
+
+/* ── Work Log: enrich modal box ── */
+.wl-enrich-modal-box {
+  background: var(--bg-elevated, #ffffff);
+  border-radius: 12px;
+  padding: 24px;
+  width: 100%;
+  max-width: 460px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+  border: 1px solid var(--border-light);
+}
+
+.wl-enrich-task-desc {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  background: #e2ece7;
+  border: 1px solid #b8d9c9;
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin-bottom: 14px;
+  line-height: 1.4;
+}
+.wl-enrich-task-desc svg {
+  color: #4a7c63;
+  flex-shrink: 0;
+  margin-top: 1px;
 }

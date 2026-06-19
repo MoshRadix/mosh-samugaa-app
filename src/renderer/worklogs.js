@@ -199,7 +199,7 @@ const WL = (() => {
     });
   }
 
-  // ── Table rendering ─────────────────────────────────────────────────────────
+  // ── Table rendering ─────────────────────────────────────────────────────
   function renderTable(logs) {
     filteredLogs = logs;
     const tbody = el("wl-table-body");
@@ -225,29 +225,67 @@ const WL = (() => {
         ? tags.map(t => { const c = tagColor(t); return `<span class="wl-tag-chip" style="background:${c.bg};color:${c.fg};">${escapeHtml(t)}</span>`; }).join("")
         : `<span class="wl-empty-notes">—</span>`;
 
-      const hasPhoto = log.photoPath ? true : false;
+      const hasPhoto = !!log.photoPath;
+
+      // Photo cell: thumbnail button if photo exists, add-photo icon button if not
       const photoHtml = hasPhoto
         ? `<button class="wl-photo-thumb-btn" data-logid="${log.id}" data-task="${escapeHtml(log.task||"")}" title="View photo">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
            </button>`
-        : `<span class="wl-empty-notes">—</span>`;
+        : `<button class="wl-photo-add-btn" data-id="${log.id}" data-task="${escapeHtml(log.task||"")}" title="Attach a photo">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+           </button>`;
 
-      return `<tr>
+      // Linked To-Do source badge
+      const isLinked = !!log.linkedTodoId;
+      const sourceBadge = isLinked
+        ? `<span class="wl-source-badge wl-source-badge--todo" title="Auto-logged from To-Do">
+            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+            From To-Do
+           </span>`
+        : "";
+
+      // Reopen banner
+      const history = Array.isArray(log.todoStatusHistory) ? log.todoStatusHistory : [];
+      const lastEvent = history.length ? history[history.length - 1] : null;
+      const reopenBanner = (isLinked && lastEvent && lastEvent.event === "reopened")
+        ? `<div class="wl-reopen-banner" title="The linked To-Do was unmarked — this log entry is preserved">
+             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+             To-Do reopened
+           </div>`
+        : "";
+
+      // Enrich note preview
+      const notePreview = log.enrichNote
+        ? `<div class="wl-enrich-note-preview" title="${escapeHtml(log.enrichNote)}">${escapeHtml(log.enrichNote.length > 60 ? log.enrichNote.slice(0, 60) + "…" : log.enrichNote)}</div>`
+        : "";
+
+      // Actions: edit (pencil) for ALL items + delete — always on the same row
+      return `<tr class="${isLinked ? "wl-row--linked" : ""}">
         <td class="wl-col-num">${idx + 1}</td>
         <td class="wl-col-date"><span class="wl-date-badge">${date}</span></td>
         <td class="wl-col-time">${time}</td>
-        <td class="wl-col-task">${task}</td>
+        <td class="wl-col-task">
+          ${sourceBadge}${reopenBanner}
+          <span class="wl-task-text">${task}</span>
+          ${notePreview}
+        </td>
         <td class="wl-col-tags">${tagsHtml}</td>
         <td class="wl-col-photo">${photoHtml}</td>
         <td class="wl-col-actions">
-          <button class="wl-btn-delete" data-id="${log.id}" title="Delete log">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-              <polyline points="3 6 5 6 21 6"/>
-              <path d="M19 6l-1 14H6L5 6"/>
-              <path d="M10 11v6M14 11v6"/>
-              <path d="M9 6V4h6v2"/>
-            </svg>
-          </button>
+          <div class="wl-actions-row">
+            <button class="wl-btn-enrich" data-id="${log.id}" data-task="${escapeHtml(log.task||"")}" data-hasphoto="${hasPhoto}" title="Edit note or photo">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            </button>
+            <button class="wl-btn-delete" data-id="${log.id}" title="Delete log">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                <polyline points="3 6 5 6 21 6"/>
+                <path d="M19 6l-1 14H6L5 6"/>
+                <path d="M10 11v6M14 11v6"/>
+                <path d="M9 6V4h6v2"/>
+              </svg>
+            </button>
+          </div>
         </td>
       </tr>`;
     }).join("");
@@ -257,6 +295,14 @@ const WL = (() => {
     );
     tbody.querySelectorAll(".wl-photo-thumb-btn").forEach(btn =>
       btn.addEventListener("click", () => openPhotoLightbox(btn.dataset.logid, btn.dataset.task))
+    );
+    // Edit button — opens enrich modal for ALL items
+    tbody.querySelectorAll(".wl-btn-enrich").forEach(btn =>
+      btn.addEventListener("click", () => openEnrichModal(btn.dataset.id, btn.dataset.task, btn.dataset.hasphoto === "true"))
+    );
+    // Add-photo shortcut button in photo cell
+    tbody.querySelectorAll(".wl-photo-add-btn").forEach(btn =>
+      btn.addEventListener("click", () => openEnrichModal(btn.dataset.id, btn.dataset.task, false))
     );
   }
 
@@ -482,6 +528,93 @@ const WL = (() => {
     }
   }
 
+  // ── Enrichment modal (for linked To-Do work log entries) ────────────────────
+  let _enrichWorklogId = null;
+  let _enrichPendingPhoto = null;
+
+  function openEnrichModal(worklogId, taskLabel, hasExistingPhoto) {
+    _enrichWorklogId = worklogId;
+    _enrichPendingPhoto = null;
+    const modal = el("wl-enrich-modal");
+    const titleEl = el("wl-enrich-task-label");
+    const noteInput = el("wl-enrich-note-input");
+    const photoPreviewWrap = el("wl-enrich-photo-preview-wrap");
+    const photoBtn = el("wl-enrich-photo-btn");
+
+    if (titleEl) titleEl.textContent = taskLabel || "";
+    if (noteInput) {
+      // Pre-fill existing note if any
+      const log = allLogs.find(l => l.id === worklogId);
+      noteInput.value = (log && log.enrichNote) ? log.enrichNote : "";
+    }
+    if (photoPreviewWrap) photoPreviewWrap.style.display = "none";
+    if (photoBtn) photoBtn.style.display = "";
+    if (modal) modal.style.display = "flex";
+    setTimeout(() => noteInput && noteInput.focus(), 50);
+  }
+
+  function closeEnrichModal() {
+    _enrichWorklogId = null;
+    _enrichPendingPhoto = null;
+    const modal = el("wl-enrich-modal");
+    if (modal) modal.style.display = "none";
+    const noteInput = el("wl-enrich-note-input");
+    if (noteInput) noteInput.value = "";
+    const photoPreviewWrap = el("wl-enrich-photo-preview-wrap");
+    if (photoPreviewWrap) photoPreviewWrap.style.display = "none";
+    const photoInput = el("wl-enrich-photo-input");
+    if (photoInput) photoInput.value = "";
+  }
+
+  function handleEnrichPhotoSelected(file) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      _enrichPendingPhoto = { dataUrl: e.target.result, fileName: file.name, mimeType: file.type };
+      const img = el("wl-enrich-photo-preview");
+      const wrap = el("wl-enrich-photo-preview-wrap");
+      const btn = el("wl-enrich-photo-btn");
+      const nameEl = el("wl-enrich-photo-name");
+      if (img) img.src = e.target.result;
+      if (nameEl) nameEl.textContent = file.name;
+      if (wrap) wrap.style.display = "flex";
+      if (btn) btn.style.display = "none";
+    };
+    reader.readAsDataURL(file);
+  }
+
+  async function saveEnrichment() {
+    if (!_enrichWorklogId) return;
+    const noteInput = el("wl-enrich-note-input");
+    const note = (noteInput?.value || "").trim();
+    const saveBtn = el("wl-enrich-save-btn");
+    if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = "Saving…"; }
+
+    try {
+      // Save note
+      await window.electronAPI.worklogAddNote({ worklogId: _enrichWorklogId, note: note || null });
+
+      // Save photo if selected
+      if (_enrichPendingPhoto) {
+        await window.electronAPI.worklogEnrichPhoto({
+          worklogId: _enrichWorklogId,
+          dataUrl: _enrichPendingPhoto.dataUrl,
+          fileName: _enrichPendingPhoto.fileName,
+          mimeType: _enrichPendingPhoto.mimeType,
+        });
+      }
+
+      showNotification("Work log updated.", "success");
+      closeEnrichModal();
+      await loadLogs();
+    } catch (err) {
+      console.error("Enrich save error:", err);
+      showNotification("Failed to save enrichment.", "error");
+    } finally {
+      if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = "Save"; }
+    }
+  }
+
   // ── Photo attachment handling ────────────────────────────────────────────────
   function clearPhotoPreview() {
     const wrap = el("wl-photo-preview-wrap");
@@ -576,6 +709,25 @@ const WL = (() => {
     // Close modal on backdrop click
     el("wl-monthly-modal")?.addEventListener("click", (e) => {
       if (e.target === el("wl-monthly-modal")) closeMonthlyModal();
+    });
+
+    // Enrichment modal
+    el("wl-enrich-modal")?.addEventListener("click", (e) => {
+      if (e.target === el("wl-enrich-modal")) closeEnrichModal();
+    });
+    el("wl-enrich-close-btn")?.addEventListener("click", closeEnrichModal);
+    el("wl-enrich-cancel-btn")?.addEventListener("click", closeEnrichModal);
+    el("wl-enrich-save-btn")?.addEventListener("click", saveEnrichment);
+    el("wl-enrich-photo-btn")?.addEventListener("click", () => el("wl-enrich-photo-input")?.click());
+    el("wl-enrich-photo-input")?.addEventListener("change", (e) => handleEnrichPhotoSelected(e.target.files?.[0]));
+    el("wl-enrich-photo-remove")?.addEventListener("click", () => {
+      _enrichPendingPhoto = null;
+      const wrap = el("wl-enrich-photo-preview-wrap");
+      const btn = el("wl-enrich-photo-btn");
+      const input = el("wl-enrich-photo-input");
+      if (wrap) wrap.style.display = "none";
+      if (btn) btn.style.display = "";
+      if (input) input.value = "";
     });
 
     loadLogs();

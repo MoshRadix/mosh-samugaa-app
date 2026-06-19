@@ -321,13 +321,48 @@ function _tdRender() {
   _tdBindItemEvents();
 }
 
+function _tdSetLoggedBadge(itemEl, worklogId, show) {
+  if (!itemEl) return;
+  let badge = itemEl.querySelector(".td-logged-badge");
+  if (show && worklogId) {
+    if (!badge) {
+      badge = document.createElement("span");
+      badge.className = "td-logged-badge";
+      badge.title = "Logged to Work Log";
+      badge.innerHTML = `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg> Logged`;
+      // Try to append into existing tags row; if none, create one
+      let tagsRow = itemEl.querySelector(".td-item-tags");
+      if (!tagsRow) {
+        tagsRow = document.createElement("div");
+        tagsRow.className = "td-item-tags";
+        const body = itemEl.querySelector(".td-item-body");
+        if (body) body.appendChild(tagsRow);
+      }
+      tagsRow.appendChild(badge);
+    }
+  } else if (badge) {
+    badge.remove();
+  }
+}
+
 function _tdRenderItem(item) {
   const today = _tdFmtDate(new Date());
   const isOverdue = !item.done && item.date < today;
   const priority = item.priority || "medium";
   const tags = Array.isArray(item.tags) ? item.tags : [];
-  const tagPills = tags.length
-    ? `<div class="td-item-tags">${tags.map(t => `<span class="td-tag-pill td-tag-pill--item" data-tag="${_tdEscape(t)}">${_tdEscape(t)}</span>`).join("")}</div>`
+
+  // "Logged" badge — sits in the metadata row alongside tag pills
+  const loggedBadge = (item.done && item.linkedWorklogId)
+    ? `<span class="td-logged-badge" title="Logged to Work Log"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg> Logged</span>`
+    : "";
+
+  // Metadata row: tag pills + logged badge grouped together below the text
+  const hasMeta = tags.length > 0 || !!loggedBadge;
+  const metaRow = hasMeta
+    ? `<div class="td-item-tags">
+        ${tags.map(t => `<span class="td-tag-pill td-tag-pill--item" data-tag="${_tdEscape(t)}">${_tdEscape(t)}</span>`).join("")}
+        ${loggedBadge}
+       </div>`
     : "";
 
   // Priority dot colours — red/amber/teal
@@ -345,8 +380,10 @@ function _tdRenderItem(item) {
       </button>
       <span class="td-priority-dot" style="background:${dotColour}" title="${priority} priority" aria-hidden="true"></span>
       <div class="td-item-body">
-        <span class="td-item-text" data-id="${item.id}">${_tdEscape(item.text)}</span>
-        ${tagPills}
+        <div class="td-item-text-row">
+          <span class="td-item-text" data-id="${item.id}">${_tdEscape(item.text)}</span>
+        </div>
+        ${metaRow}
       </div>
       <div class="td-item-actions">
         <button class="td-action-btn td-edit-btn" data-id="${item.id}" title="Edit (double-click task to edit inline)" aria-label="Edit task">
@@ -965,6 +1002,46 @@ function _tdBindItemEvents() {
 
       try {
         await window.electronAPI.calTodoUpdate(id, { done: newDone });
+
+        // ── Auto Work Log Integration ────────────────────────────────────
+        if (newDone) {
+          // Marking done → create/update linked work log entry
+          if (item) {
+            try {
+              const result = await window.electronAPI.todoCompleteToWorklog({
+                todoId: item.id,
+                todoText: item.text,
+                todoDate: item.date,
+                todoTags: item.tags || [],
+                todoPriority: item.priority || "medium",
+              });
+              if (result) {
+                item.linkedWorklogId = result.worklogId;
+                // Show subtle confirmation toast
+                const msg = result.isNew
+                  ? "Logged to Work Log ✓"
+                  : "Work Log updated ✓";
+                if (window.showToast) window.showToast(msg, "success");
+                // Update the item element with a "logged" badge
+                _tdSetLoggedBadge(itemEl, item.linkedWorklogId, true);
+              }
+            } catch (logErr) {
+              console.warn("Auto work log failed:", logErr);
+            }
+          }
+        } else {
+          // Marking undone → signal the work log that todo was reopened
+          if (item && item.linkedWorklogId) {
+            try {
+              await window.electronAPI.todoReopenWorklog(item.id);
+              if (window.showToast) window.showToast("Task reopened — Work Log preserved", "success");
+            } catch (logErr) {
+              console.warn("Reopen signal failed:", logErr);
+            }
+          }
+        }
+        // ── End Work Log Integration ─────────────────────────────────────
+
         // Full re-render for progress bar + strikethrough sync
         _tdRender();
       } catch (e) {

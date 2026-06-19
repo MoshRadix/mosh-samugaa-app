@@ -239,6 +239,32 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("get-work-log-photo", photoPath),
 
   /**
+   * When a To-Do is marked done, creates a linked Work Log entry (idempotent).
+   * @param {Object} data - { todoId, todoText, todoDate, todoTags, todoPriority }
+   * @returns {Promise<{worklogId:string, isNew:boolean}>}
+   */
+  todoCompleteToWorklog: (data) => ipcRenderer.invoke("todo-complete-to-worklog", data),
+
+  /**
+   * When a To-Do is un-done, appends a "reopened" event to the linked worklog.
+   * @param {string} todoId
+   * @returns {Promise<boolean>}
+   */
+  todoReopenWorklog: (todoId) => ipcRenderer.invoke("todo-reopen-worklog", todoId),
+
+  /**
+   * Adds/updates an enrichment note on a linked Work Log entry.
+   * @param {Object} data - { worklogId, note }
+   */
+  worklogAddNote: (data) => ipcRenderer.invoke("worklog-add-note", data),
+
+  /**
+   * Attaches a photo to an existing Work Log entry.
+   * @param {Object} data - { worklogId, dataUrl, fileName, mimeType }
+   */
+  worklogEnrichPhoto: (data) => ipcRenderer.invoke("worklog-enrich-photo", data),
+
+  /**
    * Exports a formatted monthly summary as a Word (.docx) report.
    * @param {Object} data - { rows, month, officer }
    * @returns {Promise<{success:boolean, path:string}|null>}
