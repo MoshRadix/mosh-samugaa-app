@@ -339,6 +339,14 @@ contextBridge.exposeInMainWorld("electronAPI", {
   calWeatherRefresh: () => ipcRenderer.invoke("cal-weather-refresh"),
 
   /**
+   * Fetch historical weather for a specific past date from Open-Meteo archive
+   * and persist the record in cal_weather. Returns the stored record or null.
+   * @param {string} date "YYYY-MM-DD"
+   * @returns {Promise<Object|null>}
+   */
+  calWeatherFetchHistorical: (date) => ipcRenderer.invoke("cal-weather-fetch-historical", date),
+
+  /**
    * Opens a native file dialog restricted to CSV / XLSX files (for batch generation).
    * @returns {Promise<string|null>} Absolute path of selected file, or null if cancelled.
    */

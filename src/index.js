@@ -2243,6 +2243,98 @@ ipcMain.handle("cal-weather-refresh", async () => {
   return { ok: true, count: inserted.length, records: inserted };
 });
 
+/**
+ * Fetch historical weather for a specific date (YYYY-MM-DD) from Open-Meteo
+ * archive API and store in cal_weather. Called when a past date has no cached
+ * record. Returns the stored record or null on failure.
+ */
+ipcMain.handle("cal-weather-fetch-historical", async (event, date) => {
+  // Validate date format
+  if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
+
+  // Check DB first — avoid redundant API calls
+  const existing = wlDb.exec(
+    "SELECT date, fetched_at, condition, condition_dv, temp_min, temp_max, humidity, wind_speed, wind_dir, sunrise, sunset, wmo_code FROM cal_weather WHERE date = ?",
+    [date]
+  );
+  if (existing.length && existing[0].values.length) {
+    const [d, fa, cond, condDv, tMin, tMax, hum, ws, wd, sr, ss, wmo] = existing[0].values[0];
+    return { date: d, fetched_at: fa, condition: cond, condition_dv: condDv,
+             temp_min: tMin, temp_max: tMax, humidity: hum, wind_speed: ws,
+             wind_dir: wd, sunrise: sr, sunset: ss, wmo_code: wmo };
+  }
+
+  const ADDU_LAT = 0.629;
+  const ADDU_LON = 73.099;
+  // Open-Meteo archive requires start_date and end_date (same date for single day)
+  const url = `https://archive-api.open-meteo.com/v1/archive?latitude=${ADDU_LAT}&longitude=${ADDU_LON}` +
+    `&start_date=${date}&end_date=${date}` +
+    `&daily=weathercode,temperature_2m_max,temperature_2m_min,relative_humidity_2m_max,windspeed_10m_max,winddirection_10m_dominant,sunrise,sunset` +
+    `&timezone=Indian%2FMaldives`;
+
+  let json;
+  try {
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    json = await resp.json();
+  } catch (err) {
+    console.warn(`[Weather] Historical fetch failed for ${date}:`, err.message);
+    return null;
+  }
+
+  const daily = json.daily;
+  if (!daily || !Array.isArray(daily.time) || !daily.time.length) return null;
+
+  const WMO_EN = {
+    0: "Clear sky", 1: "Mainly clear", 2: "Partly cloudy", 3: "Overcast",
+    45: "Fog", 48: "Icy fog", 51: "Light drizzle", 53: "Drizzle", 55: "Heavy drizzle",
+    61: "Light rain", 63: "Rain", 65: "Heavy rain",
+    71: "Light snow", 73: "Snow", 75: "Heavy snow", 77: "Snow grains",
+    80: "Light showers", 81: "Showers", 82: "Heavy showers",
+    85: "Snow showers", 86: "Heavy snow showers",
+    95: "Thunderstorm", 96: "Thunderstorm with hail", 99: "Thunderstorm with heavy hail",
+  };
+  const WMO_DV = {
+    0: "ސާފު", 1: "ގިނައިން ސާފު", 2: "ތަންތަންކޮޅު ވިލާ", 3: "ވިލާ",
+    45: "ދުން", 48: "ދުން",
+  };
+
+  const i = 0; // single-day response
+  const wmo = daily.weathercode ? daily.weathercode[i] : null;
+  const sunrise = daily.sunrise ? daily.sunrise[i] : null;
+  const sunset = daily.sunset ? daily.sunset[i] : null;
+  const srTime = sunrise ? sunrise.slice(11, 16) : null;
+  const ssTime = sunset ? sunset.slice(11, 16) : null;
+
+  const rec = {
+    date: daily.time[i],
+    fetched_at: new Date().toISOString(),
+    condition: WMO_EN[wmo] || "Unknown",
+    condition_dv: WMO_DV[wmo] || WMO_EN[wmo] || "Unknown",
+    temp_min: daily.temperature_2m_min ? daily.temperature_2m_min[i] : null,
+    temp_max: daily.temperature_2m_max ? daily.temperature_2m_max[i] : null,
+    humidity: daily.relative_humidity_2m_max ? daily.relative_humidity_2m_max[i] : null,
+    wind_speed: daily.windspeed_10m_max ? daily.windspeed_10m_max[i] : null,
+    wind_dir: daily.winddirection_10m_dominant ? daily.winddirection_10m_dominant[i] : null,
+    sunrise: srTime,
+    sunset: ssTime,
+    wmo_code: wmo,
+  };
+
+  wlDb.run(
+    `INSERT OR REPLACE INTO cal_weather
+      (date, fetched_at, condition, condition_dv, temp_min, temp_max, humidity, wind_speed, wind_dir, sunrise, sunset, wmo_code)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [rec.date, rec.fetched_at, rec.condition, rec.condition_dv,
+     rec.temp_min, rec.temp_max, rec.humidity, rec.wind_speed, rec.wind_dir,
+     rec.sunrise, rec.sunset, rec.wmo_code]
+  );
+
+  await saveWorkLogsDB();
+  console.log(`[Weather] Stored historical record for ${date}`);
+  return rec;
+});
+
 ipcMain.handle("export-work-logs-excel", async (event, { rows }) => {
   const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
     title: "Export Work Logs to Excel",

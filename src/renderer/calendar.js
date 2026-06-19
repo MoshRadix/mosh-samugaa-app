@@ -941,7 +941,7 @@ function _windDirLabel(deg, lang) {
 /** Bilingual labels for the weather panel */
 const CAL_WI18N = {
   en: {
-    title: "Addu City Forecast",
+    title: "Forecast",
     temp: "Temperature",
     humidity: "Humidity",
     wind: "Wind",
@@ -968,16 +968,40 @@ const CAL_WI18N = {
 
 /**
  * Fetch weather for a date from the DB (via IPC), with in-memory caching.
+ * For past dates with no cached record, automatically fetches from the
+ * Open-Meteo archive API and persists the result.
  * @param {string} dateStr "YYYY-MM-DD"
  * @returns {Promise<Object|null>}
  */
 async function _calGetWeather(dateStr) {
+  // Return from in-memory session cache if present (null means "no data, already tried")
   if (_calWeatherCache[dateStr] !== undefined) return _calWeatherCache[dateStr];
+
   try {
+    // 1. Try the DB first (covers forecast data already stored)
     const rec = await window.electronAPI.calWeatherGet(dateStr);
-    _calWeatherCache[dateStr] = rec || null;
-    return _calWeatherCache[dateStr];
+    if (rec) {
+      _calWeatherCache[dateStr] = rec;
+      return rec;
+    }
+
+    // 2. If no record, determine whether the date is in the past
+    const today = new Date();
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+    const isPast = dateStr < todayStr;
+
+    if (isPast) {
+      // 3. Fetch from Open-Meteo archive and store in DB
+      const historical = await window.electronAPI.calWeatherFetchHistorical(dateStr);
+      _calWeatherCache[dateStr] = historical || null;
+      return _calWeatherCache[dateStr];
+    }
+
+    // Future date with no forecast yet — return null
+    _calWeatherCache[dateStr] = null;
+    return null;
   } catch {
+    _calWeatherCache[dateStr] = null;
     return null;
   }
 }
@@ -1006,31 +1030,73 @@ async function _calMaybeRefreshWeather() {
 
 /**
  * Build the HTML for the weather section of the day detail panel.
+ * For past dates, automatically triggers a historical fetch if no record exists.
  * @param {string} dateStr
  * @param {string} lang "en" | "dv"
  * @returns {Promise<string>} HTML string
  */
 async function _calWeatherHtml(dateStr, lang) {
   const W = CAL_WI18N[lang] || CAL_WI18N.en;
+
+  // Determine if this is a past date (before today)
+  const today = new Date();
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+  const isPast = dateStr < todayStr;
+
+  // Check in-memory cache synchronously — if undefined it means we haven't tried yet
+  const cached = _calWeatherCache[dateStr];
+  const alreadyFetched = cached !== undefined;
+
+  // If past date with no in-memory record and we haven't tried this session,
+  // show a loading placeholder while we fire the historical fetch asynchronously.
+  if (isPast && !alreadyFetched) {
+    const loadingLabel = lang === "dv" ? "ލޯޑް ކުރަނީ…" : "Loading historical weather…";
+    // Fire async fetch; when done, re-render the detail panel
+    _calGetWeather(dateStr).then(() => {
+      if (_calState.selectedDate === dateStr) renderDayDetail();
+    });
+    return `
+      <div class="cal-weather-section cal-weather-section--loading">
+        <div class="cal-weather-header">
+          <span class="cal-weather-title-icon">${CAL_WEATHER_ICONS.clear}</span>
+          <span class="cal-weather-title">${W.title}</span>
+        </div>
+        <div class="cal-weather-no-data cal-weather-no-data--loading">
+          <span class="cal-weather-spinner"></span> ${loadingLabel}
+        </div>
+      </div>`;
+  }
+
   const rec = await _calGetWeather(dateStr);
 
   if (!rec) {
+    // No-data message differs: past dates failed to retrieve history; future dates have no forecast yet
+    const noDataMsg = isPast
+      ? (lang === "dv" ? "ތާރީހީ ވިލާ ދެ ތަފްސީލު ލިބިފައެއް ނެތް." : "Historical weather data not available for this date.")
+      : W.noData;
+
     return `
       <div class="cal-weather-section cal-weather-section--empty">
         <div class="cal-weather-header">
           <span class="cal-weather-title-icon">${CAL_WEATHER_ICONS.clear}</span>
           <span class="cal-weather-title">${W.title}</span>
         </div>
-        <div class="cal-weather-no-data">${W.noData}</div>
-        <button class="cal-weather-refresh-btn" id="cal-weather-refresh-btn">
-          ${CAL_WEATHER_ICONS.wind} ${W.refresh}
-        </button>
+        <div class="cal-weather-no-data">${noDataMsg}</div>
+        ${isPast
+          ? `<button class="cal-weather-refresh-btn" id="cal-weather-refresh-btn" title="Retry">↺ ${lang === "dv" ? "އަލުން ތާޒާ ކުރޭ" : "Retry"}</button>`
+          : `<button class="cal-weather-refresh-btn" id="cal-weather-refresh-btn">${CAL_WEATHER_ICONS.wind} ${W.refresh}</button>`
+        }
       </div>`;
   }
 
   const iconKey = _wmoIconKey(rec.wmo_code);
   const condLabel = lang === "dv" ? (rec.condition_dv || rec.condition) : rec.condition;
   const windDir = _windDirLabel(rec.wind_dir, lang);
+
+  // Badge label: distinguish archived vs forecast
+  const dataSourceLabel = isPast
+    ? (lang === "dv" ? "📅 ތާރީހީ" : "📅 Historical")
+    : (lang === "dv" ? "🔮 ލަފާ" : "🔮 Forecast");
 
   const tempRow = (rec.temp_min != null && rec.temp_max != null)
     ? `<div class="cal-weather-row">
@@ -1077,6 +1143,7 @@ async function _calWeatherHtml(dateStr, lang) {
       <div class="cal-weather-header">
         <span class="cal-weather-title-icon">${CAL_WEATHER_ICONS[iconKey]}</span>
         <span class="cal-weather-title">${W.title}</span>
+        <span class="cal-weather-source-badge">${dataSourceLabel}</span>
       </div>
       <div class="cal-weather-condition">
         <span class="cal-weather-cond-icon cal-weather-cond-icon--${iconKey}">${CAL_WEATHER_ICONS[iconKey]}</span>
@@ -1881,8 +1948,19 @@ async function renderDayDetail() {
     e.stopPropagation();
     const btn = panel.querySelector("#cal-weather-refresh-btn");
     if (btn) { btn.disabled = true; btn.textContent = "…"; }
-    localStorage.removeItem(CAL_WEATHER_REFRESH_KEY); // force re-fetch
-    await _calMaybeRefreshWeather();
+
+    // Determine if this is a past date
+    const today = new Date();
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+    const isPast = _calState.selectedDate < todayStr;
+
+    if (isPast) {
+      // Bust in-memory cache so _calGetWeather will re-fetch from archive
+      delete _calWeatherCache[_calState.selectedDate];
+    } else {
+      localStorage.removeItem(CAL_WEATHER_REFRESH_KEY); // force forecast re-fetch
+      await _calMaybeRefreshWeather();
+    }
     renderDayDetail();
   });
 

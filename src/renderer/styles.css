@@ -5093,6 +5093,55 @@ kbd {
   cursor: not-allowed;
 }
 
+.cal-weather-refresh-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Source badge: "Historical" vs "Forecast" */
+.cal-weather-source-badge {
+  margin-left: auto;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--text-muted);
+  background: var(--bg-sunken, rgba(0,0,0,0.06));
+  border-radius: 10px;
+  padding: 2px 7px;
+  white-space: nowrap;
+}
+
+/* Loading state */
+.cal-weather-section--loading .cal-weather-no-data {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-muted);
+  font-size: 12px;
+  padding: 10px 0 6px;
+}
+
+.cal-weather-no-data--loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+@keyframes cal-weather-spin {
+  to { transform: rotate(360deg); }
+}
+
+.cal-weather-spinner {
+  display: inline-block;
+  width: 13px;
+  height: 13px;
+  border: 2px solid var(--border-light);
+  border-top-color: var(--accent-primary, #4a6b5a);
+  border-radius: 50%;
+  animation: cal-weather-spin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+
 /* Dhivehi RTL overrides for weather */
 .cal-lang--dv .cal-weather-title,
 .cal-lang--dv .cal-weather-cond-label,
