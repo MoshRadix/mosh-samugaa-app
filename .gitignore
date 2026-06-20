@@ -105,4 +105,7 @@ test.xlsx
 test.xlsx
 This is a test document.docx
 ~$this is a test document.docx
+*.ttf
+*.xlsx
+*.docx
 

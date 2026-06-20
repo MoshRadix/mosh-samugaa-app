@@ -103,6 +103,7 @@ async function loadAboutInfo() {
       <p><strong>👨‍💻 Developer:</strong> ${escapeHtml(info.author)}</p>
       <p><strong>📧 Email:</strong> <a href="mailto:${escapeHtml(info.email)}">${escapeHtml(info.email)}</a></p>
       <p><strong>📞 Phone:</strong> <a href="tel:${escapeHtml(info.phone)}">${escapeHtml(info.phone)}</a></p>
+      <p><strong>🔗 Website:</strong> <a href="${escapeHtml(info.website)}" target="_blank">${escapeHtml(info.website)}</a></p>
       <p><strong>🔗 Repository:</strong> <a href="${escapeHtml(info.repo)}" target="_blank">${escapeHtml(info.repo)}</a></p>
       <p><strong>🖥️ Platform:</strong> ${escapeHtml(info.platform)} (${escapeHtml(info.arch)})</p>
       <div class="about-quote">“${escapeHtml(info.quote)}”</div>
