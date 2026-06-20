@@ -60,13 +60,20 @@ async function initSQLite(filePath) {
     fileData = await fs.readFile(filePath);
   } catch (e) {}
   db = new SQL.Database(fileData);
+
+  // NOTE on `templates.fileName`: templates are no longer addressed by an
+  // absolute path stored in the database. Only the on-disk file name lives
+  // here — the directory always comes from the live `templatesDir` setting
+  // (see resolveTemplatePath()). This means moving or repointing the
+  // template directory in Settings never leaves stale/broken path
+  // references behind.
   db.exec(`
     CREATE TABLE IF NOT EXISTS templates (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
       description TEXT,
       category TEXT,
-      filePath TEXT NOT NULL,
+      fileName TEXT NOT NULL,
       originalName TEXT NOT NULL,
       type TEXT NOT NULL,
       hasFields INTEGER NOT NULL DEFAULT 0,
@@ -102,6 +109,48 @@ async function initSQLite(filePath) {
       "ALTER TABLE data_records ADD COLUMN printed INTEGER NOT NULL DEFAULT 0",
     );
     console.log("[DB Migration] Added 'printed' column to data_records");
+  }
+
+  // Migration: older versions of the app stored an absolute `filePath` on
+  // each template row. The new design stores only `fileName` and resolves
+  // the directory from settings at read-time. No backward compatibility is
+  // required for this change, so an old-schema `templates` table (one that
+  // has `filePath` but not `fileName`) is dropped and recreated empty —
+  // old template catalog records referencing absolute paths are discarded.
+  // Document files already sitting in the templates folder are untouched;
+  // only the database catalog entries are reset, so templates can simply
+  // be re-uploaded.
+  const templateCols = db.exec("PRAGMA table_info(templates)");
+  const templateColNames =
+    templateCols.length > 0 ? templateCols[0].values.map((r) => r[1]) : [];
+  if (
+    templateColNames.includes("filePath") &&
+    !templateColNames.includes("fileName")
+  ) {
+    console.log(
+      "[DB Migration] Old 'templates' schema (absolute filePath) detected — recreating table with filename-based storage. Old template catalog entries are discarded; re-upload templates if needed.",
+    );
+    db.exec("DROP TABLE IF EXISTS templates");
+    db.exec(`
+      CREATE TABLE templates (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        description TEXT,
+        category TEXT,
+        fileName TEXT NOT NULL,
+        originalName TEXT NOT NULL,
+        type TEXT NOT NULL,
+        hasFields INTEGER NOT NULL DEFAULT 0,
+        fields TEXT,
+        dateRangeConfig TEXT,
+        hasDateRange INTEGER NOT NULL DEFAULT 0,
+        isActive INTEGER NOT NULL DEFAULT 1,
+        createdAt TEXT NOT NULL,
+        updatedAt TEXT NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS idx_templates_type ON templates(type);
+      CREATE INDEX IF NOT EXISTS idx_templates_hasFields ON templates(hasFields);
+    `);
   }
 
   await saveDatabase();
@@ -222,10 +271,13 @@ async function migrateFromJSONIfNeeded() {
     const templates = jsonData.templates || [];
     const dataRecords = jsonData.dataRecords || [];
     for (const t of templates) {
+      // Legacy JSON records stored an absolute filePath; the new schema only
+      // keeps the file name (the directory comes from settings at read-time).
+      const fileName = t.fileName || (t.filePath ? path.basename(t.filePath) : "");
       db.run(
         `
         INSERT OR REPLACE INTO templates (
-          id, name, description, category, filePath, originalName, type,
+          id, name, description, category, fileName, originalName, type,
           hasFields, fields, dateRangeConfig, hasDateRange, isActive, createdAt, updatedAt
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `,
@@ -234,7 +286,7 @@ async function migrateFromJSONIfNeeded() {
           t.name,
           t.description || "",
           t.category || "General",
-          t.filePath,
+          fileName,
           t.originalName,
           t.type,
           t.hasFields ? 1 : 0,
@@ -290,6 +342,86 @@ function getDbPath() {
   return settings.dbPath;
 }
 
+// ========== Template Path Resolution ==========
+// Templates are stored in the database by FILE NAME ONLY. The directory is
+// always pulled live from `settings.templatesDir`, so the full on-disk path
+// is constructed dynamically every time a template is read or used — never
+// persisted. This means changing the template directory in Settings (or
+// restoring a backup on a different machine) never leaves a stale absolute
+// path behind.
+
+/**
+ * Combine the current templatesDir setting with a stored file name to get
+ * a full, on-disk path. Throws a descriptive error if either piece is
+ * missing, rather than silently producing a broken path.
+ */
+function resolveTemplatePath(fileName) {
+  if (!fileName) {
+    throw new Error("Template record is missing its file name.");
+  }
+  const templatesDir = getTemplatesDir();
+  if (!templatesDir) {
+    throw new Error(
+      "Template directory is not configured. Please set the Template Directory in Settings before working with templates.",
+    );
+  }
+  return path.join(templatesDir, fileName);
+}
+
+/**
+ * Same as resolveTemplatePath(), but non-throwing — used for list views
+ * where a missing/invalid settings path shouldn't crash the whole list,
+ * just leave filePath as null for that row so the UI can show a
+ * "missing file" state.
+ */
+function resolveTemplatePathSafe(fileName) {
+  try {
+    return resolveTemplatePath(fileName);
+  } catch (_) {
+    return null;
+  }
+}
+
+/**
+ * Validates that the configured template directory exists (creating it if
+ * needed) and returns it. Use before any operation that writes into the
+ * template directory (e.g. uploading a new template).
+ */
+async function ensureTemplatesDirReady() {
+  const templatesDir = getTemplatesDir();
+  if (!templatesDir || !String(templatesDir).trim()) {
+    throw new Error(
+      "Template directory is not configured. Please set the Template Directory in Settings before uploading templates.",
+    );
+  }
+  try {
+    await fs.mkdir(templatesDir, { recursive: true });
+  } catch (err) {
+    throw new Error(
+      `The configured template directory is invalid or inaccessible: "${templatesDir}" (${err.message}). Please update the Template Directory path in Settings.`,
+    );
+  }
+  return templatesDir;
+}
+
+/**
+ * Resolves a template's on-disk path AND confirms the file actually exists,
+ * throwing a clear, actionable error otherwise (missing settings path,
+ * moved/deleted file, etc.). Use before any read of a template file
+ * (document generation, preview/print, field reload, batch generation).
+ */
+async function ensureTemplateFileExists(template) {
+  const fullPath = resolveTemplatePath(template.fileName);
+  try {
+    await fs.access(fullPath);
+  } catch (_) {
+    throw new Error(
+      `Template file "${template.fileName}" was not found in the configured template directory ("${getTemplatesDir()}"). It may have been moved, renamed, or deleted — try re-uploading the template, or check the Template Directory path in Settings.`,
+    );
+  }
+  return fullPath;
+}
+
 // ========== Database Operations ==========
 function getTemplates() {
   const rows = db.exec(`
@@ -299,23 +431,29 @@ function getTemplates() {
     ORDER BY name
   `);
   if (rows.length === 0) return [];
-  return rows[0].values.map((row) => ({
-    id: row[0],
-    name: row[1],
-    description: row[2],
-    category: row[3],
-    filePath: row[4],
-    originalName: row[5],
-    type: row[6],
-    hasFields: row[7] === 1,
-    fields: JSON.parse(row[8] || "[]"),
-    dateRangeConfig: row[9] ? JSON.parse(row[9]) : null,
-    hasDateRange: row[10] === 1,
-    isActive: row[11] === 1,
-    createdAt: row[12],
-    updatedAt: row[13],
-    recordCount: row[14] || 0,
-  }));
+  return rows[0].values.map((row) => {
+    const fileName = row[4];
+    return {
+      id: row[0],
+      name: row[1],
+      description: row[2],
+      category: row[3],
+      fileName: fileName,
+      // filePath is derived on every read from settings.templatesDir + fileName.
+      // It is never stored — only fileName is persisted in the database.
+      filePath: resolveTemplatePathSafe(fileName),
+      originalName: row[5],
+      type: row[6],
+      hasFields: row[7] === 1,
+      fields: JSON.parse(row[8] || "[]"),
+      dateRangeConfig: row[9] ? JSON.parse(row[9]) : null,
+      hasDateRange: row[10] === 1,
+      isActive: row[11] === 1,
+      createdAt: row[12],
+      updatedAt: row[13],
+      recordCount: row[14] || 0,
+    };
+  });
 }
 
 function getTemplateById(id) {
@@ -329,7 +467,9 @@ function getTemplateById(id) {
     name: row.name,
     description: row.description,
     category: row.category,
-    filePath: row.filePath,
+    fileName: row.fileName,
+    // filePath is derived on every read from settings.templatesDir + fileName.
+    filePath: resolveTemplatePathSafe(row.fileName),
     originalName: row.originalName,
     type: row.type,
     hasFields: row.hasFields === 1,
@@ -348,7 +488,7 @@ function insertTemplate(template) {
   db.run(
     `
     INSERT INTO templates (
-      id, name, description, category, filePath, originalName, type,
+      id, name, description, category, fileName, originalName, type,
       hasFields, fields, dateRangeConfig, hasDateRange, isActive, createdAt, updatedAt
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `,
@@ -357,7 +497,7 @@ function insertTemplate(template) {
       template.name,
       template.description || "",
       template.category || "General",
-      template.filePath,
+      template.fileName,
       template.originalName,
       template.type,
       template.hasFields ? 1 : 0,
@@ -968,12 +1108,15 @@ async function withAutoSave(fn) {
 
 ipcMain.handle("upload-template", async (event, { filePath, metadata }) => {
   return withAutoSave(async () => {
+    // Validate/create the configured template directory before touching any files.
+    const templatesDir = await ensureTemplatesDirReady();
+
     const fileBuffer = await fs.readFile(filePath);
     const fileName = path.basename(filePath);
     const templateId = uuidv4();
     const templateFileName = `${templateId}_${fileName}`;
-    const templatePath = path.join(getTemplatesDir(), templateFileName);
-    await fs.writeFile(templatePath, fileBuffer);
+    const destPath = path.join(templatesDir, templateFileName);
+    await fs.writeFile(destPath, fileBuffer);
     const extension = path.extname(fileName).toLowerCase();
     let type = "unknown";
     if (extension === ".docx") type = "word";
@@ -1051,7 +1194,9 @@ ipcMain.handle("upload-template", async (event, { filePath, metadata }) => {
       name: metadata.name || fileName.replace(extension, ""),
       description: metadata.description || "",
       category: metadata.category || "General",
-      filePath: templatePath,
+      // Only the file name is persisted — the directory always comes from
+      // the live templatesDir setting at read-time (see resolveTemplatePath).
+      fileName: templateFileName,
       originalName: fileName,
       type: type,
       hasFields: fields.length > 0,
@@ -1063,7 +1208,9 @@ ipcMain.handle("upload-template", async (event, { filePath, metadata }) => {
       updatedAt: new Date().toISOString(),
     };
     insertTemplate(template);
-    return template;
+    // Return the freshly-read record so the renderer gets a fully-formed
+    // object (including the derived `filePath`), matching get-templates shape.
+    return getTemplateById(templateId);
   });
 });
 
@@ -1093,7 +1240,8 @@ ipcMain.handle("reload-template-fields", async (event, templateId) => {
   return withAutoSave(async () => {
     const template = getTemplateById(templateId);
     if (!template) throw new Error("Template not found");
-    const fileBuffer = await fs.readFile(template.filePath);
+    const templateFullPath = await ensureTemplateFileExists(template);
+    const fileBuffer = await fs.readFile(templateFullPath);
     const extension = path.extname(template.originalName).toLowerCase();
     let newFields = [];
     if (extension === ".docx") {
@@ -1162,7 +1310,7 @@ ipcMain.handle(
   ) => {
     const template = getTemplateById(templateId);
     if (!template) throw new Error("Template not found");
-    await fs.access(template.filePath);
+    const templateFullPath = await ensureTemplateFileExists(template);
     const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
     const outputFileName = `${template.name}_${timestamp}.${outputFormat}`;
     const outputPath = path.join(getOutputsDir(), outputFileName);
@@ -1244,9 +1392,9 @@ ipcMain.handle(
     }
 
     if (template.type === "word")
-      await generateWordDocument(template.filePath, outputPath, formData);
+      await generateWordDocument(templateFullPath, outputPath, formData);
     else if (template.type === "excel")
-      await generateExcelDocument(template.filePath, outputPath, formData);
+      await generateExcelDocument(templateFullPath, outputPath, formData);
     else throw new Error("Unsupported template type");
     const record = {
       id: uuidv4(),
@@ -1278,13 +1426,11 @@ ipcMain.handle("get-data-records", async (event, templateId) =>
 );
 ipcMain.handle("preview-template", async (event, templateId) => {
   const template = getTemplateById(templateId);
-  if (template && template.filePath) {
-    await fs.access(template.filePath);
-    const result = await shell.openPath(template.filePath);
-    if (result) throw new Error(`Failed to open file: ${result}`);
-    return true;
-  }
-  throw new Error("Template file not found");
+  if (!template) throw new Error("Template not found");
+  const templateFullPath = await ensureTemplateFileExists(template);
+  const result = await shell.openPath(templateFullPath);
+  if (result) throw new Error(`Failed to open file: ${result}`);
+  return true;
 });
 ipcMain.handle(
   "export-document",
@@ -1526,7 +1672,7 @@ ipcMain.handle(
   async (event, { templateId, rows, outputFormat = "docx" }) => {
     const template = getTemplateById(templateId);
     if (!template) throw new Error("Template not found");
-    await fs.access(template.filePath);
+    const templateFullPath = await ensureTemplateFileExists(template);
 
     const DIVEHI_MONTHS_BATCH = [
       "ޖެނުއަރީ",
@@ -1607,9 +1753,9 @@ ipcMain.handle(
         const outputPath = path.join(getOutputsDir(), outputFileName);
 
         if (template.type === "word") {
-          await generateWordDocument(template.filePath, outputPath, formData);
+          await generateWordDocument(templateFullPath, outputPath, formData);
         } else if (template.type === "excel") {
-          await generateExcelDocument(template.filePath, outputPath, formData);
+          await generateExcelDocument(templateFullPath, outputPath, formData);
         } else {
           throw new Error("Unsupported template type");
         }
@@ -1715,13 +1861,42 @@ ipcMain.handle("update-settings", async (event, newSettings) => {
     newSettings.dbPath = path.join(newSettings.dbFolder, "mto_forms.db");
     delete newSettings.dbFolder;
   }
+
+  // Validate the template directory path up front. Templates are resolved
+  // as settings.templatesDir + fileName on every read, so this setting must
+  // always be a usable, non-empty directory.
+  if (
+    Object.prototype.hasOwnProperty.call(newSettings, "templatesDir") &&
+    !String(newSettings.templatesDir || "").trim()
+  ) {
+    throw new Error(
+      "Template Directory cannot be empty — templates are located using this path.",
+    );
+  }
+
+  const candidate = { ...settings, ...newSettings };
+
+  // Verify every directory is actually creatable/writable BEFORE persisting
+  // the new settings, so a bad path (e.g. on a removed drive) can't leave
+  // the app pointing at a template directory it can't use.
+  try {
+    await fs.mkdir(candidate.templatesDir, { recursive: true });
+    await fs.mkdir(candidate.outputsDir, { recursive: true });
+    await fs.mkdir(path.dirname(candidate.dbPath), { recursive: true });
+  } catch (err) {
+    throw new Error(
+      `Could not access one of the configured directories (${err.path || ""}): ${err.message}. Settings were not changed.`,
+    );
+  }
+
   Object.assign(settings, newSettings);
   await saveConfig();
-  await fs.mkdir(settings.templatesDir, { recursive: true });
-  await fs.mkdir(settings.outputsDir, { recursive: true });
-  const dbDir = path.dirname(settings.dbPath);
-  await fs.mkdir(dbDir, { recursive: true });
 
+  // Optional convenience: physically move existing files into the new
+  // location so they stay colocated with the setting. This is not required
+  // for correctness anymore — templates are looked up dynamically by
+  // fileName + the current templatesDir setting — but keeps the folder on
+  // disk consistent with what Settings shows.
   const migrate = async (oldPath, newPath, name) => {
     if (oldPath !== newPath && fsSync.existsSync(oldPath)) {
       const answer = dialog.showMessageBoxSync(mainWindow, {
@@ -3128,8 +3303,10 @@ ipcMain.handle("docs-backup", async () => {
 
 /**
  * Restore document templates from a backup zip.
- * Writes template files to current templatesDir and updates the DB filePath
- * column so every record points to the correct location on this machine.
+ * Writes template files into the current templatesDir. The DB only stores
+ * each template's fileName (no absolute path), so once the files are
+ * restored into settings.templatesDir, every catalog record resolves
+ * correctly on this machine automatically — no path fix-up required.
  */
 ipcMain.handle("docs-restore", async () => {
   const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
@@ -3178,16 +3355,10 @@ ipcMain.handle("docs-restore", async () => {
   await fs.writeFile(settings.dbPath, dbContent);
   await initSQLite(settings.dbPath);
 
-  // Fix filePath column — repoint every template to the current templatesDir
-  const rows = db.exec("SELECT id, filePath FROM templates");
-  if (rows.length && rows[0].values.length) {
-    for (const [id, oldPath] of rows[0].values) {
-      const fileName = path.basename(oldPath);
-      const newPath = path.join(settings.templatesDir, fileName);
-      db.run("UPDATE templates SET filePath = ? WHERE id = ?", [newPath, id]);
-    }
-    await saveDatabase();
-  }
+  // No path repointing needed: templates are stored by fileName only, and
+  // fileName is resolved against the current settings.templatesDir on every
+  // read. As long as the files above were restored into settings.templatesDir
+  // (which they were, just above), the catalog entries already line up.
 
   return { success: true, count };
 });
@@ -3356,16 +3527,9 @@ ipcMain.handle("full-restore", async () => {
     }
     await fs.writeFile(settings.dbPath, docDbBuf);
     await initSQLite(settings.dbPath);
-    const rows = db.exec("SELECT id, filePath FROM templates");
-    if (rows.length && rows[0].values.length) {
-      for (const [id, oldPath] of rows[0].values) {
-        db.run("UPDATE templates SET filePath = ? WHERE id = ?", [
-          path.join(settings.templatesDir, path.basename(oldPath)),
-          id,
-        ]);
-      }
-      await saveDatabase();
-    }
+    // No path repointing needed: templates are stored by fileName only and
+    // resolved against the current settings.templatesDir on every read —
+    // the files restored just above already line up with the DB records.
   }
 
   // ── Social Media templates ──
