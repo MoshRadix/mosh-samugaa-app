@@ -9,6 +9,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Yellowtail&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="styles.css" />
     <link rel="stylesheet" href="notes_styles.css" />
+    <link rel="stylesheet" href="wallpaper_styles.css" />
   </head>
   <body>
     <div class="app-container">
@@ -549,6 +550,59 @@
                 <button id="test-notion-btn" class="btn btn-outline">
                   Test Connection
                 </button>
+              </div>
+            </div>
+
+            <!-- Dynamic Wallpaper -->
+            <div class="settings-group wallpaper-settings-group" style="margin-top: 2rem">
+              <h3>🖼️ Dynamic Wallpaper</h3>
+              <p style="font-size:13px;color:var(--text-tertiary);margin-bottom:12px;">
+                Generates a calm desktop wallpaper showing this week's calendar (with holidays) plus
+                today's and tomorrow's to-do items, and applies it as your system background.
+                Checks for changes every 5 minutes while enabled, and only re-applies the wallpaper
+                when today's or tomorrow's to-do items actually change.
+              </p>
+
+              <div class="wallpaper-enable-row">
+                <div class="wallpaper-enable-row-label">
+                  <strong>Enable Dynamic Wallpaper</strong>
+                  <small>Checks every 5 minutes; only updates your desktop image when today's or tomorrow's to-dos change.</small>
+                </div>
+                <label class="wp-toggle">
+                  <input type="checkbox" id="wallpaper-enabled-toggle" />
+                  <span class="wp-toggle-track"></span>
+                </label>
+              </div>
+
+              <div class="wallpaper-theme-grid">
+                <div class="wallpaper-theme-field">
+                  <label for="wallpaper-color-bg1">Background — start</label>
+                  <input type="color" id="wallpaper-color-bg1" value="#eef6f1" />
+                </div>
+                <div class="wallpaper-theme-field">
+                  <label for="wallpaper-color-bg2">Background — end</label>
+                  <input type="color" id="wallpaper-color-bg2" value="#dce8e0" />
+                </div>
+                <div class="wallpaper-theme-field">
+                  <label for="wallpaper-color-accent">Accent color</label>
+                  <input type="color" id="wallpaper-color-accent" value="#6c8b7a" />
+                </div>
+                <div class="wallpaper-theme-field">
+                  <label for="wallpaper-font-scale">Text size</label>
+                  <select id="wallpaper-font-scale">
+                    <option value="0.85">Small</option>
+                    <option value="1" selected>Medium</option>
+                    <option value="1.2">Large</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="wallpaper-status-row">
+                <span class="wallpaper-status-text" id="wallpaper-status-text">Never generated yet.</span>
+                <div class="wallpaper-actions">
+                  <button id="wallpaper-reset-theme" class="btn btn-outline">Reset Theme</button>
+                  <button id="wallpaper-refresh-now" class="btn btn-primary">Refresh Wallpaper Now</button>
+                </div>
               </div>
             </div>
 
@@ -2255,6 +2309,7 @@
     <script src="prayertimes.js"></script>
     <script src="notes.js"></script>
     <script src="todo.js"></script>
+    <script src="wallpaper.js"></script>
     <script src="socialmedia.js"></script>
     <script src="app.js"></script>
 

@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>MTO Samugaa — Dynamic Wallpaper</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600&display=swap');
+  @import url('https://cdn.jsdelivr.net/gh/kudanai/Thaana-OSX@master/Library/Fonts/MV%20Faruma.ttf');
+  @font-face {
+    font-family: 'MV Faruma';
+    src: url('https://cdn.jsdelivr.net/gh/kudanai/Thaana-OSX@master/Library/Fonts/MV%20Faruma.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    background: #eef2f0;
+  }
+
+  /* ---------------------------------------------------------------------
+     Root — theme variables are set inline by JS once data arrives.
+     --------------------------------------------------------------------- */
+  .wp-root {
+    --bg1: #eef6f1;
+    --bg2: #dce8e0;
+    --accent: #6c8b7a;
+    --accent-light: #e2ece7;
+    --warm: #c9a87b;
+    --warm-light: #f3e9d8;
+    --danger: #c47a6e;
+    --danger-light: #f4e7e5;
+    --info: #7a9bb5;
+    --ink: #2c3e35;
+    --ink-soft: #5d6e64;
+    --ink-faint: #8a988f;
+    --card: rgba(255, 255, 255, 0.62);
+    --card-border: rgba(255, 255, 255, 0.9);
+    --font-scale: 1;
+
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    color: var(--ink);
+    overflow: hidden;
+  }
+
+  .wp-root.lang-dv {
+    direction: rtl;
+    font-family: 'MV Faruma', sans-serif;
+  }
+
+  /* Background: soft diagonal gradient + two faint glow blobs for depth. No
+     photography / texture — keeps it calm and minimalistic per spec. */
+  .wp-bg {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, var(--bg1) 0%, var(--bg2) 100%);
+  }
+  .wp-bg::before,
+  .wp-bg::after {
+    content: "";
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    opacity: 0.45;
+  }
+  .wp-bg::before {
+    width: 38vw;
+    height: 38vw;
+    top: -10vw;
+    right: -8vw;
+    background: var(--accent-light);
+  }
+  .wp-bg::after {
+    width: 30vw;
+    height: 30vw;
+    bottom: -8vw;
+    left: -6vw;
+    background: var(--warm-light);
+  }
+
+  .wp-stage {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 4.2vh 4vw 4vh;
+  }
+
+  /* ---------------------------------------------------------------------
+     Header — current date, kept small and quiet at the top.
+     --------------------------------------------------------------------- */
+  .wp-header {
+    text-align: center;
+    margin-bottom: 3.2vh;
+  }
+  .wp-date-greg {
+    font-family: 'Oswald', sans-serif;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    font-size: calc(2.05vw * var(--font-scale));
+    color: var(--ink);
+    opacity: 0.88;
+  }
+  .wp-date-hijri {
+    margin-top: 0.4vh;
+    font-size: calc(0.95vw * var(--font-scale));
+    color: var(--ink-soft);
+    letter-spacing: 0.02em;
+  }
+  .lang-dv .wp-date-hijri { font-size: calc(1.15vw * var(--font-scale)); }
+
+  /* ---------------------------------------------------------------------
+     Week strip
+     --------------------------------------------------------------------- */
+  .wp-week {
+    width: 100%;
+    max-width: 1500px;
+  }
+  .wp-week-title {
+    font-size: calc(0.78vw * var(--font-scale));
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--ink-faint);
+    margin-bottom: 1.1vh;
+    text-align: center;
+  }
+  .wp-week-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 0.9vw;
+  }
+  .wp-day {
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 16px;
+    padding: 1.4vh 0.5vw;
+    text-align: center;
+    backdrop-filter: blur(6px);
+  }
+  .wp-day--weekend { background: rgba(255, 255, 255, 0.38); }
+  .wp-day--holiday { background: var(--warm-light); border-color: rgba(201, 168, 123, 0.45); }
+  .wp-day--today {
+    background: var(--accent);
+    border-color: var(--accent);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+  }
+
+  .wp-day-name {
+    font-size: calc(0.78vw * var(--font-scale));
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--ink-soft);
+  }
+  .wp-day--today .wp-day-name { color: rgba(255, 255, 255, 0.85); }
+
+  .wp-day-num {
+    font-family: 'Oswald', sans-serif;
+    font-weight: 600;
+    font-size: calc(2vw * var(--font-scale));
+    margin: 0.2vh 0;
+    color: var(--ink);
+  }
+  .wp-day--today .wp-day-num { color: #fff; }
+
+  .wp-day-hijri {
+    font-size: calc(0.62vw * var(--font-scale));
+    color: var(--ink-faint);
+    margin-bottom: 0.4vh;
+  }
+  .wp-day--today .wp-day-hijri { color: rgba(255, 255, 255, 0.75); }
+
+  .wp-day-badge {
+    display: inline-block;
+    margin-top: 0.3vh;
+    font-size: calc(0.66vw * var(--font-scale));
+    line-height: 1.25;
+    padding: 0.2vh 0.5vw;
+    border-radius: 10px;
+    background: rgba(201, 168, 123, 0.28);
+    color: #6b5424;
+    max-width: 100%;
+  }
+  .wp-day--today .wp-day-badge {
+    background: rgba(255, 255, 255, 0.28);
+    color: #fff;
+  }
+  .wp-day-badge--observance {
+    background: rgba(122, 155, 181, 0.22);
+    color: #355870;
+  }
+
+  /* ---------------------------------------------------------------------
+     Today / Tomorrow to-do panel
+     --------------------------------------------------------------------- */
+  .wp-todos {
+    margin-top: auto;
+    width: 100%;
+    max-width: 1500px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.4vw;
+  }
+  .wp-todo-col {
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 18px;
+    padding: 2vh 1.6vw;
+    backdrop-filter: blur(6px);
+    min-height: 14vh;
+  }
+  .wp-todo-col-title {
+    font-size: calc(0.92vw * var(--font-scale));
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: var(--ink);
+    margin-bottom: 1.2vh;
+    display: flex;
+    align-items: baseline;
+    gap: 0.5vw;
+  }
+  .wp-todo-col-date {
+    font-size: calc(0.68vw * var(--font-scale));
+    color: var(--ink-faint);
+    font-weight: 400;
+  }
+
+  .wp-todo-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.85vh;
+  }
+  .wp-todo-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.6vw;
+    font-size: calc(0.92vw * var(--font-scale));
+    color: var(--ink);
+    line-height: 1.35;
+  }
+  .wp-todo-dot {
+    flex: none;
+    width: 0.55vw;
+    height: 0.55vw;
+    min-width: 7px;
+    min-height: 7px;
+    border-radius: 50%;
+    margin-top: 0.55em;
+    background: var(--accent);
+  }
+  .wp-todo-dot--high { background: var(--danger); }
+  .wp-todo-dot--medium { background: var(--warm); }
+  .wp-todo-dot--low { background: var(--accent); }
+
+  .wp-todo-item--done {
+    color: var(--ink-faint);
+    text-decoration: line-through;
+    opacity: 0.7;
+  }
+
+  .wp-todo-more {
+    font-size: calc(0.74vw * var(--font-scale));
+    color: var(--ink-faint);
+    margin-top: 0.2vh;
+  }
+
+  .wp-todo-empty {
+    font-size: calc(0.88vw * var(--font-scale));
+    color: var(--ink-faint);
+    font-style: italic;
+  }
+
+  /* ---------------------------------------------------------------------
+     Footer
+     --------------------------------------------------------------------- */
+  .wp-footer {
+    margin-top: 2.4vh;
+    font-size: calc(0.65vw * var(--font-scale));
+    color: var(--ink-faint);
+    letter-spacing: 0.04em;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+  <div class="wp-root" id="wpRoot">
+    <div class="wp-bg"></div>
+    <div class="wp-stage">
+      <header class="wp-header">
+        <div class="wp-date-greg" id="wpDateGreg">—</div>
+        <div class="wp-date-hijri" id="wpDateHijri"></div>
+      </header>
+
+      <section class="wp-week">
+        <div class="wp-week-title" id="wpWeekTitle">This Week</div>
+        <div class="wp-week-grid" id="wpWeekGrid"></div>
+      </section>
+
+      <section class="wp-todos">
+        <div class="wp-todo-col">
+          <div class="wp-todo-col-title">
+            <span id="wpTodayLabel">Today</span>
+            <span class="wp-todo-col-date" id="wpTodayDate"></span>
+          </div>
+          <ul class="wp-todo-list" id="wpTodayList"></ul>
+        </div>
+        <div class="wp-todo-col">
+          <div class="wp-todo-col-title">
+            <span id="wpTomorrowLabel">Tomorrow</span>
+            <span class="wp-todo-col-date" id="wpTomorrowDate"></span>
+          </div>
+          <ul class="wp-todo-list" id="wpTomorrowList"></ul>
+        </div>
+      </section>
+
+      <footer class="wp-footer" id="wpFooter">MTO Samugaa</footer>
+    </div>
+  </div>
+
+  <script>
+    const STRINGS = {
+      en: {
+        thisWeek: "This Week",
+        today: "Today",
+        tomorrow: "Tomorrow",
+        allClear: "Nothing on the list — enjoy the calm.",
+        more: (n) => `+${n} more`,
+        footer: (ts) => `MTO Samugaa · Updated ${ts}`,
+      },
+      dv: {
+        thisWeek: "މި ހަފްތާ",
+        today: "މިއަދު",
+        tomorrow: "މާދަމާ",
+        allClear: "ލިސްޓުގައި އެއްވެސް ކަމެއް ނެތް — އަރާމުކޮށްލާ.",
+        more: (n) => `+${n} އިތުރު`,
+        footer: (ts) => `MTO Samugaa · އަޕްޑޭޓްކުރީ ${ts}`,
+      },
+    };
+
+    function el(id) { return document.getElementById(id); }
+    function escapeHtml(text) {
+      const div = document.createElement("div");
+      div.textContent = text == null ? "" : String(text);
+      return div.innerHTML;
+    }
+
+    function renderTodoList(listEl, items, emptyText, maxItems) {
+      listEl.innerHTML = "";
+      if (!items || !items.length) {
+        const li = document.createElement("li");
+        li.className = "wp-todo-empty";
+        li.textContent = emptyText;
+        listEl.appendChild(li);
+        return;
+      }
+      const visible = items.slice(0, maxItems);
+      visible.forEach((t) => {
+        const li = document.createElement("li");
+        li.className = "wp-todo-item" + (t.done ? " wp-todo-item--done" : "");
+        const dot = document.createElement("span");
+        dot.className = "wp-todo-dot wp-todo-dot--" + (t.priority || "medium");
+        const span = document.createElement("span");
+        span.textContent = t.text || "";
+        li.appendChild(dot);
+        li.appendChild(span);
+        listEl.appendChild(li);
+      });
+      if (items.length > maxItems) {
+        const li = document.createElement("li");
+        li.className = "wp-todo-more";
+        li.textContent = "+" + (items.length - maxItems);
+        listEl.appendChild(li);
+      }
+    }
+
+    function applyData(data) {
+      try {
+        const lang = (data && data.lang === "dv") ? "dv" : "en";
+        const S = STRINGS[lang];
+        const root = el("wpRoot");
+        root.classList.toggle("lang-dv", lang === "dv");
+
+        const theme = (data && data.theme) || {};
+        if (theme.bg1) root.style.setProperty("--bg1", theme.bg1);
+        if (theme.bg2) root.style.setProperty("--bg2", theme.bg2);
+        if (theme.accent) {
+          root.style.setProperty("--accent", theme.accent);
+        }
+        if (theme.fontScale) {
+          root.style.setProperty("--font-scale", String(theme.fontScale));
+        }
+
+        // Header — today's date in long form + Hijri date if available.
+        const days = (data && data.days) || [];
+        const today = days.find((d) => d.isToday) || days[0] || null;
+        if (today) {
+          const dt = new Date(today.date + "T00:00:00");
+          el("wpDateGreg").textContent = dt.toLocaleDateString(
+            lang === "dv" ? "en-GB" : "en-US",
+            { weekday: "long", day: "numeric", month: "long" },
+          );
+          el("wpDateHijri").textContent = today.hijriDay && today.hijriMonth
+            ? `${today.hijriDay} ${today.hijriMonth}`
+            : "";
+        }
+
+        el("wpWeekTitle").textContent = S.thisWeek;
+        el("wpTodayLabel").textContent = S.today;
+        el("wpTomorrowLabel").textContent = S.tomorrow;
+
+        // Week grid
+        const grid = el("wpWeekGrid");
+        grid.innerHTML = "";
+        days.forEach((d) => {
+          const cell = document.createElement("div");
+          let cls = "wp-day";
+          if (d.isWeekend) cls += " wp-day--weekend";
+          if (d.holiday) cls += " wp-day--holiday";
+          if (d.isToday) cls += " wp-day--today";
+          cell.className = cls;
+
+          let badgeHtml = "";
+          if (d.holiday) {
+            badgeHtml = `<div class="wp-day-badge">${escapeHtml(d.holiday.label)}</div>`;
+          } else if (d.observance) {
+            badgeHtml = `<div class="wp-day-badge wp-day-badge--observance">${escapeHtml(d.observance.label)}</div>`;
+          }
+
+          cell.innerHTML = `
+            <div class="wp-day-name">${escapeHtml(d.dayName)}</div>
+            <div class="wp-day-num">${escapeHtml(d.dayNum)}</div>
+            <div class="wp-day-hijri">${d.hijriDay ? escapeHtml(d.hijriDay + " " + d.hijriMonth) : ""}</div>
+            ${badgeHtml}
+          `;
+          grid.appendChild(cell);
+        });
+
+        // Today / Tomorrow to-do panel
+        const maxItems = (data && data.theme && data.theme.maxTodoItems) || 6;
+        el("wpTodayDate").textContent = today ? today.dayName + " " + today.dayNum : "";
+        const tomorrowDay = days.find((d) => d.date === data.tomorrowStr);
+        el("wpTomorrowDate").textContent = tomorrowDay ? tomorrowDay.dayName + " " + tomorrowDay.dayNum : "";
+
+        renderTodoList(el("wpTodayList"), data.todayTodos, S.allClear, maxItems);
+        renderTodoList(el("wpTomorrowList"), data.tomorrowTodos, S.allClear, maxItems);
+
+        // Footer
+        const ts = data.generatedAt ? new Date(data.generatedAt) : new Date();
+        const tsLabel = ts.toLocaleString(lang === "dv" ? "en-GB" : "en-US", {
+          hour: "2-digit",
+          minute: "2-digit",
+          day: "numeric",
+          month: "short",
+        });
+        el("wpFooter").textContent = S.footer(tsLabel);
+      } catch (err) {
+        // Never leave the capture hanging — fall through to "ready" even on error,
+        // a partially-rendered (or default) wallpaper beats a frozen pipeline.
+        console.error("[Wallpaper Render] applyData failed:", err);
+      }
+    }
+
+    function signalReady() {
+      const finish = () => {
+        if (window.wallpaperBridge && typeof window.wallpaperBridge.ready === "function") {
+          window.wallpaperBridge.ready();
+        }
+      };
+      // Double rAF + webfont wait so custom fonts (MV Faruma / Oswald) and the
+      // final layout pass are guaranteed to be painted before capture.
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          if (document.fonts && document.fonts.ready) {
+            document.fonts.ready.then(finish).catch(finish);
+          } else {
+            finish();
+          }
+        });
+      });
+    }
+
+    if (window.wallpaperBridge && typeof window.wallpaperBridge.onData === "function") {
+      window.wallpaperBridge.onData((data) => {
+        applyData(data);
+        signalReady();
+      });
+    } else {
+      // Should never happen (preload missing), but don't hang main's capture wait.
+      signalReady();
+    }
+  </script>
+</body>
+</html>

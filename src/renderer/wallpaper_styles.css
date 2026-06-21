@@ -1,0 +1,163 @@
+/* ============================================================================
+   wallpaper_styles.css — Dynamic Wallpaper settings UI
+   Mirrors the visual language already used for the Notion Integration card
+   in notes_styles.css (.settings-group / .setting-item / status badges).
+   ============================================================================ */
+
+.wallpaper-settings-group {
+  margin-top: 1.5rem;
+}
+
+.wallpaper-settings-group .setting-item:last-of-type {
+  margin-bottom: 0;
+}
+
+/* --- Enable/disable row -------------------------------------------------- */
+.wallpaper-enable-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  border-radius: var(--radius-sm, 8px);
+  background: var(--bg-subtle, rgba(0, 0, 0, 0.03));
+  margin-bottom: 20px;
+}
+
+.wallpaper-enable-row-label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.wallpaper-enable-row-label strong {
+  font-size: 14px;
+  color: var(--text-primary);
+}
+
+.wallpaper-enable-row-label small {
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+
+/* --- Toggle switch (no existing global component, so scoped here) -------- */
+.wp-toggle {
+  position: relative;
+  display: inline-block;
+  width: 42px;
+  height: 24px;
+  flex: none;
+}
+.wp-toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.wp-toggle-track {
+  position: absolute;
+  cursor: pointer;
+  inset: 0;
+  background: var(--border-color, #ccc);
+  border-radius: 999px;
+  transition: background 0.18s ease;
+}
+.wp-toggle-track::before {
+  content: "";
+  position: absolute;
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  top: 3px;
+  background: #fff;
+  border-radius: 50%;
+  transition: transform 0.18s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+}
+.wp-toggle input:checked + .wp-toggle-track {
+  background: var(--accent-primary, #6c8b7a);
+}
+.wp-toggle input:checked + .wp-toggle-track::before {
+  transform: translateX(18px);
+}
+.wp-toggle input:disabled + .wp-toggle-track {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* --- Disabled state: dims everything except the enable row itself, so the
+   master toggle always stays reachable to turn the feature back on. -------- */
+.wallpaper-settings-group--disabled .wallpaper-theme-grid,
+.wallpaper-settings-group--disabled .wallpaper-status-row {
+  opacity: 0.5;
+  transition: opacity 0.15s ease;
+}
+
+.wallpaper-theme-field input:disabled,
+.wallpaper-theme-field select:disabled {
+  cursor: not-allowed;
+}
+
+/* --- Theme customization grid -------------------------------------------- */
+.wallpaper-theme-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+@media (max-width: 900px) {
+  .wallpaper-theme-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+.wallpaper-theme-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.wallpaper-theme-field label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.wallpaper-theme-field input[type="color"] {
+  width: 100%;
+  height: 38px;
+  padding: 2px;
+  border-radius: var(--radius-sm, 6px);
+  border: 1px solid var(--border-light, var(--border-color));
+  background: var(--bg-subtle, transparent);
+  cursor: pointer;
+}
+
+.wallpaper-theme-field select {
+  height: 38px;
+  border-radius: var(--radius-sm, 6px);
+  border: 1px solid var(--border-light, var(--border-color));
+  background: var(--bg-subtle, transparent);
+  padding: 0 8px;
+  color: var(--text-primary);
+}
+
+/* --- Status line + action buttons ---------------------------------------- */
+.wallpaper-status-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.wallpaper-status-text {
+  font-size: 13px;
+  color: var(--text-tertiary);
+}
+.wallpaper-status-text--success { color: #2e6b47; }
+.wallpaper-status-text--error { color: var(--accent-danger, #c47a6e); }
+.wallpaper-status-text--info { color: var(--text-tertiary); }
+
+.wallpaper-actions {
+  display: flex;
+  gap: 10px;
+}

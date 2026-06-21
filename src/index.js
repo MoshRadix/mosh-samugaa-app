@@ -5,10 +5,13 @@ const {
   dialog,
   shell,
   Menu,
+  screen,
 } = require("electron");
 const path = require("path");
 const fs = require("fs").promises;
 const fsSync = require("fs");
+const os = require("os");
+const { execFile } = require("child_process");
 const PizZip = require("pizzip");
 const Docxtemplater = require("docxtemplater");
 // Safe optional require — app works normally even if package not yet installed
@@ -48,6 +51,16 @@ let settings = {
   templatesDir: path.join(app.getPath("userData"), "templates"),
   outputsDir: path.join(app.getPath("userData"), "outputs"),
   dbPath: path.join(app.getPath("userData"), "mto_forms.db"),
+  // Dynamic Wallpaper — only the parts that must be known *before* any
+  // renderer is involved (so the scheduler can start on app launch).
+  // Theme/colour customization lives in renderer localStorage (see wallpaper.js)
+  // since it's only ever needed at the moment a wallpaper image is generated.
+  wallpaper: {
+    enabled: false,
+    lastGeneratedAt: null,
+    lastError: null,
+    lastImagePath: null,
+  },
 };
 
 // ========== SQL.js Helpers ==========
@@ -4080,6 +4093,250 @@ ipcMain.handle("export-todo-word", async (event, { todos, rangeLabel }) => {
   return { success: true, path: filePath };
 });
 
+// ============================================================================
+// DYNAMIC WALLPAPER MODULE
+// ----------------------------------------------------------------------------
+// Renders a calm, minimalist desktop wallpaper showing this week's calendar
+// (with holidays/observances) plus today's and tomorrow's to-do items, then
+// sets it as the OS desktop background. Runs entirely in the main process so
+// the 5-minute scheduler keeps working even while the window is hidden/minimized.
+//
+// Data flow:
+//   1. Main asks the renderer for fresh data ("wallpaper:request-data"), OR
+//      the renderer asks for itself (manual "Refresh Wallpaper" button).
+//   2. Renderer (wallpaper.js) collects calendar/holiday/to-do data using the
+//      *existing* calendar.js helpers + cal-todo-get-all, and invokes
+//      "wallpaper-generate" with the assembled JSON payload.
+//   3. Main renders that payload into a hidden BrowserWindow loaded with a
+//      small, self-contained HTML template (wallpaper-render.html), captures
+//      it as a PNG, and applies it as the system wallpaper.
+// ============================================================================
+
+const WALLPAPER_DIR = path.join(app.getPath("userData"), "wallpaper");
+// How often the main process pings the renderer to check for fresh data.
+// The renderer itself only actually re-renders/re-applies the wallpaper when
+// today's or tomorrow's to-do items (or the date) have changed since the
+// last successful generation — see wcComputeTodoFingerprint() in wallpaper.js.
+const WALLPAPER_REFRESH_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
+const WALLPAPER_IMAGE_PATH = path.join(WALLPAPER_DIR, "wallpaper.png");
+const WALLPAPER_HTML_PATH = path.join(
+  __dirname,
+  "renderer",
+  "wallpaper-render.html",
+);
+const WALLPAPER_PRELOAD_PATH = path.join(
+  __dirname,
+  "renderer",
+  "wallpaper-preload.js",
+);
+
+let wallpaperRefreshTimer = null;
+let wallpaperGenerationInFlight = false; // guards against overlapping pipeline runs
+
+async function ensureWallpaperDir() {
+  await fs.mkdir(WALLPAPER_DIR, { recursive: true });
+}
+
+/**
+ * Renders the given data payload into a hidden, screen-sized BrowserWindow
+ * and captures it as a PNG saved to WALLPAPER_IMAGE_PATH.
+ * @param {Object} payload - Wallpaper content assembled by the renderer.
+ * @returns {Promise<string>} Path to the generated PNG.
+ */
+async function renderWallpaperImage(payload) {
+  const display = screen.getPrimaryDisplay();
+  const { width, height } = display.size;
+
+  const win = new BrowserWindow({
+    width,
+    height,
+    show: false,
+    frame: false,
+    transparent: false,
+    backgroundColor: "#eef2f0",
+    webPreferences: {
+      preload: WALLPAPER_PRELOAD_PATH,
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: false,
+    },
+  });
+
+  try {
+    win.webContents.setBackgroundThrottling(false);
+    await win.loadFile(WALLPAPER_HTML_PATH);
+
+    // Wait for the template to report it has finished painting (it sends
+    // 'wallpaper-render-ready' once data is applied and fonts are loaded),
+    // with a safety timeout in case something in the template goes wrong.
+    const renderReady = new Promise((resolve) => {
+      let settled = false;
+      const finish = () => {
+        if (settled) return;
+        settled = true;
+        ipcMain.removeListener("wallpaper-render-ready", finish);
+        resolve();
+      };
+      ipcMain.once("wallpaper-render-ready", finish);
+      setTimeout(finish, 6000);
+    });
+
+    win.webContents.send("wallpaper:data", { ...payload, width, height });
+    await renderReady;
+
+    // One extra tick so the final paint after layout/fonts has settled.
+    await new Promise((resolve) => setTimeout(resolve, 150));
+
+    const image = await win.webContents.capturePage();
+    const pngBuffer = image.toPNG();
+    await ensureWallpaperDir();
+    await fs.writeFile(WALLPAPER_IMAGE_PATH, pngBuffer);
+    return WALLPAPER_IMAGE_PATH;
+  } finally {
+    if (!win.isDestroyed()) win.destroy();
+  }
+}
+
+/** Sets the desktop wallpaper on Windows via SystemParametersInfo (user32.dll). */
+async function setSystemWallpaperWindows(imagePath) {
+  const ps1Path = path.join(os.tmpdir(), "mto_set_wallpaper.ps1");
+  const psContent = `
+param([string]$ImagePath)
+Add-Type -TypeDefinition @"
+using System;
+using System.Runtime.InteropServices;
+public class MtoWallpaperSetter {
+  [DllImport("user32.dll", CharSet=CharSet.Auto)]
+  public static extern int SystemParametersInfo(int uAction, int uParam, string lpvParam, int fuWinIni);
+}
+"@
+[MtoWallpaperSetter]::SystemParametersInfo(20, 0, $ImagePath, 3) | Out-Null
+`;
+  await fs.writeFile(ps1Path, psContent, "utf8");
+  await new Promise((resolve, reject) => {
+    execFile(
+      "powershell.exe",
+      [
+        "-NoProfile",
+        "-NonInteractive",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        ps1Path,
+        "-ImagePath",
+        imagePath,
+      ],
+      (err, stdout, stderr) => {
+        if (err) reject(new Error(stderr || err.message));
+        else resolve();
+      },
+    );
+  });
+}
+
+/** Sets the desktop wallpaper on macOS via Finder/AppleScript. */
+async function setSystemWallpaperMac(imagePath) {
+  const script = `tell application "Finder" to set desktop picture to POSIX file "${imagePath}"`;
+  await new Promise((resolve, reject) => {
+    execFile("osascript", ["-e", script], (err, stdout, stderr) => {
+      if (err) reject(new Error(stderr || err.message));
+      else resolve();
+    });
+  });
+}
+
+/** Best-effort desktop wallpaper setter for Linux (GNOME/most gsettings-based DEs). */
+async function setSystemWallpaperLinux(imagePath) {
+  const uri = `file://${imagePath}`;
+  await new Promise((resolve, reject) => {
+    execFile(
+      "gsettings",
+      ["set", "org.gnome.desktop.background", "picture-uri", uri],
+      (err, stdout, stderr) => {
+        // Dark-mode variant is best-effort; ignore failures (key may not exist).
+        execFile(
+          "gsettings",
+          ["set", "org.gnome.desktop.background", "picture-uri-dark", uri],
+          () => {},
+        );
+        if (err) reject(new Error(stderr || err.message));
+        else resolve();
+      },
+    );
+  });
+}
+
+async function setSystemWallpaper(imagePath) {
+  if (process.platform === "win32") return setSystemWallpaperWindows(imagePath);
+  if (process.platform === "darwin") return setSystemWallpaperMac(imagePath);
+  return setSystemWallpaperLinux(imagePath);
+}
+
+/**
+ * Full pipeline: render the data payload to an image, set it as the system
+ * wallpaper, and persist status (used by both manual and scheduled refreshes).
+ */
+async function runWallpaperPipeline(payload) {
+  if (wallpaperGenerationInFlight) {
+    return { success: false, error: "A wallpaper refresh is already in progress." };
+  }
+  wallpaperGenerationInFlight = true;
+  try {
+    const imagePath = await renderWallpaperImage(payload || {});
+    await setSystemWallpaper(imagePath);
+    settings.wallpaper.lastGeneratedAt = new Date().toISOString();
+    settings.wallpaper.lastError = null;
+    settings.wallpaper.lastImagePath = imagePath;
+    await saveConfig();
+    return { success: true, imagePath };
+  } catch (err) {
+    console.error("[Wallpaper] Pipeline failed:", err);
+    settings.wallpaper.lastError = err.message;
+    try {
+      await saveConfig();
+    } catch (_) {}
+    return { success: false, error: err.message };
+  } finally {
+    wallpaperGenerationInFlight = false;
+  }
+}
+
+/** Asks the renderer to check for fresh data and submit it for generation (renderer skips the actual re-render if today's/tomorrow's to-dos haven't changed). */
+function requestWallpaperRefresh() {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send("wallpaper:request-data");
+  }
+}
+
+/** (Re)starts the 5-minute background check timer based on current settings. Idempotent. */
+function scheduleWallpaperRefresh() {
+  if (wallpaperRefreshTimer) {
+    clearInterval(wallpaperRefreshTimer);
+    wallpaperRefreshTimer = null;
+  }
+  if (!settings.wallpaper || !settings.wallpaper.enabled) return;
+  wallpaperRefreshTimer = setInterval(
+    requestWallpaperRefresh,
+    WALLPAPER_REFRESH_INTERVAL_MS,
+  );
+}
+
+ipcMain.handle("wallpaper-get-state", () => ({ ...settings.wallpaper }));
+
+ipcMain.handle("wallpaper-set-enabled", async (event, enabled) => {
+  settings.wallpaper.enabled = !!enabled;
+  await saveConfig();
+  scheduleWallpaperRefresh();
+  return { ...settings.wallpaper };
+});
+
+/** Renderer-submitted data → run the full render/set-wallpaper pipeline. */
+ipcMain.handle("wallpaper-generate", async (event, payload) => {
+  return await runWallpaperPipeline(payload);
+});
+
+// ============================================================================
+
 app.whenReady().then(async () => {
   Menu.setApplicationMenu(null);
   await loadConfig();
@@ -4101,6 +4358,23 @@ app.whenReady().then(async () => {
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
+
+  // Dynamic Wallpaper: resume the periodic scheduler if it was left enabled,
+  // and do one refresh shortly after launch so the wallpaper isn't stale
+  // for up to an hour after the app starts.
+  scheduleWallpaperRefresh();
+  if (settings.wallpaper && settings.wallpaper.enabled) {
+    mainWindow.webContents.once("did-finish-load", () => {
+      setTimeout(requestWallpaperRefresh, 3000);
+    });
+  }
+});
+
+app.on("before-quit", () => {
+  if (wallpaperRefreshTimer) {
+    clearInterval(wallpaperRefreshTimer);
+    wallpaperRefreshTimer = null;
+  }
 });
 
 app.on("window-all-closed", () => {

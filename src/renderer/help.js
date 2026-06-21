@@ -61,6 +61,7 @@ window.initHelp = function () {
       <a href="#hn-randompicker"  class="help-pill" data-tab="tools">🎲 Random Picker</a>
       <a href="#hn-backup"        class="help-pill" data-tab="app">Backup</a>
       <a href="#hn-settings"      class="help-pill" data-tab="app">Settings</a>
+      <a href="#hn-wallpaper"     class="help-pill" data-tab="app">🖥️ Dynamic Wallpaper</a>
       <a href="#hn-tips"          class="help-pill" data-tab="app">💡 Tips</a>
     </div>
 
@@ -147,6 +148,11 @@ window.initHelp = function () {
           <span class="help-feature-icon" aria-hidden="true">💾</span>
           <strong>Backup &amp; Restore</strong>
           <span>Export and import all your data safely across machines</span>
+        </div>
+        <div class="help-feature-card" role="listitem">
+          <span class="help-feature-icon" aria-hidden="true">🖥️</span>
+          <strong>Dynamic Wallpaper</strong>
+          <span>A calm desktop background showing this week's calendar and your to-dos, kept fresh automatically</span>
         </div>
       </div>
     </section>
@@ -1094,6 +1100,12 @@ window.initHelp = function () {
         A full calendar with Maldives public holidays, Hijri (Islamic) dates, international
         observance days, and bilingual support in English and ދިވެހި.
       </p>
+
+      <div class="help-badge-row">
+        <span class="help-badge help-badge--updated">Updated</span>
+        <span class="help-badge-caption">Now includes weather, astronomical events, and to-do indicators on each day.</span>
+      </div>
+
       <div class="help-table-wrapper">
         <table class="help-table">
           <thead><tr><th scope="col">Feature</th><th scope="col">Details</th></tr></thead>
@@ -1103,6 +1115,9 @@ window.initHelp = function () {
             <tr><td><strong>Hijri dates</strong></td><td>Each day cell shows the corresponding Hijri calendar date in a smaller label.</td></tr>
             <tr><td><strong>Public Holidays</strong></td><td>Maldives national holidays are highlighted and labelled directly on the calendar (blue styling with gazette references).</td></tr>
             <tr><td><strong>International Days</strong></td><td>~75 UN and international observance days are marked with a subtle green dot.</td></tr>
+            <tr><td><strong>Astronomical events</strong></td><td>Solstices, equinoxes, eclipses, and similar events are marked with a small icon on the relevant day; click a day to see full details.</td></tr>
+            <tr><td><strong>Weather</strong></td><td>Each day shows a weather summary — a live forecast for upcoming dates, or actual recorded conditions for past dates. A small badge indicates whether you're looking at a forecast or historical data.</td></tr>
+            <tr><td><strong>To-do indicator</strong></td><td>Days with one or more to-do items show a small dot, so you can spot busy days at a glance without opening the To-Do page.</td></tr>
             <tr><td><strong>Language toggle</strong></td><td>Switch all labels between English and ދިވެހި. The setting is remembered between sessions.</td></tr>
             <tr><td><strong>Weekends</strong></td><td>Friday and Saturday are highlighted as Maldivian weekend days.</td></tr>
             <tr><td><strong>Past dates</strong></td><td>Days before today are shown with a faint diagonal strikethrough to help you orient quickly.</td></tr>
@@ -1112,6 +1127,7 @@ window.initHelp = function () {
       <p class="help-note">
         💡 Holiday data is loaded from a remote JSON feed (GitHub) and cached locally for 24 hours.
         The calendar works offline using the cached data. The week starts on <strong>Sunday</strong> to match Maldivian convention.
+        Weather data is fetched from Open-Meteo and also cached locally, so previously viewed dates remain available offline.
       </p>
     </section>
 
@@ -1402,8 +1418,83 @@ window.initHelp = function () {
       <h3 class="help-subsection-title">Notion Integration</h3>
       <p>Enter your <strong>Notion Integration Token</strong> and <strong>Database ID</strong> here to enable Notes and To-Do → Notion sync. See the <a href="#hn-notes" class="help-inline-link">Notes section</a> for full setup instructions.</p>
 
+      <h3 class="help-subsection-title">Dynamic Wallpaper</h3>
+      <p>Turn your desktop background into a live view of this week's calendar and your to-dos. See the <a href="#hn-wallpaper" class="help-inline-link">Dynamic Wallpaper section</a> below for full details.</p>
+
       <h3 class="help-subsection-title">About</h3>
       <p>Displays the app version, developer contact details, and repository link — useful when reporting bugs or requesting support.</p>
+    </section>
+
+    <!-- ══════════════════════════════════════════════════════════════════
+         SECTION: DYNAMIC WALLPAPER
+    ══════════════════════════════════════════════════════════════════════ -->
+    <section class="help-section" id="hn-wallpaper" data-tab="app" aria-labelledby="hn-wallpaper-title">
+      <h2 class="help-section-title" id="hn-wallpaper-title">🖥️ Dynamic Wallpaper</h2>
+
+      <div class="help-badge-row">
+        <span class="help-badge help-badge--new">New Feature</span>
+        <span class="help-badge-caption">Turns your desktop background into a calm, always-current view of your week.</span>
+      </div>
+
+      <p>
+        <strong>Dynamic Wallpaper</strong> generates a soft, minimalist desktop background showing
+        this week's calendar — with public holidays and observance days highlighted — plus your
+        <strong>today's</strong> and <strong>tomorrow's</strong> to-do items, and sets it as your
+        Windows desktop background automatically. Everything is configured from
+        <strong>Settings → Dynamic Wallpaper</strong>.
+      </p>
+
+      <h3 class="help-subsection-title">Turning It On</h3>
+      <ol class="help-list">
+        <li>Open <strong>Settings</strong> and scroll to the <strong>Dynamic Wallpaper</strong> card.</li>
+        <li>Switch on <strong>Enable Dynamic Wallpaper</strong>. The app generates and applies a wallpaper immediately.</li>
+        <li>When the toggle is off, the rest of the card (colours, text size, Refresh button) is greyed out — there's nothing to customise or refresh until it's turned back on.</li>
+      </ol>
+
+      <h3 class="help-subsection-title">What's on the Wallpaper</h3>
+      <div class="help-table-wrapper">
+        <table class="help-table">
+          <thead><tr><th scope="col">Element</th><th scope="col">Details</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Date header</strong></td><td>Today's date in long form, with the equivalent Hijri date underneath.</td></tr>
+            <tr><td><strong>Week strip</strong></td><td>This week (Sunday–Saturday) with each day's number, Hijri date, and a holiday/observance label where one exists. Today is highlighted; weekends are subtly shaded.</td></tr>
+            <tr><td><strong>Today &amp; Tomorrow panel</strong></td><td>Pending to-dos for today and tomorrow, sorted by priority, with a coloured dot per priority level. Capped at six items per day with a "+N more" note if you have more.</td></tr>
+            <tr><td><strong>Empty days</strong></td><td>If a day has no to-dos, that column simply shows a quiet "nothing on the list" message — the calendar grid and any holidays still display normally.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 class="help-subsection-title">Keeping It Fresh</h3>
+      <ul class="help-list">
+        <li>The app checks for changes every <strong>5 minutes</strong> while enabled — silently, in the background.</li>
+        <li>The desktop image is only actually regenerated when <strong>today's or tomorrow's to-do items change</strong> (added, edited, completed, reopened, or deleted), or when the date rolls over. If nothing has changed, the check is a no-op — no flicker, no unnecessary disk writes.</li>
+        <li>Click <strong>Refresh Wallpaper Now</strong> in Settings to force an immediate update at any time, regardless of whether anything changed.</li>
+        <li>The Settings card always shows the status of the last attempt — either a timestamp of the last successful update, or an error message if something went wrong.</li>
+      </ul>
+
+      <h3 class="help-subsection-title">Customisation</h3>
+      <div class="help-table-wrapper">
+        <table class="help-table">
+          <thead><tr><th scope="col">Control</th><th scope="col">Effect</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Background — start / end</strong></td><td>The two colours blended into the wallpaper's soft diagonal gradient.</td></tr>
+            <tr><td><strong>Accent colour</strong></td><td>Used to highlight today's date in the week strip.</td></tr>
+            <tr><td><strong>Text size</strong></td><td>Small / Medium / Large — scales all text on the wallpaper, useful for high-resolution or multi-monitor setups.</td></tr>
+            <tr><td><strong>Reset Theme</strong></td><td>Restores the default sage-and-cream colour scheme and medium text size.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="help-note">
+        💡 Colour and text-size changes are saved instantly but only appear on the desktop the next
+        time the wallpaper regenerates — click <strong>Refresh Wallpaper Now</strong> to see them right away.
+      </p>
+
+      <h3 class="help-subsection-title">Language &amp; Platform</h3>
+      <ul class="help-list">
+        <li>The wallpaper follows the same language as the Calendar page (English or ދިވެހި), including right-to-left layout and Thaana script in Dhivehi mode.</li>
+        <li>Wallpaper images are generated and applied entirely offline.</li>
+        <li>Setting the desktop background is fully supported on <strong>Windows</strong>. macOS and Linux are best-effort.</li>
+      </ul>
     </section>
 
     <!-- ══════════════════════════════════════════════════════════════════
@@ -1494,6 +1585,13 @@ window.initHelp = function () {
         <li>The Unit Converter accepts feet-and-inches input like <code>5'11"</code> directly in the length fields.</li>
         <li>Tide predictions are mathematical estimates — always cross-check against official tables for navigation or safety.</li>
         <li>In the Moon Phase view, spring tides occur around Full Moon and New Moon.</li>
+      </ul>
+
+      <h3 class="help-subsection-title">Dynamic Wallpaper</h3>
+      <ul class="help-list">
+        <li>Set due dates and priorities on your to-dos so the wallpaper's Today/Tomorrow panel stays genuinely useful at a glance.</li>
+        <li>If you change the theme colours, click <strong>Refresh Wallpaper Now</strong> to see the new look immediately instead of waiting for the next automatic check.</li>
+        <li>Because the wallpaper only updates when today's or tomorrow's to-dos change, it won't repeatedly flicker your desktop during a quiet day — it's safe to leave enabled at all times.</li>
       </ul>
     </section>
 

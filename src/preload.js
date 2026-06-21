@@ -405,6 +405,30 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
   /** Export current to-do list as a Word report document. */
   exportTodoWord: (data) => ipcRenderer.invoke("export-todo-word", data),
+
+  // ==========================================
+  // DYNAMIC WALLPAPER
+  // ==========================================
+
+  /** Get persisted wallpaper state: { enabled, lastGeneratedAt, lastError, lastImagePath }. */
+  wallpaperGetState: () => ipcRenderer.invoke("wallpaper-get-state"),
+
+  /** Enable/disable the Dynamic Wallpaper feature (also starts/stops the hourly scheduler in main). */
+  wallpaperSetEnabled: (enabled) =>
+    ipcRenderer.invoke("wallpaper-set-enabled", enabled),
+
+  /** Submit an assembled data payload (calendar week + today/tomorrow to-dos + theme) to render and apply as wallpaper. */
+  wallpaperGenerate: (payload) =>
+    ipcRenderer.invoke("wallpaper-generate", payload),
+
+  /**
+   * Subscribe to the main process's hourly "please send fresh data" ping.
+   * Registers a single listener (re-registering replaces the previous one).
+   */
+  onWallpaperRequestData: (callback) => {
+    ipcRenderer.removeAllListeners("wallpaper:request-data");
+    ipcRenderer.on("wallpaper:request-data", () => callback());
+  },
 });
 
 //OLD ONE

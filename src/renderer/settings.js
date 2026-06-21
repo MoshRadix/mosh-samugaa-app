@@ -121,6 +121,8 @@ window.initSettings = () => {
   loadAboutInfo();
   loadNotionSettings();
   setupNotionSettings();
+  if (typeof window.loadWallpaperSettings === "function") window.loadWallpaperSettings();
+  if (typeof window.setupWallpaperSettings === "function") window.setupWallpaperSettings();
   if (typeof window.initBackup === "function") window.initBackup();
 };
 
