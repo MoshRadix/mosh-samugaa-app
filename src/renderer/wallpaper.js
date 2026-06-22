@@ -25,6 +25,8 @@
 // ============================================================================
 
 const WC_SETTINGS_KEY = "mto_wallpaper_theme";
+const WC_TODO_CHANGE_EVENT = "mto:todo-changed";
+const WC_TODO_CHANGE_DEBOUNCE_MS = 5 * 1000;
 
 const WC_DEFAULTS = {
   bg1: "#eef6f1",
@@ -172,6 +174,7 @@ async function wcCollectWallpaperData() {
 // ============================================================================
 
 let wcGenerating = false;
+let wcTodoChangeRefreshTimer = null;
 const WC_LAST_FINGERPRINT_KEY = "mto_wallpaper_last_fingerprint";
 
 /**
@@ -188,6 +191,17 @@ function wcComputeTodoFingerprint(data) {
   return [data.todayStr, data.tomorrowStr, simplify(data.todayTodos), simplify(data.tomorrowTodos)].join("\u0002");
 }
 
+async function wcGetWallpaperEnabledState() {
+  try {
+    if (window.electronAPI && typeof window.electronAPI.wallpaperGetState === "function") {
+      const state = await window.electronAPI.wallpaperGetState();
+      return !!(state && state.enabled);
+    }
+  } catch (err) {
+    console.warn("[Wallpaper] Failed to read enabled state:", err);
+  }
+  return false;
+}
 /**
  * Collects fresh data and asks the main process to render + apply it as the
  * system wallpaper. Shared by the manual "Refresh Now" button and the
@@ -200,9 +214,18 @@ function wcComputeTodoFingerprint(data) {
 async function wcGenerateWallpaper(opts = {}) {
   const silent = !!opts.silent;
   const force = !!opts.force;
+  const requireEnabled = opts.requireEnabled !== false && !force;
   if (wcGenerating) return { success: false, error: "Already generating." };
   if (!window.electronAPI || typeof window.electronAPI.wallpaperGenerate !== "function") {
     return { success: false, error: "Wallpaper API unavailable." };
+  }
+
+  if (requireEnabled) {
+    const enabled = await wcGetWallpaperEnabledState();
+    if (!enabled) {
+      wcSetStatus("Dynamic Wallpaper disabled.", "info");
+      return { success: true, skipped: true, reason: "disabled" };
+    }
   }
 
   wcGenerating = true;
@@ -247,6 +270,28 @@ async function wcGenerateWallpaper(opts = {}) {
   }
 }
 
+/**
+ * Debounces To-Do mutation bursts into one background wallpaper check. The
+ * fingerprint check in wcGenerateWallpaper() still decides whether rendering is
+ * necessary, so this timer is cheap when edits do not affect today/tomorrow.
+ */
+function wcScheduleTodoChangeWallpaperRefresh() {
+  if (wcTodoChangeRefreshTimer) {
+    clearTimeout(wcTodoChangeRefreshTimer);
+    wcTodoChangeRefreshTimer = null;
+  }
+
+  wcSetStatus("To-do changed. Wallpaper will refresh shortly.", "info");
+  wcTodoChangeRefreshTimer = setTimeout(() => {
+    wcTodoChangeRefreshTimer = null;
+    if (wcGenerating) {
+      wcScheduleTodoChangeWallpaperRefresh();
+      return;
+    }
+    wcGenerateWallpaper({ silent: true });
+  }, WC_TODO_CHANGE_DEBOUNCE_MS);
+}
+
 // Always listen for the main process's periodic refresh ping, regardless of
 // whether the Settings view is currently open — this is what keeps the
 // wallpaper checking for to-do changes in the background. The fingerprint
@@ -257,6 +302,11 @@ if (window.electronAPI && typeof window.electronAPI.onWallpaperRequestData === "
     wcGenerateWallpaper({ silent: true });
   });
 }
+
+// To-Do owns persistence; wallpaper owns refresh timing. A successful To-Do
+// write dispatches this event, and the wallpaper module coalesces rapid changes
+// into one refresh 5 seconds after the final change.
+window.addEventListener(WC_TODO_CHANGE_EVENT, wcScheduleTodoChangeWallpaperRefresh);
 
 // ============================================================================
 // SETTINGS PAGE UI

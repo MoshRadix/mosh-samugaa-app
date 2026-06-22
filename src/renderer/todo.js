@@ -37,11 +37,23 @@ let _tdModalTags = []; // tags being edited in modal
 let _tdPriorityFilter = "all"; // "all" | "low" | "medium" | "high"
 let _tdModalPriority = "medium"; // priority being set in modal
 
+const TD_WALLPAPER_TODO_CHANGE_EVENT = "mto:todo-changed";
+
 // Notion
 let _tdNotionToken = "";
 let _tdNotionDbId = "";
 let _tdNotionSyncing = false;
 
+function _tdNotifyWallpaperTodoChanged(reason, item) {
+  window.dispatchEvent(new CustomEvent(TD_WALLPAPER_TODO_CHANGE_EVENT, {
+    detail: {
+      reason,
+      itemId: item && item.id,
+      date: item && item.date,
+      changedAt: new Date().toISOString(),
+    },
+  }));
+}
 // ============================================================================
 // INIT
 // ============================================================================
@@ -896,6 +908,7 @@ async function _tdSaveModal() {
         item.date = date;
         item.tags = tags;
         item.priority = priority;
+        _tdNotifyWallpaperTodoChanged("modal-edit", item);
 
         // ── Sync edit to linked Work Log ─────────────────────────────────
         if (item.linkedWorklogId) {
@@ -916,6 +929,7 @@ async function _tdSaveModal() {
       const newItem = await window.electronAPI.calTodoAdd(date, text, tags, priority);
       _tdAllItems.push(newItem);
       _tdNotifyCalendar(date);
+      _tdNotifyWallpaperTodoChanged("modal-add", newItem);
     }
   } catch (e) {
     console.error("Todo save error:", e);
@@ -962,6 +976,7 @@ function _tdStartInlineEdit(textEl, itemId) {
       try {
         await window.electronAPI.calTodoUpdate(itemId, { text: newText });
         item.text = newText;
+        _tdNotifyWallpaperTodoChanged("inline-edit", item);
         // Re-render the text span only to re-escape it properly
         textEl.textContent = newText;
 
@@ -1039,6 +1054,7 @@ function _tdBindItemEvents() {
 
       try {
         await window.electronAPI.calTodoUpdate(id, { done: newDone });
+        _tdNotifyWallpaperTodoChanged("toggle-done", item);
 
         // ── Auto Work Log Integration ────────────────────────────────────
         if (newDone) {
@@ -1136,6 +1152,7 @@ function _tdBindItemEvents() {
         try {
           await window.electronAPI.calTodoMove(id, newDate);
           item.date = newDate;
+          _tdNotifyWallpaperTodoChanged("date-move", item);
           _tdNotifyCalendar(oldDate);
           _tdNotifyCalendar(newDate);
           _tdRender();
@@ -1185,6 +1202,7 @@ function _tdBindItemEvents() {
         await window.electronAPI.calTodoDelete(id);
         if (item) _tdNotifyCalendar(item.date);
         _tdAllItems = _tdAllItems.filter((i) => i.id !== id);
+        _tdNotifyWallpaperTodoChanged("delete", item || { id });
         _tdRender();
         const msg = hasLinkedLog ? "Task and Work Log entry deleted" : "Task deleted";
         if (window.showToast) window.showToast(msg, "success");
@@ -1433,6 +1451,7 @@ async function _tdNotionPull() {
     _tdSaveNotionMap(notionMap);
     _tdSetNotionBusy(false);
     _tdRender();
+    if (imported > 0 || updated > 0) _tdNotifyWallpaperTodoChanged("notion-pull", null);
     if (window.showToast) window.showToast(`Notion pull: ${imported} imported, ${updated} updated`, "success");
   } catch (e) {
     console.error("Notion pull error:", e);
