@@ -185,22 +185,24 @@ function smRenderTemplateList() {
   });
 }
 
-function smConfirmDelete(id) {
+async function smConfirmDelete(id) {
   const tpl = smTemplates.find(t => t.id === id);
   const name = tpl ? tpl.name : id;
-  const doDelete = async () => {
-    try {
-      await smIPC("smDeleteTemplate", id);
-      smNotify(`"${name}" deleted.`, "success");
-      smLoadAndRenderList();
-    } catch (e) {
-      smNotify("Delete failed: " + e.message, "error");
-    }
-  };
+
+  let confirmed = false;
   if (typeof showConfirm === "function") {
-    showConfirm(`Delete "${name}"? This cannot be undone.`, doDelete);
-  } else if (confirm(`Delete "${name}"?`)) {
-    doDelete();
+    confirmed = await showConfirm(`Delete "${name}"? This cannot be undone.`, "Delete");
+  } else {
+    confirmed = confirm(`Delete "${name}"?`);
+  }
+  if (!confirmed) return;
+
+  try {
+    await smIPC("smDeleteTemplate", id);
+    smNotify(`"${name}" deleted.`, "success");
+    smLoadAndRenderList();
+  } catch (e) {
+    smNotify("Delete failed: " + e.message, "error");
   }
 }
 

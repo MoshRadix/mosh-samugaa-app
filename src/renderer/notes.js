@@ -28,16 +28,16 @@ window.initNotes = function () {
   }
   _notesInitialized = true;
 
-  _loadNotesFromStorage();
+  _loadNotesFromStorage().then(() => {
+    if (_notes.length === 0) {
+      _createNote('Welcome Note', 'Start typing your notes here...\n\nThis is your personal notebook. Notes are saved automatically as you type.');
+    } else {
+      _activateNote(_notes[0].id);
+    }
+  });
   _loadNotionSettings();
   _attachNoteEditorListeners();
-
-  // If no notes yet, create a welcome note
-  if (_notes.length === 0) {
-    _createNote('Welcome Note', 'Start typing your notes here...\n\nThis is your personal notebook. Notes are saved automatically as you type.');
-  } else {
-    _activateNote(_notes[0].id);
-  }
+  _attachCloudSyncListener();
 };
 
 // ============================================================================
@@ -45,26 +45,224 @@ window.initNotes = function () {
 // ============================================================================
 
 async function _loadNotesFromStorage() {
+  const legacyNotes = _loadLegacyNotes();
   try {
-    const raw = localStorage.getItem('mto_notes');
-    if (raw) {
-      _notes = JSON.parse(raw);
+    if (window.electronAPI?.notesInit) {
+      const dbNotes = await window.electronAPI.notesInit(legacyNotes);
+      _notes = Array.isArray(dbNotes) ? dbNotes.map(_normalizeLocalNote) : [];
+    } else {
+      _notes = legacyNotes;
     }
   } catch (e) {
-    _notes = [];
+    console.warn('Notes DB unavailable; using localStorage fallback.', e);
+    _notes = legacyNotes;
   }
+  _notes = _dedupeCloudNotes(_notes);
+  _saveLegacyNotes();
   _renderNotesList();
-  if (_notes.length > 0) {
-    _activateNote(_notes[0].id);
-  }
 }
 
 function _saveNotesToStorage() {
   try {
-    localStorage.setItem('mto_notes', JSON.stringify(_notes));
+    _notes = _notes.map(_normalizeLocalNote);
+    _saveLegacyNotes();
   } catch (e) {
     console.error('Notes save error:', e);
   }
+}
+
+function _loadLegacyNotes() {
+  try {
+    const raw = localStorage.getItem('mto_notes');
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.map(_normalizeLocalNote) : [];
+  } catch {
+    return [];
+  }
+}
+
+function _saveLegacyNotes() {
+  localStorage.setItem('mto_notes', JSON.stringify(_notes.filter(n => !n.isDeleted)));
+}
+
+function _attachCloudSyncListener() {
+  if (!window.electronAPI?.onSyncNotesUpdate) return;
+
+  window.electronAPI.onSyncNotesUpdate((serverNotes) => {
+    if (!Array.isArray(serverNotes)) return;
+
+    const looksLikeFullLocalList = serverNotes.every(note =>
+      note && Object.prototype.hasOwnProperty.call(note, 'createdAt')
+    );
+    if (looksLikeFullLocalList) {
+      _notes = _dedupeCloudNotes(serverNotes.map(_normalizeLocalNote));
+      _saveNotesToStorage();
+      _renderNotesList();
+      if (_activeNoteId) _activateNote(_activeNoteId);
+      return;
+    }
+
+    for (const sn of serverNotes) {
+      if (!sn) continue;
+
+      if (sn.isDeleted) {
+        _notes = _notes.filter(n => !_noteMatchesServer(n, sn));
+        continue;
+      }
+
+      const localIdx = _findCloudNoteIndex(sn);
+      const serverDate = new Date(sn.updatedAt || sn.clientUpdatedAt || 0).getTime();
+
+      if (localIdx === -1) {
+        _notes.unshift(_serverNoteToLocal(sn));
+      } else {
+        const local = _notes[localIdx];
+        const localDate = new Date(local.updatedAt ?? 0).getTime();
+        _notes[localIdx] = _mergeServerNote(local, sn, serverDate, localDate);
+      }
+    }
+
+    _notes = _dedupeCloudNotes(_notes);
+    _saveNotesToStorage();
+    _renderNotesList();
+    if (_activeNoteId) _activateNote(_activeNoteId);
+  });
+}
+
+function _normalizeLocalNote(note = {}) {
+  const id = String(note.id || note.clientId || _newNoteId()).trim();
+  return {
+    ...note,
+    id,
+    clientId: String(note.clientId || id).trim(),
+    remoteId: note.remoteId || null,
+    language: note.language || 'en',
+    color: note.color || '#1c1408',
+    syncStatus: note.syncStatus || note.sync_status || (note.synced ? 'synced' : 'pending'),
+    isDeleted: !!(note.isDeleted || note.is_deleted),
+  };
+}
+
+function _findCloudNoteIndex(serverNote) {
+  let idx = _notes.findIndex(n => _noteMatchesServer(n, serverNote));
+  if (idx !== -1) return idx;
+
+  idx = _notes.findIndex(n => (
+    !n.remoteId &&
+    n.title === serverNote.title &&
+    n.content === serverNote.content
+  ));
+  return idx;
+}
+
+function _noteMatchesServer(localNote = {}, serverNote = {}) {
+  const localIds = [
+    localNote.id,
+    localNote.clientId,
+    localNote.remoteId,
+  ].filter(Boolean).map(String);
+  const serverIds = [
+    serverNote.id,
+    serverNote.clientId,
+    serverNote.remoteId,
+  ].filter(Boolean).map(String);
+
+  return localIds.some(id => serverIds.includes(id));
+}
+
+function _serverNoteToLocal(serverNote = {}) {
+  const clientId = String(serverNote.clientId || serverNote.id || _newNoteId());
+  return _normalizeLocalNote({
+    id: clientId,
+    clientId,
+    remoteId: serverNote.id || null,
+    title: serverNote.title || 'Untitled Note',
+    content: serverNote.content || '',
+    language: serverNote.language || 'en',
+    color: serverNote.color || '#1c1408',
+    createdAt: serverNote.createdAt || serverNote.clientUpdatedAt || new Date().toISOString(),
+    updatedAt: serverNote.updatedAt || serverNote.clientUpdatedAt || new Date().toISOString(),
+    synced: true,
+  });
+}
+
+function _mergeServerNote(localNote = {}, serverNote = {}, serverDate = 0, localDate = 0) {
+  const local = _normalizeLocalNote(localNote);
+  const serverIsNewer = serverDate >= localDate;
+
+  return _normalizeLocalNote({
+    ...local,
+    title: serverIsNewer && serverNote.title != null ? serverNote.title : local.title,
+    content: serverIsNewer && serverNote.content != null ? serverNote.content : local.content,
+    createdAt: local.createdAt || serverNote.createdAt,
+    updatedAt: serverIsNewer
+      ? (serverNote.updatedAt || serverNote.clientUpdatedAt || local.updatedAt)
+      : local.updatedAt,
+    clientId: local.clientId || serverNote.clientId || local.id,
+    remoteId: local.remoteId || serverNote.remoteId || serverNote.id || null,
+    language: local.language || serverNote.language || 'en',
+    color: local.color || serverNote.color || '#1c1408',
+    notionPageId: local.notionPageId || serverNote.notionPageId || null,
+    synced: true,
+  });
+}
+
+function _dedupeCloudNotes(notes) {
+  const deduped = [];
+  for (const rawNote of notes) {
+    const note = _normalizeLocalNote(rawNote);
+    const existingIdx = deduped.findIndex(existing => (
+      _localNotesOverlap(existing, note) ||
+      _localNotesLookLikeCloudDuplicates(existing, note)
+    ));
+
+    if (existingIdx === -1) {
+      deduped.push(note);
+    } else {
+      deduped[existingIdx] = _mergeDuplicateLocalNotes(deduped[existingIdx], note);
+    }
+  }
+  return deduped;
+}
+
+function _localNotesOverlap(a = {}, b = {}) {
+  return _noteMatchesServer(a, b);
+}
+
+function _localNotesLookLikeCloudDuplicates(a = {}, b = {}) {
+  return (
+    a.title === b.title &&
+    a.content === b.content &&
+    (!!a.remoteId || !!b.remoteId)
+  );
+}
+
+function _mergeDuplicateLocalNotes(a = {}, b = {}) {
+  const first = _normalizeLocalNote(a);
+  const second = _normalizeLocalNote(b);
+  const firstDate = new Date(first.updatedAt || 0).getTime();
+  const secondDate = new Date(second.updatedAt || 0).getTime();
+  const newer = secondDate > firstDate ? second : first;
+  const older = newer === first ? second : first;
+  const active = [first, second].find(note => note.id === _activeNoteId || note.clientId === _activeNoteId);
+  const language = active?.language || ([first, second].some(note => note.language === 'dv') ? 'dv' : newer.language || older.language || 'en');
+
+  return _normalizeLocalNote({
+    ...older,
+    ...newer,
+    id: active?.id || first.id || second.id,
+    clientId: active?.clientId || first.clientId || second.clientId || first.id || second.id,
+    remoteId: first.remoteId || second.remoteId || null,
+    language,
+    color: newer.color || older.color || '#1c1408',
+    notionPageId: newer.notionPageId || older.notionPageId || null,
+    synced: first.synced || second.synced,
+  });
+}
+
+function _newNoteId() {
+  return 'note_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
 }
 
 // ============================================================================
@@ -74,6 +272,7 @@ function _saveNotesToStorage() {
 function _loadNotionSettings() {
   _notionToken = localStorage.getItem('mto_notion_token') || '';
   _notionDbId = localStorage.getItem('mto_notion_db_id') || '';
+  _updateNotionSidebarStatus();
 }
 
 // Called from settings.js
@@ -82,6 +281,7 @@ window.saveNotionSettings = function(token, dbId) {
   _notionDbId = dbId.trim();
   localStorage.setItem('mto_notion_token', _notionToken);
   localStorage.setItem('mto_notion_db_id', _notionDbId);
+  _updateNotionSidebarStatus();
 };
 
 window.getNotionSettings = function() {
@@ -96,18 +296,23 @@ window.getNotionSettings = function() {
 // ============================================================================
 
 function _createNote(title = 'Untitled Note', content = '', language = 'en') {
+  const id = _newNoteId();
   const note = {
-    id: 'note_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
+    id,
+    clientId: id,
+    remoteId: null,
     title: title || 'Untitled Note',
     content,
     language: language || 'en',
     color: '#1c1408',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
+    syncStatus: 'pending',
     notionPageId: null,
   };
   _notes.unshift(note);
   _saveNotesToStorage();
+  window.electronAPI?.addNote?.(note).catch(e => console.warn('SQLite note add failed:', e));
   _renderNotesList();
   _activateNote(note.id);
   return note;
@@ -118,13 +323,16 @@ function _updateActiveNote(field, value) {
   if (!note) return;
   note[field] = value;
   note.updatedAt = new Date().toISOString();
+  note.syncStatus = 'pending';
   _saveNotesToStorage();
+  window.electronAPI?.updateNote?.(note).catch(e => console.warn('SQLite note update failed:', e));
   _renderNoteItem(note);
 }
 
 function _deleteNote(id) {
   const idx = _notes.findIndex(n => n.id === id);
   if (idx === -1) return;
+  window.electronAPI?.deleteNoteRecord?.(id).catch(e => console.warn('SQLite note delete failed:', e));
   _notes.splice(idx, 1);
   _saveNotesToStorage();
   _renderNotesList();
@@ -288,14 +496,28 @@ function _attachNoteEditorListeners() {
     }, 400);
   });
 
+  document.getElementById('nb-cloud-sync-btn')?.addEventListener('click', () => {
+    _syncWithCloudService();
+  });
+
   // Sync to Notion button
   document.getElementById('nb-sync-btn')?.addEventListener('click', () => {
     if (!_activeNoteId) return;
     _syncNoteToNotion(_activeNoteId);
   });
+  document.getElementById('nb-sidebar-sync-btn')?.addEventListener('click', () => {
+    if (!_activeNoteId) {
+      showToast('Select a note to sync.', 'warning');
+      return;
+    }
+    _syncNoteToNotion(_activeNoteId);
+  });
 
   // Sync all button
   document.getElementById('nb-sync-all-btn')?.addEventListener('click', () => {
+    _syncAllToNotion();
+  });
+  document.getElementById('nb-sidebar-sync-all-btn')?.addEventListener('click', () => {
     _syncAllToNotion();
   });
 
@@ -338,6 +560,51 @@ function _filterNotes(query) {
   });
 }
 
+async function _syncWithCloudService() {
+  if (!window.electronAPI?.syncNow) {
+    showToast('Cloud sync is not available.', 'error');
+    return;
+  }
+
+  const btn = document.getElementById('nb-cloud-sync-btn');
+  const original = btn?.innerHTML;
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Syncing...';
+  }
+
+  try {
+    await window.electronAPI?.flushNotes?.();
+    const result = await window.electronAPI.syncNow({ notes: _notes });
+    if (!result?.success) {
+      showToast(result?.error || 'Cloud sync failed.', 'error');
+      return;
+    }
+
+    if (window.electronAPI?.getNotes) {
+      const dbNotes = await window.electronAPI.getNotes();
+      if (Array.isArray(dbNotes)) {
+        _notes = _dedupeCloudNotes(dbNotes.map(_normalizeLocalNote));
+        _saveNotesToStorage();
+      }
+    }
+    _renderNotesList();
+    if (_activeNoteId) _activateNote(_activeNoteId);
+    const notesSent = result.notes?.sent ?? _notes.length;
+    const todosSent = result.todos?.sent ?? 0;
+    const workLogsSent = result.workLogs?.sent ?? 0;
+    showToast(`Cloud synced. Sent ${notesSent} note(s), ${todosSent} todo(s), ${workLogsSent} work log(s).`, 'success');
+  } catch (err) {
+    console.error('Cloud sync error:', err);
+    showToast('Cloud sync failed: ' + (err.message || 'Unknown error'), 'error');
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = original;
+    }
+  }
+}
+
 // ============================================================================
 // NOTION SYNC
 // ============================================================================
@@ -358,6 +625,7 @@ async function _syncNoteToNotion(noteId) {
 
   _setSyncStatus('syncing');
   _updateSyncBadge(note);
+  _setNoteSyncButtonsBusy(true);
 
   try {
     if (note.notionPageId) {
@@ -380,6 +648,8 @@ async function _syncNoteToNotion(noteId) {
     _setSyncStatus('error');
     _updateSyncBadgeById(noteId, 'error');
     showToast('Notion sync failed: ' + (err.message || 'Unknown error'), 'error');
+  } finally {
+    _setNoteSyncButtonsBusy(false);
   }
 }
 
@@ -391,6 +661,8 @@ async function _syncAllToNotion() {
   }
 
   const btn = document.getElementById('nb-sync-all-btn');
+  const sidebarBtn = document.getElementById('nb-sidebar-sync-all-btn');
+  if (sidebarBtn) { sidebarBtn.disabled = true; sidebarBtn.textContent = 'Syncing...'; }
   if (btn) { btn.disabled = true; btn.textContent = 'Syncing…'; }
 
   let succeeded = 0, failed = 0;
@@ -412,6 +684,7 @@ async function _syncAllToNotion() {
   _saveNotesToStorage();
   _renderNotesList();
   if (_activeNoteId) _activateNote(_activeNoteId);
+  if (sidebarBtn) { sidebarBtn.disabled = false; sidebarBtn.textContent = 'Sync All'; }
 
   if (btn) { btn.disabled = false; btn.textContent = '⇅ Sync All'; }
   showToast(`Synced ${succeeded} note(s) to Notion${failed ? ` (${failed} failed)` : ''}.`, failed ? 'warning' : 'success');
@@ -537,6 +810,28 @@ function _chunkString(str, size) {
     chunks.push(str.slice(i, i + size));
   }
   return chunks.length ? chunks : [''];
+}
+
+function _updateNotionSidebarStatus() {
+  const status = document.getElementById('nb-notion-status');
+  const hint = document.getElementById('nb-notion-hint');
+  if (!status) return;
+
+  const connected = !!_notionToken && !!_notionDbId;
+  status.textContent = connected ? 'On' : 'Off';
+  status.className = `nb-notion-status${connected ? ' connected' : ''}`;
+  if (hint) hint.textContent = connected ? 'Ready to sync notes' : 'Configure in Settings -> Notion';
+}
+
+function _setNoteSyncButtonsBusy(busy) {
+  const buttons = [
+    document.getElementById('nb-sync-btn'),
+    document.getElementById('nb-sidebar-sync-btn')
+  ].filter(Boolean);
+
+  buttons.forEach((btn) => {
+    btn.disabled = busy;
+  });
 }
 
 // ============================================================================

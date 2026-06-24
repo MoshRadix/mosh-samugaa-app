@@ -13,7 +13,7 @@ window.initHelp = function () {
 
     <!-- ══ HELP HERO ═══════════════════════════════════════════════════ -->
     <div class="help-hero" role="banner">
-      <div class="help-hero-icon" aria-hidden="true">🧭</div>
+      <img class="help-hero-icon" src="../../assets/icons/app.ico" alt="" aria-hidden="true" />
       <div class="help-hero-text">
         <h1 class="help-hero-title">MTO Samugaa — User Guide</h1>
         <p class="help-hero-sub">Complete reference for all features: documents, to-dos, work logs, calendar, utilities, and more</p>
@@ -71,7 +71,7 @@ window.initHelp = function () {
     <section class="help-section" id="hn-overview" data-tab="all" aria-labelledby="hn-overview-title">
       <h2 class="help-section-title" id="hn-overview-title">📄 Overview</h2>
       <p>
-        <strong>MTO Samugaa</strong> ("MTO's compass") is a desktop productivity suite for
+        <strong>MTO Samugaa</strong> is a desktop productivity suite for
         Addu City Council staff. It generates filled Word (<code>.docx</code>) and Excel
         (<code>.xlsx</code>) documents from reusable templates, manages to-do tasks, logs
         daily work activities, creates branded social media graphics, maintains a personal

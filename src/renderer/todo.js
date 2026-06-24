@@ -36,6 +36,7 @@ let _tdTagFilter = null; // null = show all, string = filter by this tag
 let _tdModalTags = []; // tags being edited in modal
 let _tdPriorityFilter = "all"; // "all" | "low" | "medium" | "high"
 let _tdModalPriority = "medium"; // priority being set in modal
+let _tdCloudSyncListenerAttached = false;
 
 const TD_WALLPAPER_TODO_CHANGE_EVENT = "mto:todo-changed";
 
@@ -70,6 +71,7 @@ async function initTodo() {
   _tdBindStatusTabs();
   _tdBindSearchInput();
   _tdBindSortButton();
+  _tdBindCloudSyncButton();
   _tdBindAddButton();
   _tdBindModal();
   _tdBindTagFilter();
@@ -79,8 +81,75 @@ async function initTodo() {
   _tdBindExport();
   _tdBindCollapsibleSections();
   _tdLoadNotionCreds();
+  _tdAttachCloudSyncListener();
 
   await _tdLoadAll();
+}
+
+function _tdAttachCloudSyncListener() {
+  if (_tdCloudSyncListenerAttached || !window.electronAPI?.onSyncTodosUpdate) return;
+  _tdCloudSyncListenerAttached = true;
+
+  window.electronAPI.onSyncTodosUpdate(async () => {
+    await _tdLoadAll();
+    _tdNotifyWallpaperTodoChanged("cloud-sync", null);
+  });
+}
+
+function _tdBindCloudSyncButton() {
+  const btn = document.getElementById("td-cloud-sync-btn");
+  if (!btn) return;
+  btn.addEventListener("click", _tdSyncWithCloudService);
+}
+
+async function _tdSyncWithCloudService() {
+  if (!window.electronAPI?.syncNow) {
+    if (window.showToast) window.showToast("Cloud sync is not available.", "error");
+    return;
+  }
+
+  const btn = document.getElementById("td-cloud-sync-btn");
+  const original = btn?.innerHTML;
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = "Syncing...";
+  }
+
+  try {
+    const result = await window.electronAPI.syncNow({ notes: _tdGetLocalNotesForCloudSync() });
+    if (!result?.success) {
+      if (window.showToast) window.showToast(result?.error || "Cloud sync failed.", "error");
+      return;
+    }
+
+    await _tdLoadAll();
+    _tdNotifyWallpaperTodoChanged("cloud-sync", null);
+    const notesSent = result.notes?.sent ?? 0;
+    const todosSent = result.todos?.sent ?? 0;
+    const workLogsSent = result.workLogs?.sent ?? 0;
+    if (window.showToast) {
+      window.showToast(`Cloud synced. Sent ${notesSent} note(s), ${todosSent} todo(s), ${workLogsSent} work log(s).`, "success");
+    }
+  } catch (err) {
+    console.error("Cloud sync error:", err);
+    if (window.showToast) {
+      window.showToast("Cloud sync failed: " + (err.message || "Unknown error"), "error");
+    }
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = original;
+    }
+  }
+}
+
+function _tdGetLocalNotesForCloudSync() {
+  try {
+    const notes = JSON.parse(localStorage.getItem("mto_notes") || "[]");
+    return Array.isArray(notes) ? notes : [];
+  } catch {
+    return [];
+  }
 }
 
 // ============================================================================

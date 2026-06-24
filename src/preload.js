@@ -372,6 +372,52 @@ contextBridge.exposeInMainWorld("electronAPI", {
   batchMergeToPdf: (data) => ipcRenderer.invoke("batch-merge-to-pdf", data),
 
   // ==========================================
+  // CLOUD SYNC
+  // ==========================================
+
+  syncRegister: (email, password, name) =>
+    ipcRenderer.invoke("sync-register", { email, password, name }),
+  syncLogin: (email, password) =>
+    ipcRenderer.invoke("sync-login", { email, password }),
+  syncResendVerification: (email) =>
+    ipcRenderer.invoke("sync-resend-verification", { email }),
+  syncLogout: () => ipcRenderer.invoke("sync-logout"),
+  syncGetSettings: () => ipcRenderer.invoke("sync-get-settings"),
+  syncNow: (data) => ipcRenderer.invoke("sync-now", data || {}),
+  syncGetStatus: () => ipcRenderer.invoke("sync-get-status"),
+  onSyncNotesUpdate: (callback) => {
+    ipcRenderer.removeAllListeners("sync:notes-update");
+    ipcRenderer.on("sync:notes-update", (_event, notes) => callback(notes));
+  },
+  onSyncTodosUpdate: (callback) => {
+    ipcRenderer.removeAllListeners("sync:todos-update");
+    ipcRenderer.on("sync:todos-update", () => callback());
+  },
+  onSyncWorkLogsUpdate: (callback) => {
+    ipcRenderer.removeAllListeners("sync:worklogs-update");
+    ipcRenderer.on("sync:worklogs-update", () => callback());
+  },
+  removeSyncListeners: () => {
+    ipcRenderer.removeAllListeners("sync:notes-update");
+    ipcRenderer.removeAllListeners("sync:todos-update");
+    ipcRenderer.removeAllListeners("sync:worklogs-update");
+  },
+
+  // ==========================================
+  // NOTES DATABASE
+  // ==========================================
+
+  notesInit: (legacyNotes) => ipcRenderer.invoke("notes-init", legacyNotes || []),
+  notesSyncLegacy: (legacyNotes) =>
+    ipcRenderer.invoke("notes-sync-legacy", legacyNotes || []),
+  addNote: (note) => ipcRenderer.invoke("notes-add", note),
+  updateNote: (note) => ipcRenderer.invoke("notes-update", note),
+  deleteNoteRecord: (id) => ipcRenderer.invoke("notes-delete", id),
+  getNotes: () => ipcRenderer.invoke("notes-get"),
+  flushNotes: () => ipcRenderer.invoke("notes-flush"),
+  syncNotes: () => ipcRenderer.invoke("notes-sync"),
+
+  // ==========================================
   // SOCIAL MEDIA TEMPLATES
   // ==========================================
 

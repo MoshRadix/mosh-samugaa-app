@@ -801,6 +801,7 @@ let _calc = {
   memory: 0,
   sciMode: false,
   histSearch: "",
+  initialized: false,
 };
 
 function calcLoadHistory() {
@@ -993,6 +994,13 @@ function calcHandleDecimal() {
     _calc.display = "0.";
     _calc.waitingForOperand = false;
     _calc.justEqualed = false;
+  } else if (_calc.justEqualed) {
+    _calc.display = "0.";
+    _calc.expression = "";
+    _calc.fullExpression = "";
+    _calc.operand = null;
+    _calc.operator = null;
+    _calc.justEqualed = false;
   } else if (!_calc.display.includes(".")) {
     _calc.display += ".";
     _calc.justEqualed = false;
@@ -1003,16 +1011,25 @@ function calcHandleDecimal() {
 function calcHandleOperator(op) {
   const current = parseFloat(_calc.display);
 
+  if (_calc.waitingForOperand) {
+    _calc.operator = op;
+    _calc.fullExpression = _calc.fullExpression.replace(/[+−×÷^]$/, "") + op;
+    _calc.expression = _calc.fullExpression;
+    calcUpdateDisplay();
+    calcHighlightActiveOp();
+    return;
+  }
+
   if (_calc.fullExpression === "" || _calc.justEqualed) {
     _calc.fullExpression = _calc.display;
     _calc.justEqualed = false;
   }
 
   if (_calc.operator && !_calc.waitingForOperand) {
+    _calc.fullExpression += _calc.display;
     const result = calcApplyOp(_calc.operand, _calc.operator, current);
     _calc.display = calcFormatNumber(result);
     _calc.operand = result;
-    _calc.fullExpression += _calc.display;
   } else {
     _calc.operand = current;
     if (!_calc.waitingForOperand) {
@@ -1079,7 +1096,8 @@ function calcHandleClearAll() {
 
 function calcHandleBackspace() {
   if (_calc.waitingForOperand || _calc.justEqualed) return;
-  _calc.display = _calc.display.length > 1 ? _calc.display.slice(0,-1) : "0";
+  const next = _calc.display.length > 1 ? _calc.display.slice(0,-1) : "0";
+  _calc.display = next === "-" ? "0" : next;
   calcUpdateDisplay();
 }
 
@@ -1163,6 +1181,12 @@ function calcToggleSciMode() {
 function initCalculator() {
   const panel = document.querySelector('.util-tab-panel[data-panel="calculator"]');
   if (!panel) return;
+  if (_calc.initialized) {
+    calcUpdateDisplay();
+    calcRenderHistory();
+    return;
+  }
+  _calc.initialized = true;
 
   panel.querySelectorAll(".calc-btn").forEach(btn => {
     btn.addEventListener("click", () => {

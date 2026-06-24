@@ -30,6 +30,16 @@ const ExcelJS = require("@protobi/exceljs");
 const { v4: uuidv4 } = require("uuid");
 const initSqlJs = require("sql.js");
 const { updateElectronApp, UpdateSourceType } = require("update-electron-app");
+const { registerSyncHandlers } = require('./sync-service');
+const {
+  initNotesStore,
+  registerNotesHandlers,
+  closeNotesStore,
+  flushNotesCache,
+  getNotes,
+  getNotesDbPath,
+  migrateLegacyNotes,
+} = require("./notes-store");
 
 process.noDeprecation = true;
 // At the very top of src/index.js, before any other code
@@ -40,6 +50,7 @@ if (require("electron-squirrel-startup")) {
 let mainWindow;
 let db = null; // SQL.js database instance
 let dbPath = null; // Current database file path
+const APP_ICON_PATH = path.join(__dirname, "..", "assets", "icons", "app.ico");
 
 // Work Logs — always stored in a fixed, separate database (not user-configurable)
 let wlDb = null;
@@ -242,6 +253,36 @@ async function initWorkLogsDB() {
     wlDb.exec("ALTER TABLE work_logs ADD COLUMN enrichNote TEXT");
     console.log("[WorkLogs DB] Added 'enrichNote' column");
   }
+  if (!wlColNames.includes("remote_id")) {
+    wlDb.exec("ALTER TABLE work_logs ADD COLUMN remote_id TEXT");
+    console.log("[WorkLogs DB] Added 'remote_id' column");
+  }
+  if (!wlColNames.includes("client_id")) {
+    wlDb.exec("ALTER TABLE work_logs ADD COLUMN client_id TEXT");
+    console.log("[WorkLogs DB] Added 'client_id' column");
+  }
+  if (!wlColNames.includes("is_deleted")) {
+    wlDb.exec("ALTER TABLE work_logs ADD COLUMN is_deleted INTEGER NOT NULL DEFAULT 0");
+    console.log("[WorkLogs DB] Added 'is_deleted' column");
+  }
+  if (!wlColNames.includes("synced")) {
+    wlDb.exec("ALTER TABLE work_logs ADD COLUMN synced INTEGER NOT NULL DEFAULT 0");
+    console.log("[WorkLogs DB] Added 'synced' column");
+  }
+  if (!wlColNames.includes("created_at")) {
+    wlDb.exec("ALTER TABLE work_logs ADD COLUMN created_at TEXT");
+    console.log("[WorkLogs DB] Added 'created_at' column");
+  }
+  if (!wlColNames.includes("updated_at")) {
+    wlDb.exec("ALTER TABLE work_logs ADD COLUMN updated_at TEXT");
+    console.log("[WorkLogs DB] Added 'updated_at' column");
+  }
+  wlDb.exec(`
+    CREATE INDEX IF NOT EXISTS idx_work_logs_remote_id ON work_logs(remote_id);
+    CREATE INDEX IF NOT EXISTS idx_work_logs_client_id ON work_logs(client_id);
+    CREATE INDEX IF NOT EXISTS idx_work_logs_synced ON work_logs(synced);
+    CREATE INDEX IF NOT EXISTS idx_work_logs_updated_at ON work_logs(updated_at);
+  `);
 
   // cal_todos migrations
   const todoColsRes = wlDb.exec("PRAGMA table_info(cal_todos)");
@@ -258,6 +299,30 @@ async function initWorkLogsDB() {
     wlDb.exec("ALTER TABLE cal_todos ADD COLUMN linkedWorklogId TEXT");
     console.log("[WorkLogs DB] Added 'linkedWorklogId' column to cal_todos");
   }
+  if (!todoColNames.includes("remote_id")) {
+    wlDb.exec("ALTER TABLE cal_todos ADD COLUMN remote_id TEXT");
+    console.log("[WorkLogs DB] Added 'remote_id' column to cal_todos");
+  }
+  if (!todoColNames.includes("client_id")) {
+    wlDb.exec("ALTER TABLE cal_todos ADD COLUMN client_id TEXT");
+    console.log("[WorkLogs DB] Added 'client_id' column to cal_todos");
+  }
+  if (!todoColNames.includes("is_deleted")) {
+    wlDb.exec("ALTER TABLE cal_todos ADD COLUMN is_deleted INTEGER NOT NULL DEFAULT 0");
+    console.log("[WorkLogs DB] Added 'is_deleted' column to cal_todos");
+  }
+  if (!todoColNames.includes("synced")) {
+    wlDb.exec("ALTER TABLE cal_todos ADD COLUMN synced INTEGER NOT NULL DEFAULT 0");
+    console.log("[WorkLogs DB] Added 'synced' column to cal_todos");
+  }
+  if (!todoColNames.includes("created_at")) {
+    wlDb.exec("ALTER TABLE cal_todos ADD COLUMN created_at TEXT");
+    console.log("[WorkLogs DB] Added 'created_at' column to cal_todos");
+  }
+  if (!todoColNames.includes("updated_at")) {
+    wlDb.exec("ALTER TABLE cal_todos ADD COLUMN updated_at TEXT");
+    console.log("[WorkLogs DB] Added 'updated_at' column to cal_todos");
+  }
 
   // Ensure photos directory exists
   const photosDir = path.join(app.getPath("userData"), "worklog_photos");
@@ -273,6 +338,10 @@ async function saveWorkLogsDB() {
   const data = wlDb.export();
   const buffer = Buffer.from(data);
   await fs.writeFile(WL_DB_PATH, buffer);
+}
+
+function todoSyncTimestamp() {
+  return new Date().toISOString();
 }
 
 async function migrateFromJSONIfNeeded() {
@@ -1490,6 +1559,7 @@ ipcMain.handle("print-document", async (event, filePath) => {
     return new Promise((resolve, reject) => {
       let workerWindow = new BrowserWindow({
         show: false,
+        icon: APP_ICON_PATH,
         webPreferences: {
           plugins: true,
         },
@@ -1954,6 +2024,7 @@ ipcMain.handle("update-settings", async (event, newSettings) => {
     }
   }
   await initSQLite(settings.dbPath);
+  await initNotesStore(path.dirname(settings.dbPath));
   return true;
 });
 ipcMain.handle("reset-settings", async () => {
@@ -1965,6 +2036,7 @@ ipcMain.handle("reset-settings", async () => {
   };
   await saveConfig();
   await initSQLite(settings.dbPath);
+  await initNotesStore(path.dirname(settings.dbPath));
   return true;
 });
 
@@ -1998,15 +2070,22 @@ ipcMain.handle(
   "add-work-log",
   async (event, { task, notes, createdAt, tags, photoPath }) => {
     const id = uuidv4();
+    const now = new Date().toISOString();
+    const logCreatedAt = createdAt || now;
     wlDb.run(
-      "INSERT INTO work_logs (id, task, notes, createdAt, tags, photoPath) VALUES (?, ?, ?, ?, ?, ?)",
+      `INSERT INTO work_logs
+         (id, task, notes, createdAt, tags, photoPath, client_id, synced, is_deleted, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 0, 0, ?, ?)`,
       [
         id,
         task || "",
         notes || "",
-        createdAt || new Date().toISOString(),
+        logCreatedAt,
         tags || "[]",
         photoPath || null,
+        id,
+        now,
+        now,
       ],
     );
     await saveWorkLogsDB();
@@ -2030,7 +2109,7 @@ ipcMain.handle(
 
 ipcMain.handle("get-work-logs", async () => {
   const rows = wlDb.exec(
-    "SELECT id, task, notes, createdAt, tags, photoPath, linkedTodoId, todoStatusHistory, enrichNote FROM work_logs ORDER BY createdAt DESC",
+    "SELECT id, task, notes, createdAt, tags, photoPath, linkedTodoId, todoStatusHistory, enrichNote FROM work_logs WHERE COALESCE(is_deleted, 0) = 0 ORDER BY createdAt DESC",
   );
   if (!rows.length) return [];
   return rows[0].values.map(
@@ -2049,7 +2128,10 @@ ipcMain.handle("get-work-logs", async () => {
 });
 
 ipcMain.handle("delete-work-log", async (event, id) => {
-  wlDb.run("DELETE FROM work_logs WHERE id = ?", [id]);
+  wlDb.run(
+    "UPDATE work_logs SET is_deleted = 1, synced = 0, updated_at = ?, client_id = COALESCE(client_id, id) WHERE id = ?",
+    [new Date().toISOString(), id],
+  );
   await saveWorkLogsDB();
   return true;
 });
@@ -2081,7 +2163,10 @@ ipcMain.handle("todo-complete-to-worklog", async (event, { todoId, todoText, tod
     let hist = [];
     try { hist = JSON.parse(histRaw || "[]"); } catch(_) {}
     hist.push({ event: "completed", at: nowIso });
-    wlDb.run("UPDATE work_logs SET todoStatusHistory = ? WHERE id = ?", [JSON.stringify(hist), wlId]);
+    wlDb.run(
+      "UPDATE work_logs SET todoStatusHistory = ?, synced = 0, updated_at = ?, client_id = COALESCE(client_id, id) WHERE id = ?",
+      [JSON.stringify(hist), new Date().toISOString(), wlId],
+    );
     await saveWorkLogsDB();
     return { worklogId: wlId, isNew: false };
   }
@@ -2094,9 +2179,11 @@ ipcMain.handle("todo-complete-to-worklog", async (event, { todoId, todoText, tod
   const createdAt = `${todoDate}T${nowIso.split("T")[1]}`;
 
   wlDb.run(
-    `INSERT INTO work_logs (id, task, notes, createdAt, tags, photoPath, linkedTodoId, todoStatusHistory, enrichNote)
-     VALUES (?, ?, ?, ?, ?, NULL, ?, ?, NULL)`,
-    [id, todoText, "", createdAt, tags, todoId, history],
+    `INSERT INTO work_logs
+       (id, task, notes, createdAt, tags, photoPath, linkedTodoId, todoStatusHistory, enrichNote,
+        client_id, synced, is_deleted, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, NULL, ?, ?, NULL, ?, 0, 0, ?, ?)`,
+    [id, todoText, "", createdAt, tags, todoId, history, id, new Date().toISOString(), new Date().toISOString()],
   );
 
   // Store the worklog ID back on the todo for quick lookup
@@ -2126,7 +2213,10 @@ ipcMain.handle("todo-reopen-worklog", async (event, todoId) => {
     return `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,"0")}-${String(d.getUTCDate()).padStart(2,"0")}T${String(d.getUTCHours()).padStart(2,"0")}:${String(d.getUTCMinutes()).padStart(2,"0")}`;
   })();
   hist.push({ event: "reopened", at: nowIso });
-  wlDb.run("UPDATE work_logs SET todoStatusHistory = ? WHERE id = ?", [JSON.stringify(hist), wlId]);
+  wlDb.run(
+    "UPDATE work_logs SET todoStatusHistory = ?, synced = 0, updated_at = ?, client_id = COALESCE(client_id, id) WHERE id = ?",
+    [JSON.stringify(hist), new Date().toISOString(), wlId],
+  );
   await saveWorkLogsDB();
   return true;
 });
@@ -2136,7 +2226,10 @@ ipcMain.handle("todo-reopen-worklog", async (event, todoId) => {
  * @param {Object} payload - { worklogId, note }
  */
 ipcMain.handle("worklog-add-note", async (event, { worklogId, note }) => {
-  wlDb.run("UPDATE work_logs SET enrichNote = ? WHERE id = ?", [note || null, worklogId]);
+  wlDb.run(
+    "UPDATE work_logs SET enrichNote = ?, synced = 0, updated_at = ?, client_id = COALESCE(client_id, id) WHERE id = ?",
+    [note || null, new Date().toISOString(), worklogId],
+  );
   await saveWorkLogsDB();
   return true;
 });
@@ -2154,7 +2247,10 @@ ipcMain.handle("worklog-enrich-photo", async (event, { worklogId, dataUrl, fileN
   const destPath = path.join(photosDir, safeName);
   const base64Data = dataUrl.replace(/^data:[^;]+;base64,/, "");
   await fs.writeFile(destPath, Buffer.from(base64Data, "base64"));
-  wlDb.run("UPDATE work_logs SET photoPath = ? WHERE id = ?", [destPath, worklogId]);
+  wlDb.run(
+    "UPDATE work_logs SET photoPath = ?, synced = 0, updated_at = ?, client_id = COALESCE(client_id, id) WHERE id = ?",
+    [destPath, new Date().toISOString(), worklogId],
+  );
   await saveWorkLogsDB();
   return { success: true, path: destPath };
 });
@@ -2163,7 +2259,7 @@ ipcMain.handle("worklog-enrich-photo", async (event, { worklogId, dataUrl, fileN
 
 ipcMain.handle("cal-todo-get", async (event, date) => {
   const rows = wlDb.exec(
-    "SELECT id, text, done FROM cal_todos WHERE date = ? ORDER BY sort_order ASC, rowid ASC",
+    "SELECT id, text, done FROM cal_todos WHERE date = ? AND COALESCE(is_deleted, 0) = 0 ORDER BY sort_order ASC, rowid ASC",
     [date],
   );
   if (!rows.length) return [];
@@ -2172,11 +2268,18 @@ ipcMain.handle("cal-todo-get", async (event, date) => {
 
 ipcMain.handle("cal-todo-save", async (event, { date, todos }) => {
   // Replace all todos for this date atomically
-  wlDb.run("DELETE FROM cal_todos WHERE date = ?", [date]);
+  const now = todoSyncTimestamp();
+  wlDb.run(
+    "UPDATE cal_todos SET is_deleted = 1, synced = 0, updated_at = ?, client_id = COALESCE(client_id, id) WHERE date = ? AND COALESCE(is_deleted, 0) = 0",
+    [now, date],
+  );
   todos.forEach((item, idx) => {
+    const id = item.id || uuidv4();
     wlDb.run(
-      "INSERT INTO cal_todos (id, date, text, done, sort_order) VALUES (?, ?, ?, ?, ?)",
-      [item.id || uuidv4(), date, item.text, item.done ? 1 : 0, idx],
+      `INSERT OR REPLACE INTO cal_todos
+         (id, date, text, done, sort_order, client_id, synced, is_deleted, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, 0, 0, ?, ?)`,
+      [id, date, item.text, item.done ? 1 : 0, idx, id, now, now],
     );
   });
   await saveWorkLogsDB();
@@ -2184,7 +2287,7 @@ ipcMain.handle("cal-todo-save", async (event, { date, todos }) => {
 });
 
 ipcMain.handle("cal-todo-has", async (event, date) => {
-  const rows = wlDb.exec("SELECT COUNT(*) FROM cal_todos WHERE date = ?", [
+  const rows = wlDb.exec("SELECT COUNT(*) FROM cal_todos WHERE date = ? AND COALESCE(is_deleted, 0) = 0", [
     date,
   ]);
   return !!(rows.length && rows[0].values[0][0] > 0);
@@ -2194,13 +2297,15 @@ ipcMain.handle("cal-todo-has", async (event, date) => {
 ipcMain.handle("cal-todo-get-all", async (event, { from, to } = {}) => {
   let sql = "SELECT id, date, text, done, sort_order, tags, priority, linkedWorklogId FROM cal_todos";
   const params = [];
+  const where = ["COALESCE(is_deleted, 0) = 0"];
   if (from && to) {
-    sql += " WHERE date >= ? AND date <= ?";
+    where.push("date >= ? AND date <= ?");
     params.push(from, to);
   } else if (from) {
-    sql += " WHERE date >= ?";
+    where.push("date >= ?");
     params.push(from);
   }
+  sql += ` WHERE ${where.join(" AND ")}`;
   sql += " ORDER BY date ASC, sort_order ASC, rowid ASC";
   const rows = wlDb.exec(sql, params);
   if (!rows.length) return [];
@@ -2218,7 +2323,10 @@ ipcMain.handle("cal-todo-get-all", async (event, { from, to } = {}) => {
 
 /** Move a single todo item to a new date (updates the date column). */
 ipcMain.handle("cal-todo-move", async (event, { id, newDate }) => {
-  wlDb.run("UPDATE cal_todos SET date = ? WHERE id = ?", [newDate, id]);
+  wlDb.run(
+    "UPDATE cal_todos SET date = ?, synced = 0, updated_at = ?, client_id = COALESCE(client_id, id) WHERE id = ?",
+    [newDate, todoSyncTimestamp(), id],
+  );
   await saveWorkLogsDB();
   return true;
 });
@@ -2232,6 +2340,10 @@ ipcMain.handle("cal-todo-update", async (event, { id, text, done, tags, priority
   if (tags !== undefined) { parts.push("tags = ?"); vals.push(JSON.stringify(tags)); }
   if (priority !== undefined) { parts.push("priority = ?"); vals.push(priority); }
   if (parts.length) {
+    parts.push("synced = 0");
+    parts.push("updated_at = ?");
+    vals.push(todoSyncTimestamp());
+    parts.push("client_id = COALESCE(client_id, id)");
     vals.push(id);
     wlDb.run(`UPDATE cal_todos SET ${parts.join(", ")} WHERE id = ?`, vals);
   }
@@ -2250,11 +2362,17 @@ ipcMain.handle("cal-todo-delete", async (event, { id }) => {
     ? linked[0].values[0][0]
     : null;
 
-  wlDb.run("DELETE FROM cal_todos WHERE id = ?", [id]);
+  wlDb.run(
+    "UPDATE cal_todos SET is_deleted = 1, synced = 0, updated_at = ?, client_id = COALESCE(client_id, id) WHERE id = ?",
+    [todoSyncTimestamp(), id],
+  );
 
   // Cascade-delete the linked work log entry
   if (worklogId) {
-    wlDb.run("DELETE FROM work_logs WHERE id = ?", [worklogId]);
+    wlDb.run(
+      "UPDATE work_logs SET is_deleted = 1, synced = 0, updated_at = ?, client_id = COALESCE(client_id, id) WHERE id = ?",
+      [new Date().toISOString(), worklogId],
+    );
   }
 
   await saveWorkLogsDB();
@@ -2303,6 +2421,10 @@ ipcMain.handle("worklog-sync-from-todo", async (event, { todoId, text, tags, dat
     vals.push(`${date}T${timePart}`);
   }
   if (parts.length) {
+    parts.push("synced = 0");
+    parts.push("updated_at = ?");
+    vals.push(new Date().toISOString());
+    parts.push("client_id = COALESCE(client_id, id)");
     vals.push(worklogId);
     wlDb.run(`UPDATE work_logs SET ${parts.join(", ")} WHERE id = ?`, vals);
     await saveWorkLogsDB();
@@ -2315,13 +2437,16 @@ ipcMain.handle("cal-todo-add", async (event, { date, text, tags, priority }) => 
   const id = uuidv4();
   const tagsJson = JSON.stringify(Array.isArray(tags) ? tags : []);
   const prio = ["low","medium","high"].includes(priority) ? priority : "medium";
-  const rowsNow = wlDb.exec("SELECT COUNT(*) FROM cal_todos WHERE date = ?", [
+  const rowsNow = wlDb.exec("SELECT COUNT(*) FROM cal_todos WHERE date = ? AND COALESCE(is_deleted, 0) = 0", [
     date,
   ]);
+  const now = todoSyncTimestamp();
   const count = rowsNow.length ? rowsNow[0].values[0][0] : 0;
   wlDb.run(
-    "INSERT INTO cal_todos (id, date, text, done, sort_order, tags, priority) VALUES (?, ?, ?, 0, ?, ?, ?)",
-    [id, date, text, count, tagsJson, prio],
+    `INSERT INTO cal_todos
+       (id, date, text, done, sort_order, tags, priority, client_id, synced, is_deleted, created_at, updated_at)
+     VALUES (?, ?, ?, 0, ?, ?, ?, ?, 0, 0, ?, ?)`,
+    [id, date, text, count, tagsJson, prio, id, now, now],
   );
   await saveWorkLogsDB();
   return { id, date, text, done: false, sort_order: count, tags: Array.isArray(tags) ? tags : [], priority: prio };
@@ -3111,25 +3236,74 @@ ipcMain.handle("sm-restore", async () => {
 
 // ========== Notes Backup & Restore ==========
 
+function parseNotesJson(jsonString) {
+  if (!jsonString) return [];
+  let notes;
+  try {
+    notes = JSON.parse(jsonString);
+  } catch (_) {
+    throw new Error("Invalid notes JSON backup.");
+  }
+  if (!Array.isArray(notes)) {
+    throw new Error("Invalid notes backup - expected an array of notes.");
+  }
+  return notes;
+}
+
+async function addNotesToZip(zip, legacyNotesJson = "[]", prefix = "") {
+  await migrateLegacyNotes(parseNotesJson(legacyNotesJson || "[]"));
+  await flushNotesCache();
+
+  const notes = getNotes();
+  const notesJson = JSON.stringify(notes, null, 2);
+  const notesDbPath = getNotesDbPath();
+  if (notesDbPath && fsSync.existsSync(notesDbPath)) {
+    zip.file(`${prefix}notes/Notes.db`, await fs.readFile(notesDbPath));
+  }
+  zip.file(`${prefix}notes.json`, notesJson);
+  zip.file(`${prefix}notes/notes.json`, notesJson);
+  return notes.length;
+}
+
+async function restoreNotesDbBuffer(dbContent) {
+  closeNotesStore();
+  await fs.writeFile(path.join(path.dirname(settings.dbPath), "Notes.db"), dbContent);
+  await initNotesStore(path.dirname(settings.dbPath));
+}
+
+async function restoreNotesJson(jsonString) {
+  closeNotesStore();
+  await initNotesStore(path.dirname(settings.dbPath));
+  await migrateLegacyNotes(parseNotesJson(jsonString));
+  await flushNotesCache();
+}
+
 /**
  * Backup notes — receives the JSON string from the renderer (localStorage)
  * and writes it to a user-chosen file.
  */
 ipcMain.handle("notes-backup", async (event, jsonString) => {
+  const zip = new PizZip();
+  const count = await addNotesToZip(zip, jsonString || "[]");
+
   const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
     title: "Backup Notes",
     defaultPath: path.join(
       app.getPath("documents"),
-      `notes-backup-${new Date().toISOString().slice(0, 10)}.json`,
+      `notes-backup-${new Date().toISOString().slice(0, 10)}.zip`,
     ),
-    filters: [{ name: "JSON File", extensions: ["json"] }],
+    filters: [
+      { name: "ZIP Archive", extensions: ["zip"] },
+      { name: "JSON File", extensions: ["json"] },
+    ],
   });
   if (canceled || !filePath) return { canceled: true };
-  await fs.writeFile(filePath, jsonString, "utf8");
-  let count = 0;
-  try {
-    count = JSON.parse(jsonString).length;
-  } catch (_) {}
+
+  if (path.extname(filePath).toLowerCase() === ".json") {
+    await fs.writeFile(filePath, JSON.stringify(getNotes(), null, 2), "utf8");
+  } else {
+    await fs.writeFile(filePath, zip.generate({ type: "nodebuffer", compression: "DEFLATE" }));
+  }
   return { success: true, path: filePath, count };
 });
 
@@ -3140,10 +3314,48 @@ ipcMain.handle("notes-backup", async (event, jsonString) => {
 ipcMain.handle("notes-restore", async () => {
   const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
     title: "Restore Notes",
-    filters: [{ name: "JSON File", extensions: ["json"] }],
+    filters: [
+      { name: "Notes Backup", extensions: ["zip", "json"] },
+      { name: "ZIP Archive", extensions: ["zip"] },
+      { name: "JSON File", extensions: ["json"] },
+    ],
     properties: ["openFile"],
   });
   if (canceled || !filePaths || !filePaths[0]) return { canceled: true };
+
+  if (path.extname(filePaths[0]).toLowerCase() === ".zip") {
+    const zipBuf = await fs.readFile(filePaths[0]);
+    let zip;
+    try {
+      zip = new PizZip(zipBuf);
+    } catch (_) {
+      throw new Error("Invalid or corrupted ZIP file.");
+    }
+
+    const notesDbEntry = zip.files["notes/Notes.db"] || zip.files["Notes.db"];
+    const notesJsonEntry = zip.files["notes.json"] || zip.files["notes/notes.json"];
+    if (notesDbEntry) {
+      const dbContent = notesDbEntry.asNodeBuffer
+        ? notesDbEntry.asNodeBuffer()
+        : Buffer.from(notesDbEntry.asBinary(), "binary");
+      await restoreNotesDbBuffer(dbContent);
+    } else if (notesJsonEntry) {
+      const rawZipNotes = notesJsonEntry.asText
+        ? notesJsonEntry.asText()
+        : notesJsonEntry.asNodeBuffer().toString("utf8");
+      await restoreNotesJson(rawZipNotes);
+    } else {
+      throw new Error("ZIP does not contain Notes.db or notes.json.");
+    }
+
+    const restoredNotes = getNotes();
+    return {
+      success: true,
+      data: JSON.stringify(restoredNotes),
+      count: restoredNotes.length,
+    };
+  }
+
   const raw = await fs.readFile(filePaths[0], "utf8");
   // Validate it's an array of notes
   let notes;
@@ -3154,7 +3366,13 @@ ipcMain.handle("notes-restore", async () => {
   }
   if (!Array.isArray(notes))
     throw new Error("Invalid backup file — expected an array of notes.");
-  return { success: true, data: JSON.stringify(notes), count: notes.length };
+  await restoreNotesJson(JSON.stringify(notes));
+  const restoredNotes = getNotes();
+  return {
+    success: true,
+    data: JSON.stringify(restoredNotes),
+    count: restoredNotes.length,
+  };
 });
 
 // ========== Work Logs Backup & Restore ==========
@@ -3393,6 +3611,7 @@ ipcMain.handle("full-backup", async (event, notesJson) => {
   // Flush all databases
   await saveDatabase();
   await saveWorkLogsDB();
+  await flushNotesCache();
 
   const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
     title: "Backup Everything",
@@ -3472,7 +3691,8 @@ ipcMain.handle("full-backup", async (event, notesJson) => {
 
   // ── Notes (passed from renderer) ──
   try {
-    zip.file("notes.json", notesJson || "[]");
+    await addNotesToZip(zip, notesJson || "[]");
+    zip.file("notes/legacy-localStorage-notes.json", notesJson || "[]");
   } catch (_) {}
 
   const zipBuf = zip.generate({ type: "nodebuffer", compression: "DEFLATE" });
@@ -3506,6 +3726,7 @@ ipcMain.handle("full-restore", async () => {
       k.startsWith("docs/") ||
       k.startsWith("social-media/") ||
       k.startsWith("worklogs/") ||
+      k.startsWith("notes/") ||
       k === "notes.json",
   );
   if (!hasAny)
@@ -3601,8 +3822,17 @@ ipcMain.handle("full-restore", async () => {
 
   // ── Notes ──
   let notesJson = null;
-  const notesBuf = readZipFile("notes.json");
-  if (notesBuf) notesJson = notesBuf.toString("utf8");
+  const notesDbBuf = readZipFile("notes/Notes.db") || readZipFile("Notes.db");
+  const notesBuf =
+    readZipFile("notes.json") ||
+    readZipFile("notes/notes.json") ||
+    readZipFile("notes/legacy-localStorage-notes.json");
+  if (notesDbBuf) {
+    await restoreNotesDbBuffer(notesDbBuf);
+  } else if (notesBuf) {
+    await restoreNotesJson(notesBuf.toString("utf8"));
+  }
+  notesJson = JSON.stringify(getNotes());
 
   return { success: true, notes: notesJson };
 });
@@ -3621,6 +3851,7 @@ function createWindow() {
       sandbox: false,
     },
     title: "Document Generator",
+    icon: APP_ICON_PATH,
     autoHideMenuBar: true,
     show: false,
   });
@@ -4152,6 +4383,7 @@ async function renderWallpaperImage(payload) {
     height,
     show: false,
     frame: false,
+    icon: APP_ICON_PATH,
     transparent: false,
     backgroundColor: "#eef2f0",
     webPreferences: {
@@ -4341,6 +4573,8 @@ app.whenReady().then(async () => {
   Menu.setApplicationMenu(null);
   await loadConfig();
   await initSQLite(getDbPath());
+  await initNotesStore(path.dirname(getDbPath()));
+  registerNotesHandlers();
   await initWorkLogsDB();
   await migrateFromJSONIfNeeded();
   await fs.mkdir(settings.templatesDir, { recursive: true });
@@ -4354,6 +4588,7 @@ app.whenReady().then(async () => {
     updateInterval: "1 hour",
     logger: require("electron-log"),
   });
+  registerSyncHandlers(db, wlDb);
   createWindow();
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
@@ -4381,6 +4616,7 @@ app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {
     if (db) db.close();
     if (wlDb) wlDb.close();
+    closeNotesStore();
     app.quit();
   }
 });

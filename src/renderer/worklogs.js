@@ -378,6 +378,52 @@ const WL = (() => {
     }
   }
 
+  // ── Cloud sync ──────────────────────────────────────────────────────────────
+  function getLocalNotesForCloudSync() {
+    try {
+      const notes = JSON.parse(localStorage.getItem("mto_notes") || "[]");
+      return Array.isArray(notes) ? notes : [];
+    } catch {
+      return [];
+    }
+  }
+
+  async function syncWithCloudService() {
+    if (!window.electronAPI?.syncNow) {
+      showNotification("Cloud sync is not available.", "error");
+      return;
+    }
+
+    const btn = el("wl-cloud-sync-btn");
+    const original = btn?.innerHTML;
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = "Syncing...";
+    }
+
+    try {
+      const result = await window.electronAPI.syncNow({ notes: getLocalNotesForCloudSync() });
+      if (!result?.success) {
+        showNotification(result?.error || "Cloud sync failed.", "error");
+        return;
+      }
+
+      await loadLogs();
+      const notesSent = result.notes?.sent ?? 0;
+      const todosSent = result.todos?.sent ?? 0;
+      const workLogsSent = result.workLogs?.sent ?? 0;
+      showNotification(`Cloud synced. Sent ${notesSent} note(s), ${todosSent} todo(s), ${workLogsSent} work log(s).`, "success");
+    } catch (err) {
+      console.error("Cloud sync error:", err);
+      showNotification("Cloud sync failed: " + (err.message || "Unknown error"), "error");
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = original;
+      }
+    }
+  }
+
   // ── Add log ─────────────────────────────────────────────────────────────────
   async function addLog() {
     const taskInput = el("wl-task-input");
@@ -712,6 +758,9 @@ const WL = (() => {
     // Export
     el("wl-export-btn")?.addEventListener("click", exportExcel);
 
+    // Cloud sync
+    el("wl-cloud-sync-btn")?.addEventListener("click", syncWithCloudService);
+
     // Monthly report
     el("wl-monthly-export-btn")?.addEventListener("click", openMonthlyModal);
     el("wl-monthly-cancel-btn")?.addEventListener("click", closeMonthlyModal);
@@ -739,6 +788,10 @@ const WL = (() => {
       if (wrap) wrap.style.display = "none";
       if (btn) btn.style.display = "";
       if (input) input.value = "";
+    });
+
+    window.electronAPI?.onSyncWorkLogsUpdate?.(() => {
+      loadLogs();
     });
 
     loadLogs();

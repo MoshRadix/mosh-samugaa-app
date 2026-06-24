@@ -15,6 +15,7 @@
     <div class="app-container">
       <header class="app-header">
         <h1>
+          <img class="app-brand-icon" src="../../assets/icons/app.ico" alt="" aria-hidden="true" />
           <svg class="app-compass-icon" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
             <defs>
               <linearGradient id="cg-ring" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -430,6 +431,31 @@
                 <input id="nb-search" type="text" placeholder="Search notes…" />
               </div>
               <div id="nb-notes-list"></div>
+              <div class="nb-notion-section">
+                <div class="nb-notion-header nb-notion-header--clickable" onclick="this.closest('.nb-notion-section').querySelector('.nb-notion-body').classList.toggle('nb-notion-body--collapsed'); this.querySelector('.nb-notion-toggle').classList.toggle('nb-notion-toggle--collapsed');">
+                  <span class="nb-notion-title">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 7h4v4H7z"/><path d="M13 7h4v4h-4z"/><path d="M7 13h4v4H7z"/></svg>
+                    Notion
+                    <span class="nb-notion-status" id="nb-notion-status">Off</span>
+                  </span>
+                  <button class="nb-notion-toggle nb-notion-toggle--collapsed" aria-expanded="false" aria-label="Toggle Notion sync">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+                  </button>
+                </div>
+                <div class="nb-notion-body nb-notion-body--collapsed">
+                  <div class="nb-notion-actions">
+                    <button class="nb-notion-btn nb-notion-btn--primary" id="nb-sidebar-sync-btn" title="Sync the selected note to Notion">
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="1 4 1 10 7 10"/><polyline points="23 20 23 14 17 14"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4-4.64 4.36A9 9 0 0 1 3.51 15"/></svg>
+                      Sync Note
+                    </button>
+                    <button class="nb-notion-btn" id="nb-sidebar-sync-all-btn" title="Sync all notes to Notion">
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="7 7 17 7 17 17"/><polyline points="17 7 7 17"/></svg>
+                      Sync All
+                    </button>
+                  </div>
+                  <p class="nb-notion-hint" id="nb-notion-hint">Configure in Settings → Notion</p>
+                </div>
+              </div>
             </aside>
 
             <!-- Editor panel -->
@@ -438,6 +464,10 @@
                 <input id="nb-editor-title" type="text" placeholder="Note title…" />
                 <span id="nb-editor-meta"></span>
                 <span id="nb-sync-badge" class="nb-sync-badge"></span>
+                <button id="nb-cloud-sync-btn" class="nb-cloud-sync-btn" title="Sync notes and to-dos with cloud service">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 16.5a4.5 4.5 0 0 0-4.18-4.49A6 6 0 0 0 5.2 10.2 3.75 3.75 0 0 0 6.75 17H18a3 3 0 0 0 3-3"/></svg>
+                  Cloud Sync
+                </button>
                 <div class="nb-lang-toggle" title="Note language">
                   <button class="nb-lang-btn active" data-lang="en">EN</button>
                   <button class="nb-lang-btn" data-lang="dv">ދިވެހި</button>
@@ -514,6 +544,8 @@
                 </button>
               </div>
             </div>
+
+            <div id="sync-settings-container"></div>
 
             <!-- Notion Integration -->
             <div class="settings-group notion-settings-group" style="margin-top: 2rem">
@@ -751,6 +783,10 @@
               <p style="color:var(--text-tertiary);font-size:13px;margin-top:2px;">Record and track your daily work activities</p>
             </div>
             <div class="wl-header-actions">
+              <button id="wl-cloud-sync-btn" class="wl-cloud-sync-btn" title="Sync notes, to-dos, and work logs with cloud service">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 16.5a4.5 4.5 0 0 0-4.18-4.49A6 6 0 0 0 5.2 10.2 3.75 3.75 0 0 0 6.75 17H18a3 3 0 0 0 3-3"/></svg>
+                Cloud Sync
+              </button>
               <button id="wl-monthly-export-btn" class="btn btn-secondary wl-export-btn-header">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
                 Monthly Report
@@ -2076,6 +2112,10 @@
 
                 <div class="td-toolbar-right">
                   <span class="td-range-label" id="td-range-label"></span>
+                  <button class="td-cloud-sync-btn" id="td-cloud-sync-btn" title="Sync notes and to-dos with cloud service">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 16.5a4.5 4.5 0 0 0-4.18-4.49A6 6 0 0 0 5.2 10.2 3.75 3.75 0 0 0 6.75 17H18a3 3 0 0 0 3-3"/></svg>
+                    Cloud Sync
+                  </button>
                   <button class="td-sort-btn" id="td-sort-btn" aria-label="Change sort order">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="6" y1="12" x2="18" y2="12"/><line x1="9" y1="18" x2="15" y2="18"/></svg>
                     <span id="td-sort-label">Date ↑</span>
