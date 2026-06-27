@@ -236,8 +236,11 @@ const WL = (() => {
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
            </button>`;
 
-      // Linked To-Do source badge
-      const isLinked = !!log.linkedTodoId;
+      const history = Array.isArray(log.todoStatusHistory) ? log.todoStatusHistory : [];
+
+      // Auto-logged To-Do entries have status history. A mobile-created work
+      // log may be manually entered while still referencing a todo.
+      const isLinked = !!log.linkedTodoId && history.length > 0;
       const sourceBadge = isLinked
         ? `<span class="wl-source-badge wl-source-badge--todo" title="Auto-logged from To-Do">
             <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
@@ -246,7 +249,6 @@ const WL = (() => {
         : "";
 
       // Reopen banner
-      const history = Array.isArray(log.todoStatusHistory) ? log.todoStatusHistory : [];
       const lastEvent = history.length ? history[history.length - 1] : null;
       const reopenBanner = (isLinked && lastEvent && lastEvent.event === "reopened")
         ? `<div class="wl-reopen-banner" title="The linked To-Do was unmarked — this log entry is preserved">
@@ -255,10 +257,17 @@ const WL = (() => {
            </div>`
         : "";
 
-      // Enrich note preview
-      const notePreview = log.enrichNote
-        ? `<div class="wl-enrich-note-preview" title="${escapeHtml(log.enrichNote)}">${escapeHtml(log.enrichNote.length > 60 ? log.enrichNote.slice(0, 60) + "…" : log.enrichNote)}</div>`
-        : "";
+      const baseNote = String(log.notes || "").trim();
+      const enrichNote = String(log.enrichNote || "").trim();
+      const notePreviewHtml = (label, value) => {
+        if (!value) return "";
+        const short = value.length > 60 ? value.slice(0, 60) + "..." : value;
+        return `<div class="wl-enrich-note-preview" title="${escapeHtml(value)}">${label ? `<strong>${escapeHtml(label)}:</strong> ` : ""}${escapeHtml(short)}</div>`;
+      };
+      const notePreview = [
+        notePreviewHtml("", baseNote),
+        notePreviewHtml("Extra", enrichNote),
+      ].join("");
 
       // Actions: edit (pencil) for ALL items + delete — always on the same row
       return `<tr class="${isLinked ? "wl-row--linked" : ""}">

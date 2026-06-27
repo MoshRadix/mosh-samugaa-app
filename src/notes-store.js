@@ -213,11 +213,16 @@ function getNotes({ includeDeleted = false } = {}) {
   return notes.map(noteToRenderer);
 }
 
-function getNotesForSync(rendererNotes) {
+function hasRemoteNotes() {
+  for (const note of notesCache.values()) {
+    if (note.remoteId) return true;
+  }
+  return false;
+}
+
+async function getNotesForSync(rendererNotes) {
   if (Array.isArray(rendererNotes) && rendererNotes.length) {
-    void migrateLegacyNotes(rendererNotes).catch((err) => {
-      console.warn("[Notes DB] Legacy sync merge failed:", err.message);
-    });
+    await migrateLegacyNotes(rendererNotes);
   }
 
   return Array.from(notesCache.values())
@@ -277,18 +282,44 @@ function applyServerNotes(serverNotes = []) {
   return getNotes();
 }
 
-function markNotesSynced(syncResult = {}) {
+async function markNotesSynced(syncResult = {}, sentNotes = []) {
   const acknowledgements = [
     ...(syncResult.notes?.created || []),
     ...(syncResult.notes?.updated || []),
   ];
   const byClientId = new Map();
   const syncedRemoteIds = new Set();
+  const serverChanges = Array.isArray(syncResult.notes?.serverChanges)
+    ? syncResult.notes.serverChanges
+    : [];
+  const serverByRemoteId = new Map();
+  const sentByRemoteId = new Map();
+  const unsavedSentNotes = [];
+
+  for (const note of serverChanges) {
+    const remoteId = note?.id || note?.remoteId || note?.remote_id;
+    if (remoteId) serverByRemoteId.set(String(remoteId), note);
+  }
+
+  for (const note of Array.isArray(sentNotes) ? sentNotes : []) {
+    if (note?.id) sentByRemoteId.set(String(note.id), note);
+    else if (note?.clientId) unsavedSentNotes.push(note);
+  }
 
   for (const ack of acknowledgements) {
     if (!ack) continue;
-    if (ack.clientId) byClientId.set(String(ack.clientId), ack);
-    if (ack.id || ack.remoteId) syncedRemoteIds.add(ack.id || ack.remoteId);
+    const remoteId = typeof ack === "string"
+      ? ack
+      : ack.id || ack.remoteId || ack.remote_id || null;
+    const matchedServerNote = remoteId ? serverByRemoteId.get(String(remoteId)) : null;
+    const matchedSentNote = remoteId ? sentByRemoteId.get(String(remoteId)) : null;
+    const fallbackCreatedNote = typeof ack === "string" ? unsavedSentNotes.shift() : null;
+    const clientId = typeof ack === "string"
+      ? matchedServerNote?.clientId || matchedSentNote?.clientId || fallbackCreatedNote?.clientId
+      : ack.clientId || ack.client_id || matchedServerNote?.clientId || matchedSentNote?.clientId;
+
+    if (clientId) byClientId.set(String(clientId), { id: remoteId, clientId });
+    if (remoteId) syncedRemoteIds.add(remoteId);
   }
 
   for (const note of notesCache.values()) {
@@ -311,7 +342,7 @@ function markNotesSynced(syncResult = {}) {
     dirtyIds.add(note.id);
   }
 
-  scheduleFlush(0);
+  await flushNotesCache();
 }
 
 function markPendingNotesFailed() {
@@ -326,7 +357,7 @@ function markPendingNotesFailed() {
 
 async function syncNotes() {
   await flushNotesCache();
-  return { success: true, notes: getNotesForSync() };
+  return { success: true, notes: await getNotesForSync() };
 }
 
 function scheduleFlush(delay = FLUSH_DELAY_MS) {
@@ -520,6 +551,7 @@ module.exports = {
   updateNote,
   deleteNote,
   getNotes,
+  hasRemoteNotes,
   getNotesForSync,
   applyServerNotes,
   markNotesSynced,

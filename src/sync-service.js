@@ -105,14 +105,7 @@ async function handleRegister(_event, { email, password, name }) {
 async function handleLogin(_event, { email, password }) {
   try {
     const deviceId = _syncSettings.deviceId ?? uuidv4();
-    const res = await apiPost("/api/auth", {
-      action: "login",
-      email,
-      password,
-      deviceId,
-      deviceName: "MTO Samugaa Desktop",
-      platform: "electron",
-    });
+    const res = await loginWithDevice(email, password, deviceId);
     if (res.token) {
       _syncSettings.token = res.token;
       _syncSettings.deviceId = res.deviceId ?? deviceId;
@@ -121,8 +114,39 @@ async function handleLogin(_event, { email, password }) {
     }
     return { success: false, error: res.error };
   } catch (err) {
+    if (_syncSettings.deviceId && _isRetryableDeviceLoginError(err)) {
+      try {
+        const freshDeviceId = uuidv4();
+        const retry = await loginWithDevice(email, password, freshDeviceId);
+        if (retry.token) {
+          _syncSettings.token = retry.token;
+          _syncSettings.deviceId = retry.deviceId ?? freshDeviceId;
+          _persistSettings();
+          return { success: true, user: retry.user };
+        }
+        return { success: false, error: retry.error };
+      } catch (retryErr) {
+        return { success: false, error: retryErr.message };
+      }
+    }
     return { success: false, error: err.message };
   }
+}
+
+function loginWithDevice(email, password, deviceId) {
+  return apiPost("/api/auth", {
+      action: "login",
+      email,
+      password,
+      deviceId,
+      deviceName: "MTO Samugaa Desktop",
+      platform: "electron",
+  });
+}
+
+function _isRetryableDeviceLoginError(err) {
+  const message = String(err?.message || "").toLowerCase();
+  return message.includes("http 500") || message.includes("duplicate key") || message.includes("device");
 }
 
 async function handleResendVerification(_event, { email }) {
@@ -197,7 +221,8 @@ async function _performSync(rendererState = {}) {
       workLogs: localWorkLogs.map(_workLogToSyncPayload).filter(Boolean),
     };
 
-    const result = await apiPost("/api/sync", payload);
+    let result = await apiPost("/api/sync", payload);
+    result = await _withFullServerPull(result);
 
     // ── 3. Apply server note changes ───────────────────────────────────
     if (result.notes?.serverChanges?.length) {
@@ -216,7 +241,9 @@ async function _performSync(rendererState = {}) {
     // ── 5. Update last sync timestamp ──────────────────────────────────
     _syncSettings.lastSync = result.syncedAt;
     _persistSettings();
-    notesStore.markNotesSynced(result);
+    await notesStore.markNotesSynced(result, payload.notes);
+    _normalizeLocalTodoDates();
+    _markLocalTodosSynced(result.todos, payload.todos);
     _markLocalWorkLogsSynced(result.workLogs);
 
     return {
@@ -260,6 +287,56 @@ function handleGetStatus() {
 }
 
 // ─── Local DB helpers ──────────────────────────────────────────────────────
+
+async function _withFullServerPull(syncResult = {}) {
+  const fullPull = await apiPost("/api/sync", {
+    notes: [],
+    todos: [],
+    workLogs: [],
+  });
+
+  return {
+    ...syncResult,
+    syncedAt: fullPull.syncedAt || syncResult.syncedAt,
+    notes: {
+      ...syncResult.notes,
+      serverChanges: _mergeServerChanges(
+        syncResult.notes?.serverChanges,
+        fullPull.notes?.serverChanges
+      ),
+    },
+    todos: {
+      ...syncResult.todos,
+      serverChanges: _mergeServerChanges(
+        syncResult.todos?.serverChanges,
+        fullPull.todos?.serverChanges
+      ),
+    },
+    workLogs: {
+      ...syncResult.workLogs,
+      serverChanges: _mergeServerChanges(
+        syncResult.workLogs?.serverChanges,
+        fullPull.workLogs?.serverChanges
+      ),
+      error: syncResult.workLogs?.error || fullPull.workLogs?.error,
+    },
+  };
+}
+
+function _mergeServerChanges(primary = [], secondary = []) {
+  const merged = [];
+  const seen = new Set();
+
+  for (const item of [...(primary || []), ...(secondary || [])]) {
+    if (!item) continue;
+    const key = String(item.id || item.remoteId || item.clientId || JSON.stringify(item));
+    if (seen.has(key)) continue;
+    seen.add(key);
+    merged.push(item);
+  }
+
+  return merged;
+}
 
 async function _getLocalNotes(notes) {
   if (Array.isArray(notes)) return notesStore.getNotesForSync(notes);
@@ -443,7 +520,7 @@ function _todoToSyncPayload(todo) {
     id: remoteId || undefined,
     text: String(todo.text || ""),
     done: !!todo.done,
-    dueDate: todo.date || todo.dueDate || null,
+    dueDate: _toDateOnly(todo.date || todo.dueDate),
     priority: _normalizePriority(todo.priority),
     tags: _parseTags(todo.tags),
     isDeleted: !!todo.isDeleted,
@@ -503,6 +580,16 @@ function _toIso(value) {
   return Number.isNaN(date.getTime()) ? new Date().toISOString() : date.toISOString();
 }
 
+function _toDateOnly(value) {
+  if (!value) return null;
+  const raw = String(value).trim();
+  const dateMatch = raw.match(/^(\d{4}-\d{2}-\d{2})/);
+  if (dateMatch) return dateMatch[1];
+
+  const date = new Date(raw);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString().slice(0, 10);
+}
+
 function _applyServerNotes(serverNotes) {
   const mergedNotes = notesStore.applyServerNotes(serverNotes);
   const { BrowserWindow } = require("electron");
@@ -519,30 +606,38 @@ function _applyServerTodos(serverTodos) {
     if (!todo.clientId && !todo.id) continue;
 
     const tagsJson = JSON.stringify(todo.tags ?? []);
+    const dueDate = _todoDateForLocalStorage(todo);
     const existingRows = _wdb.exec(
-      `SELECT id FROM cal_todos WHERE id = ? OR client_id = ? OR remote_id = ? LIMIT 1`,
+      `SELECT id, updated_at FROM cal_todos WHERE id = ? OR client_id = ? OR remote_id = ? LIMIT 1`,
       [todo.clientId, todo.clientId, todo.id]
     );
-    const existingId = existingRows.length && existingRows[0].values.length
-      ? existingRows[0].values[0][0]
+    const existing = existingRows.length && existingRows[0].values.length
+      ? existingRows[0].values[0]
       : null;
+    const existingId = existing ? existing[0] : null;
+    const existingUpdatedAt = existing ? existing[1] : null;
 
     if (existingId) {
+      const localTime = new Date(existingUpdatedAt || 0).getTime();
+      const serverTime = new Date(todo.updatedAt || todo.clientUpdatedAt || 0).getTime();
+      if (localTime > serverTime && !todo.isDeleted) continue;
+
       _wdb.run(
         `UPDATE cal_todos
          SET text = ?, done = ?, date = ?, priority = ?, tags = ?,
              remote_id = ?, client_id = ?, is_deleted = ?, synced = 1,
-             updated_at = CURRENT_TIMESTAMP
+             updated_at = ?
          WHERE id = ?`,
         [
           todo.text,
           todo.done ? 1 : 0,
-          todo.dueDate ?? null,
+          dueDate,
           todo.priority,
           tagsJson,
           todo.id,
           todo.clientId,
           todo.isDeleted ? 1 : 0,
+          _toIso(todo.updatedAt || todo.clientUpdatedAt),
           existingId,
         ]
       );
@@ -555,7 +650,7 @@ function _applyServerTodos(serverTodos) {
           todo.clientId || todo.id,
           todo.text,
           todo.done ? 1 : 0,
-          todo.dueDate ?? new Date().toISOString().slice(0, 10),
+          dueDate,
           todo.priority,
           tagsJson,
           todo.id,
@@ -565,6 +660,7 @@ function _applyServerTodos(serverTodos) {
     }
   }
 
+  _normalizeLocalTodoDates();
   _persistWorklogsDb();
 
   // Notify renderer of updated todos
@@ -573,6 +669,37 @@ function _applyServerTodos(serverTodos) {
   if (win && !win.isDestroyed()) {
     win.webContents.send("sync:todos-update");
   }
+}
+
+function _normalizeLocalTodoDates() {
+  if (!_wdb) return;
+
+  try {
+    const rows = _wdb.exec("SELECT id, date FROM cal_todos WHERE date IS NOT NULL");
+    if (!rows.length) return;
+
+    let changed = false;
+    for (const [id, date] of rows[0].values) {
+      const normalized = _toDateOnly(date);
+      if (normalized && normalized !== date) {
+        _wdb.run("UPDATE cal_todos SET date = ? WHERE id = ?", [normalized, id]);
+        changed = true;
+      }
+    }
+    if (changed) _persistWorklogsDb();
+  } catch (err) {
+    console.warn("[Sync] Failed to normalize todo dates:", err.message);
+  }
+}
+
+function _todoDateForLocalStorage(todo = {}) {
+  return (
+    _toDateOnly(todo.dueDate) ||
+    _toDateOnly(todo.createdAt) ||
+    _toDateOnly(todo.updatedAt) ||
+    _toDateOnly(todo.clientUpdatedAt) ||
+    new Date().toISOString().slice(0, 10)
+  );
 }
 
 function _applyServerWorkLogs(serverWorkLogs) {
@@ -655,6 +782,52 @@ function _applyServerWorkLogs(serverWorkLogs) {
   if (win && !win.isDestroyed()) {
     win.webContents.send("sync:worklogs-update");
   }
+}
+
+function _markLocalTodosSynced(todosResult = {}, sentTodos = []) {
+  if (!_wdb || !todosResult) return;
+
+  const serverChanges = Array.isArray(todosResult.serverChanges)
+    ? todosResult.serverChanges
+    : [];
+  const serverByRemoteId = new Map();
+  for (const todo of serverChanges) {
+    const remoteId = todo?.id || todo?.remoteId || todo?.remote_id;
+    if (remoteId) serverByRemoteId.set(String(remoteId), todo);
+  }
+  const sentByRemoteId = new Map();
+  const unsavedSentTodos = [];
+  for (const todo of Array.isArray(sentTodos) ? sentTodos : []) {
+    if (todo?.id) sentByRemoteId.set(String(todo.id), todo);
+    else if (todo?.clientId) unsavedSentTodos.push(todo);
+  }
+
+  const markAcknowledged = (ack, isCreated) => {
+    if (!ack) return;
+    const remoteId = typeof ack === "string"
+      ? ack
+      : ack.id || ack.remoteId || ack.remote_id || null;
+    const matchedServerTodo = remoteId ? serverByRemoteId.get(String(remoteId)) : null;
+    const matchedSentTodo = remoteId ? sentByRemoteId.get(String(remoteId)) : null;
+    const fallbackCreatedTodo = isCreated && typeof ack === "string" ? unsavedSentTodos.shift() : null;
+    const clientId = typeof ack === "string"
+      ? matchedServerTodo?.clientId || matchedSentTodo?.clientId || fallbackCreatedTodo?.clientId
+      : ack.clientId || ack.client_id || matchedServerTodo?.clientId || matchedSentTodo?.clientId;
+
+    if (!clientId && !remoteId) return;
+
+    _wdb.run(
+      `UPDATE cal_todos
+       SET synced = 1, remote_id = COALESCE(?, remote_id), client_id = COALESCE(client_id, id)
+       WHERE client_id = ? OR id = ? OR remote_id = ?`,
+      [remoteId, clientId, clientId, remoteId]
+    );
+  };
+
+  for (const ack of todosResult.created || []) markAcknowledged(ack, true);
+  for (const ack of todosResult.updated || []) markAcknowledged(ack, false);
+
+  _persistWorklogsDb();
 }
 
 function _markLocalWorkLogsSynced(workLogsResult = {}) {
